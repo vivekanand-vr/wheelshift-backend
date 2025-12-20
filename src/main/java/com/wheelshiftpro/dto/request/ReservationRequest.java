@@ -1,0 +1,43 @@
+package com.wheelshiftpro.dto.request;
+
+import com.wheelshiftpro.enums.ReservationStatus;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+/**
+ * DTO for creating or updating a reservation.
+ */
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class ReservationRequest {
+
+    @NotNull(message = "Car ID is required")
+    private Long carId;
+
+    @NotNull(message = "Client ID is required")
+    private Long clientId;
+
+    @NotNull(message = "Reservation date is required")
+    private LocalDateTime reservationDate;
+
+    @NotNull(message = "Expiry date is required")
+    private LocalDateTime expiryDate;
+
+    private ReservationStatus status;
+
+    @DecimalMin(value = "0.0", inclusive = true, message = "Deposit amount cannot be negative")
+    private BigDecimal depositAmount;
+
+    private Boolean depositPaid;
+
+    private String notes;
+}

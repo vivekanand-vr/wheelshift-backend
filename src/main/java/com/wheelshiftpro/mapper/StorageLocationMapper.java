@@ -1,0 +1,31 @@
+package com.wheelshiftpro.mapper;
+
+import com.wheelshiftpro.dto.request.StorageLocationRequest;
+import com.wheelshiftpro.dto.response.StorageLocationResponse;
+import com.wheelshiftpro.entity.StorageLocation;
+import org.mapstruct.*;
+
+import java.util.List;
+
+/**
+ * MapStruct mapper for StorageLocation entity and DTOs.
+ */
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE, nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+public interface StorageLocationMapper {
+
+    @Mapping(target = "availableCapacity", expression = "java(entity.getAvailableCapacity())")
+    StorageLocationResponse toResponse(StorageLocation entity);
+
+    List<StorageLocationResponse> toResponseList(List<StorageLocation> entities);
+
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "cars", ignore = true)
+    @Mapping(target = "currentVehicleCount", constant = "0")
+    StorageLocation toEntity(StorageLocationRequest request);
+
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "cars", ignore = true)
+    @Mapping(target = "currentVehicleCount", ignore = true)
+    void updateEntityFromRequest(StorageLocationRequest request, @MappingTarget StorageLocation entity);
+}

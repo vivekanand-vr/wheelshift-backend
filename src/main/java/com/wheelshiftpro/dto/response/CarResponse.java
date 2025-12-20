@@ -1,0 +1,53 @@
+package com.wheelshiftpro.dto.response;
+
+import com.wheelshiftpro.enums.CarStatus;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Map;
+
+/**
+ * DTO for car response.
+ */
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class CarResponse {
+
+    private Long id;
+    private Long carModelId;
+    private String carModelMake;
+    private String carModelModel;
+    private String carModelVariant;
+    private String vinNumber;
+    private String registrationNumber;
+    private Integer year;
+    private String color;
+    private Integer mileageKm;
+    private Integer engineCc;
+    private CarStatus status;
+    private Long storageLocationId;
+    private String storageLocationName;
+    private LocalDate purchaseDate;
+    private BigDecimal purchasePrice;
+    private BigDecimal sellingPrice;
+    
+    // Detailed specs
+    private Integer doors;
+    private Integer seats;
+    private Integer cargoCapacityLiters;
+    private BigDecimal acceleration0To100;
+    private Integer topSpeedKmh;
+    
+    // Additional features
+    private Map<String, String> features;
+    
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+}

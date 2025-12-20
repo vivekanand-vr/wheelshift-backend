@@ -1,0 +1,43 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: wheelshift-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: wheelshift_root_2025
+      MYSQL_DATABASE: wheelshift
+      MYSQL_USER: wheelshift_user
+      MYSQL_PASSWORD: wheelshift_pass_2025
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+    networks:
+      - wheelshift-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: wheelshift-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      timeout: 3s
+      retries: 5
+    networks:
+      - wheelshift-network
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  wheelshift-network:
+    driver: bridge
