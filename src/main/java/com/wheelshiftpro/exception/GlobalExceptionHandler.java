@@ -9,6 +9,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -158,6 +159,39 @@ public class GlobalExceptionHandler {
                 .build();
         
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+
+    /**
+     * Handle NoResourceFoundException (static resources not found, 404 errors)
+     * Only returns JSON for API routes. Non-API routes will show HTML error pages.
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResourceFoundException(
+            NoResourceFoundException ex, 
+            HttpServletRequest request) throws NoResourceFoundException {
+        
+        String requestUri = request.getRequestURI();
+        
+        // Only handle API routes with JSON response
+        if (requestUri.startsWith("/api")) {
+            log.warn("API endpoint not found: {}", requestUri);
+            
+            ErrorResponse errorResponse = ErrorResponse.builder()
+                    .type("about:blank")
+                    .title("API Endpoint Not Found")
+                    .status(HttpStatus.NOT_FOUND.value())
+                    .detail("The requested API endpoint '" + requestUri + "' does not exist")
+                    .instance(requestUri)
+                    .code("API_ENDPOINT_NOT_FOUND")
+                    .timestamp(LocalDateTime.now())
+                    .build();
+            
+            return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
+        }
+        
+        // For non-API routes, re-throw to let Spring's error handling show HTML error pages
+        log.info("Non-API resource not found: {}, delegating to default error handling", requestUri);
+        throw ex;
     }
 
     /**

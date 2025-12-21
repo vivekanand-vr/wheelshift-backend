@@ -90,6 +90,12 @@
 			<version>${springdoc.version}</version>
 		</dependency>
 
+		<!-- Thymeleaf for HTML error pages -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-thymeleaf</artifactId>
+		</dependency>
+
 		<!-- JWT -->
 		<dependency>
 			<groupId>io.jsonwebtoken</groupId>
