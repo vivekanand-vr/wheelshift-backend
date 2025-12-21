@@ -16,7 +16,13 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.web.bind.annotation.*;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -36,7 +42,7 @@ public class AuthController {
 
     @PostMapping("/login")
     @Operation(summary = "Login", description = "Authenticate an employee and return user details with roles and permissions")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
         try {
             log.info("Login attempt for email: {}", request.getEmail());
 
@@ -47,7 +53,18 @@ public class AuthController {
                             request.getPassword()
                     )
             );
-            log.info(authentication.isAuthenticated() ? "Authentication successful" : "Authentication failed");
+            
+            // Store authentication in security context
+            SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
+            securityContext.setAuthentication(authentication);
+            SecurityContextHolder.setContext(securityContext);
+            
+            // Save security context to session
+            HttpSession session = httpRequest.getSession(true);
+            session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, securityContext);
+            
+            log.info("Authentication successful and session created for: {}", request.getEmail());
+            
             // Fetch employee details
             Employee employee = employeeRepository.findByEmail(request.getEmail())
                     .orElseThrow(() -> new RuntimeException("Employee not found"));
@@ -117,9 +134,17 @@ public class AuthController {
 
     @PostMapping("/logout")
     @Operation(summary = "Logout", description = "Logout current user")
-    public ResponseEntity<AuthResponse> logout() {
-        // In a stateless JWT implementation, logout would involve token invalidation
-        // For now, just return success
+    public ResponseEntity<AuthResponse> logout(HttpServletRequest request) {
+        // Clear security context
+        SecurityContextHolder.clearContext();
+        
+        // Invalidate session
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
+        
+        log.info("Logout successful");
         return ResponseEntity.ok(AuthResponse.builder()
                 .message("Logout successful")
                 .build());

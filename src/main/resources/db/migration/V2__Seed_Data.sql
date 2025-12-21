@@ -20,12 +20,13 @@ INSERT INTO storage_locations (name, address, contact_person, contact_number, to
 ('East Facility', '321 East Boulevard, Faisalabad', 'Ayesha Malik', '+92-300-1111111', 40, 0);
 
 -- Insert Employees
+-- Password for all users: 'admin123' (BCrypt encoded)
 INSERT INTO employees (name, email, password_hash, phone, position, department, join_date, status) VALUES
-('Admin User', 'admin@wheelshift.com', '$2a$10$abcdefghijklmnopqrstuvwxyz1234567890', '+92-321-1000001', 'System Administrator', 'IT', '2024-01-01', 'ACTIVE'),
-('Sales Manager', 'sales.manager@wheelshift.com', '$2a$10$abcdefghijklmnopqrstuvwxyz1234567890', '+92-321-2000002', 'Sales Manager', 'Sales', '2024-01-15', 'ACTIVE'),
-('Inspector Lead', 'inspector@wheelshift.com', '$2a$10$abcdefghijklmnopqrstuvwxyz1234567890', '+92-321-3000003', 'Chief Inspector', 'Quality', '2024-02-01', 'ACTIVE'),
-('Finance Officer', 'finance@wheelshift.com', '$2a$10$abcdefghijklmnopqrstuvwxyz1234567890', '+92-321-4000004', 'Finance Officer', 'Finance', '2024-02-15', 'ACTIVE'),
-('Store Manager', 'store@wheelshift.com', '$2a$10$abcdefghijklmnopqrstuvwxyz1234567890', '+92-321-5000005', 'Store Manager', 'Operations', '2024-03-01', 'ACTIVE');
+('Admin User', 'admin@wheelshift.com', '$2a$10$UEVvqDoY24DCOvv0bJCeLO5kdSYtgZSGQzbW9A9xBJ2GbN746I.4y', '+92-321-1000001', 'System Administrator', 'IT', '2024-01-01', 'ACTIVE'),
+('Sales Manager', 'sales.manager@wheelshift.com', '$2a$10$UEVvqDoY24DCOvv0bJCeLO5kdSYtgZSGQzbW9A9xBJ2GbN746I.4y', '+92-321-2000002', 'Sales Manager', 'Sales', '2024-01-15', 'ACTIVE'),
+('Inspector Lead', 'inspector@wheelshift.com', '$2a$10$UEVvqDoY24DCOvv0bJCeLO5kdSYtgZSGQzbW9A9xBJ2GbN746I.4y', '+92-321-3000003', 'Chief Inspector', 'Quality', '2024-02-01', 'ACTIVE'),
+('Finance Officer', 'finance@wheelshift.com', '$2a$10$UEVvqDoY24DCOvv0bJCeLO5kdSYtgZSGQzbW9A9xBJ2GbN746I.4y', '+92-321-4000004', 'Finance Officer', 'Finance', '2024-02-15', 'ACTIVE'),
+('Store Manager', 'store@wheelshift.com', '$2a$10$UEVvqDoY24DCOvv0bJCeLO5kdSYtgZSGQzbW9A9xBJ2GbN746I.4y', '+92-321-5000005', 'Store Manager', 'Operations', '2024-03-01', 'ACTIVE');
 
 -- Insert Clients
 INSERT INTO clients (name, email, phone, location, status, total_purchases, last_purchase) VALUES

@@ -19,6 +19,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +36,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     private final EmployeeRepository employeeRepository;
     private final SaleRepository saleRepository;
     private final EmployeeMapper employeeMapper;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public EmployeeResponse createEmployee(EmployeeRequest request) {
@@ -45,6 +47,14 @@ public class EmployeeServiceImpl implements EmployeeService {
         }
 
         Employee employee = employeeMapper.toEntity(request);
+        
+        // Hash the password before saving
+        if (request.getPassword() != null && !request.getPassword().isEmpty()) {
+            String hashedPassword = passwordEncoder.encode(request.getPassword());
+            employee.setPasswordHash(hashedPassword);
+            log.debug("Password hashed for new employee");
+        }
+        
         Employee saved = employeeRepository.save(employee);
 
         log.info("Created employee with ID: {}", saved.getId());
@@ -59,6 +69,14 @@ public class EmployeeServiceImpl implements EmployeeService {
                 .orElseThrow(() -> new ResourceNotFoundException("Employee", "id", id));
 
         employeeMapper.updateEntityFromRequest(request, employee);
+        
+        // Hash the password if it's being updated
+        if (request.getPassword() != null && !request.getPassword().isEmpty()) {
+            String hashedPassword = passwordEncoder.encode(request.getPassword());
+            employee.setPasswordHash(hashedPassword);
+            log.debug("Password updated and hashed for employee ID: {}", id);
+        }
+        
         Employee updated = employeeRepository.save(employee);
 
         log.info("Updated employee ID: {}", id);

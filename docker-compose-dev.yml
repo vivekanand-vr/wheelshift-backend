@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: wheelshift-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: wheelshift_db
+      MYSQL_USER: wheelshift_user
+      MYSQL_PASSWORD: wheelshift_pass_2025
+    ports:
+      - "3307:3306"  # Host:Container - Use 3307 to avoid conflicts with local MySQL
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker-init:/docker-entrypoint-initdb.d
+    networks:
+      - wheelshift-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # phpMyAdmin - Web-based MySQL administration tool
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: wheelshift-phpmyadmin
+    restart: always
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_ARBITRARY: 1
+      UPLOAD_LIMIT: 100M
+    ports:
+      - "8081:80"
+    depends_on:
+      - mysql
+    networks:
+      - wheelshift-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: wheelshift-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - wheelshift-network
+    command: redis-server --appendonly yes
+
+  # Redis Commander - Redis GUI
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: wheelshift-redis-commander
+    restart: always
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8082:8081"
+    depends_on:
+      - redis
+    networks:
+      - wheelshift-network
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  wheelshift-network:
+    driver: bridge
