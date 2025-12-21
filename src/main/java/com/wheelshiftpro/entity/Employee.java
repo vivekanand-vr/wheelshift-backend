@@ -11,7 +11,9 @@ import lombok.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Entity representing an employee in the system.
@@ -82,4 +84,50 @@ public class Employee extends BaseEntity {
     @OneToMany(mappedBy = "assignee", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @Builder.Default
     private List<Task> assignedTasks = new ArrayList<>();
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+        name = "employee_roles",
+        joinColumns = @JoinColumn(name = "employee_id"),
+        inverseJoinColumns = @JoinColumn(name = "role_id"),
+        uniqueConstraints = @UniqueConstraint(name = "uk_employee_role", columnNames = {"employee_id", "role_id"})
+    )
+    @Builder.Default
+    private Set<Role> roles = new HashSet<>();
+
+    @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Builder.Default
+    private Set<EmployeeDataScope> dataScopes = new HashSet<>();
+
+    /**
+     * Helper method to add a role to this employee
+     */
+    public void addRole(Role role) {
+        this.roles.add(role);
+        role.getEmployees().add(this);
+    }
+
+    /**
+     * Helper method to remove a role from this employee
+     */
+    public void removeRole(Role role) {
+        this.roles.remove(role);
+        role.getEmployees().remove(this);
+    }
+
+    /**
+     * Helper method to add a data scope
+     */
+    public void addDataScope(EmployeeDataScope scope) {
+        this.dataScopes.add(scope);
+        scope.setEmployee(this);
+    }
+
+    /**
+     * Helper method to remove a data scope
+     */
+    public void removeDataScope(EmployeeDataScope scope) {
+        this.dataScopes.remove(scope);
+        scope.setEmployee(null);
+    }
 }
