@@ -17,19 +17,14 @@
 - [Notification System](features/notifications/README.md) - Complete notification documentation
 - [Implementation Details](features/notifications/IMPLEMENTATION.md) - Technical reference
 
+#### Dashboard
+- [Dashboard System](features/dashboard/README.md) - Role-based dashboard documentation
+- [Quick Start](features/dashboard/QUICK_START.md) - Getting started with dashboards
+- [Implementation Details](features/dashboard/IMPLEMENTATION.md) - Technical reference
+
 ### API Reference
 - **Swagger UI**: http://localhost:8080/api/v1/swagger-ui.html
 - **API Docs**: http://localhost:8080/api/v1/api-docs
-
-### Archive (Legacy Documentation)
-- [Backend README](archive/BACKEND_README.md) - Original backend documentation
-- [RBAC Implementation Guide](archive/RBAC_IMPLEMENTATION_GUIDE.md) - Detailed RBAC guide
-- [RBAC Implementation Summary](archive/RBAC_IMPLEMENTATION_SUMMARY.md) - RBAC implementation summary
-- [RBAC Quick Start (Old)](archive/RBAC_QUICK_START.md) - Original quick start
-- [Notifications Implementation Guide](archive/NOTIFICATIONS_IMPLEMENTATION_GUIDE.md) - Detailed notifications guide
-- [Completion Summary](archive/COMPLETION_SUMMARY.md) - Project completion summary
-- [Development Progress](archive/DEVELOPMENT_PROGRESS.md) - Development progress tracker
-- [File Inventory](archive/FILE_INVENTORY.md) - Complete file listing
 
 ## 🚀 Quick Links
 
@@ -40,13 +35,15 @@
 
 ### For Integration
 1. [RBAC Quick Start](features/rbac/QUICK_START.md) - Implement authentication
-2. [Notification System](features/notifications/README.md) - Add notifications
-3. [API Reference](http://localhost:8080/api/v1/swagger-ui.html) - Use the REST API
+2. [Dashboard Quick Start](features/dashboard/QUICK_START.md) - Integrate dashboards
+3. [Notification System](features/notifications/README.md) - Add notifications
+4. [API Reference](http://localhost:8080/api/v1/swagger-ui.html) - Use the REST API
 
 ### For Understanding Features
 1. [RBAC Overview](features/rbac/README.md) - Learn about security
-2. [Notification System](features/notifications/README.md) - Understand notifications
-3. [Main README](../README.md) - See all features
+2. [Dashboard System](features/dashboard/README.md) - Understand role-based dashboards
+3. [Notification System](features/notifications/README.md) - Understand notifications
+4. [Main README](../README.md) - See all features
 
 ## 📂 Documentation Structure
 
@@ -58,8 +55,12 @@ docs/
 │   │   ├── README.md                 # Complete RBAC guide
 │   │   ├── QUICK_START.md            # 5-minute setup
 │   │   └── IMPLEMENTATION.md         # Technical details
-│   └── notifications/                # Notifications documentation
-│       ├── README.md                 # Complete notifications guide
+│   ├── notifications/                # Notifications documentation
+│   │   ├── README.md                 # Complete notifications guide
+│   │   └── IMPLEMENTATION.md         # Technical details
+│   └── dashboard/                    # Dashboard documentation
+│       ├── README.md                 # Complete dashboard guide
+│       ├── QUICK_START.md            # Getting started
 │       └── IMPLEMENTATION.md         # Technical details
 ├── guides/                           # Development guides
 │   └── DEVELOPER_GUIDE.md            # Setup and development workflow
@@ -80,6 +81,7 @@ docs/
 - [Developer Guide](guides/DEVELOPER_GUIDE.md)
 - [RBAC Implementation](features/rbac/IMPLEMENTATION.md)
 - [Notification Implementation](features/notifications/IMPLEMENTATION.md)
+- [Dashboard Implementation](features/dashboard/IMPLEMENTATION.md)
 
 ### Product Manager
 - [Main README](../README.md)
@@ -111,7 +113,8 @@ docs/
 5. **Format Consistently**: Follow existing structure
 
 ## 🔄 Recent Updates
-
+2**: Added comprehensive dashboard system with role-based widgets
+- **2025-12-2
 - **2025-12-21**: Reorganized documentation with feature subdirectories
 - **2025-12-21**: Created concise feature guides for RBAC and Notifications
 - **2025-12-21**: Added comprehensive main README

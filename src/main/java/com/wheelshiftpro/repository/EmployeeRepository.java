@@ -56,4 +56,9 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
      */
     @Query("SELECT e.department as department, COUNT(e) as count FROM Employee e WHERE e.status = 'ACTIVE' GROUP BY e.department")
     List<Object[]> getEmployeeCountByDepartment();
+
+    /**
+     * Count employees by status.
+     */
+    long countByStatus(EmployeeStatus status);
 }

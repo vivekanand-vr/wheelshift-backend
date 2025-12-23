@@ -118,4 +118,14 @@ public interface CarRepository extends JpaRepository<Car, Long> {
      */
     @Query("SELECT SUM(c.purchasePrice) FROM Car c WHERE c.status IN ('AVAILABLE', 'RESERVED')")
     BigDecimal calculateTotalInventoryValue();
+
+    /**
+     * Find all cars by status (non-paginated).
+     */
+    List<Car> findByStatus(CarStatus status);
+
+    /**
+     * Find cars by status and purchase date before (for aging inventory).
+     */
+    List<Car> findByStatusAndPurchaseDateBefore(CarStatus status, java.time.LocalDate date, Pageable pageable);
 }

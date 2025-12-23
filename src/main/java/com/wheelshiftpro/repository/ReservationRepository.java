@@ -62,4 +62,9 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
      * Count reservations by status.
      */
     long countByStatus(ReservationStatus status);
+
+    /**
+     * Find reservations by status and expiry date before.
+     */
+    List<Reservation> findByStatusAndExpiryDateBefore(ReservationStatus status, LocalDateTime date);
 }

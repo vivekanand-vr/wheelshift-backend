@@ -67,4 +67,19 @@ public interface InquiryRepository extends JpaRepository<Inquiry, Long>, JpaSpec
      */
     @Query("SELECT i.status as status, COUNT(i) as count FROM Inquiry i GROUP BY i.status")
     List<Object[]> getInquiryStatistics();
+
+    /**
+     * Find inquiries by assigned employee (non-paginated).
+     */
+    List<Inquiry> findByAssignedEmployeeId(Long employeeId);
+
+    /**
+     * Count inquiries by assigned employee and status.
+     */
+    long countByAssignedEmployeeIdAndStatus(Long employeeId, InquiryStatus status);
+
+    /**
+     * Count inquiries by assigned employee and status in list.
+     */
+    long countByAssignedEmployeeIdAndStatusIn(Long employeeId, List<InquiryStatus> statuses);
 }

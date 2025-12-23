@@ -79,4 +79,9 @@ public interface SaleRepository extends JpaRepository<Sale, Long> {
      */
     @Query("SELECT COUNT(s) FROM Sale s")
     long countTotalSales();
+
+    /**
+     * Find sales by employee and date after.
+     */
+    List<Sale> findByEmployeeIdAndSaleDateAfter(Long employeeId, LocalDateTime date);
 }
