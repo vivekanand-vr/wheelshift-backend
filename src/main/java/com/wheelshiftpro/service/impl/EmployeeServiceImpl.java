@@ -96,11 +96,17 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     @Override
     @Transactional(readOnly = true)
-    public PageResponse<EmployeeResponse> getAllEmployees(int page, int size) {
-        log.debug("Fetching all employees - page: {}, size: {}", page, size);
+    public PageResponse<EmployeeResponse> getAllEmployees(String search, int page, int size) {
+        log.debug("Fetching all employees - search: {}, page: {}, size: {}", search, page, size);
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("name"));
-        Page<Employee> employeesPage = employeeRepository.findAll(pageable);
+        Page<Employee> employeesPage;
+        
+        if (search != null && !search.trim().isEmpty()) {
+            employeesPage = employeeRepository.searchEmployeesByPattern(search, pageable);
+        } else {
+            employeesPage = employeeRepository.findAll(pageable);
+        }
 
         return buildPageResponse(employeesPage);
     }

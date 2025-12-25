@@ -50,11 +50,12 @@ public class EmployeeController {
     }
 
     @GetMapping
-    @Operation(summary = "Get all employees", description = "Retrieves all employees with pagination")
+    @Operation(summary = "Get all employees", description = "Retrieves all employees with pagination and optional regex search")
     public ResponseEntity<ApiResponse<PageResponse<EmployeeResponse>>> getAllEmployees(
+            @Parameter(description = "Search term (regex pattern) to filter employees by name, email, position, or department") @RequestParam(required = false) String search,
             @Parameter(description = "Page number (0-indexed)") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size") @RequestParam(defaultValue = "20") int size) {
-        PageResponse<EmployeeResponse> response = employeeService.getAllEmployees(page, size);
+        PageResponse<EmployeeResponse> response = employeeService.getAllEmployees(search, page, size);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 

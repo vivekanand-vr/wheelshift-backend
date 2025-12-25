@@ -22,9 +22,10 @@ public interface TaskMapper {
 
     /**
      * Converts TaskRequest DTO to Task entity.
+     * Note: assignee must be set manually in service layer
      */
     @Mapping(target = "id", ignore = true)
-    @Mapping(source = "assigneeId", target = "assignee.id")
+    @Mapping(target = "assignee", ignore = true)
     Task toEntity(TaskRequest request);
 
     /**
@@ -35,9 +36,10 @@ public interface TaskMapper {
     /**
      * Updates Task entity from TaskRequest DTO.
      * Ignores null values in the request.
+     * Note: assignee must be set manually in service layer
      */
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     @Mapping(target = "id", ignore = true)
-    @Mapping(source = "assigneeId", target = "assignee.id")
+    @Mapping(target = "assignee", ignore = true)
     void updateEntityFromRequest(TaskRequest request, @MappingTarget Task task);
 }

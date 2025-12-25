@@ -3,6 +3,8 @@ package com.wheelshiftpro.exception;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -192,6 +194,75 @@ public class GlobalExceptionHandler {
         // For non-API routes, re-throw to let Spring's error handling show HTML error pages
         log.info("Non-API resource not found: {}, delegating to default error handling", requestUri);
         throw ex;
+    }
+
+    /**
+     * Handle data integrity violations (foreign key, unique constraints, etc.)
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolationException(
+            DataIntegrityViolationException ex, 
+            HttpServletRequest request) {
+        
+        log.error("Data integrity violation: {}", ex.getMessage(), ex);
+        
+        String detail = "Data integrity constraint violation. Please check your data.";
+        String code = "DATA_INTEGRITY_VIOLATION";
+        
+        // Try to provide more specific error message
+        if (ex.getMessage() != null) {
+            if (ex.getMessage().contains("foreign key")) {
+                detail = "The referenced resource does not exist or cannot be deleted due to existing references.";
+                code = "FOREIGN_KEY_VIOLATION";
+            } else if (ex.getMessage().contains("unique")) {
+                detail = "A resource with the same unique identifier already exists.";
+                code = "UNIQUE_CONSTRAINT_VIOLATION";
+            }
+        }
+        
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .type("about:blank")
+                .title("Data Integrity Violation")
+                .status(HttpStatus.CONFLICT.value())
+                .detail(detail)
+                .instance(request.getRequestURI())
+                .code(code)
+                .timestamp(LocalDateTime.now())
+                .build();
+        
+        return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);
+    }
+
+    /**
+     * Handle invalid data access API usage (transient entity references, etc.)
+     */
+    @ExceptionHandler(InvalidDataAccessApiUsageException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidDataAccessApiUsageException(
+            InvalidDataAccessApiUsageException ex, 
+            HttpServletRequest request) {
+        
+        log.error("Invalid data access API usage: {}", ex.getMessage(), ex);
+        
+        String detail = "Invalid data operation. Please ensure all referenced resources exist.";
+        String code = "INVALID_DATA_OPERATION";
+        
+        // Check for common issues
+        if (ex.getMessage() != null && ex.getMessage().contains("transient")) {
+            detail = "Referenced resource must be saved before this operation. Please ensure the resource exists in the database.";
+            code = "TRANSIENT_ENTITY_REFERENCE";
+        }
+        
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .type("about:blank")
+                .title("Invalid Data Operation")
+                .status(HttpStatus.BAD_REQUEST.value())
+                .detail(detail)
+                .instance(request.getRequestURI())
+                .code(code)
+                .timestamp(LocalDateTime.now())
+                .build();
+        
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 
     /**

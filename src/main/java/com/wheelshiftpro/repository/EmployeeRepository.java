@@ -54,6 +54,16 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     Page<Employee> searchEmployees(@Param("searchTerm") String searchTerm, Pageable pageable);
 
     /**
+     * Search employees by pattern (regex-like) on name, email, position, or department.
+     */
+    @Query("SELECT e FROM Employee e WHERE " +
+           "LOWER(e.name) LIKE LOWER(CONCAT('%', :pattern, '%')) OR " +
+           "LOWER(e.email) LIKE LOWER(CONCAT('%', :pattern, '%')) OR " +
+           "LOWER(e.position) LIKE LOWER(CONCAT('%', :pattern, '%')) OR " +
+           "LOWER(e.department) LIKE LOWER(CONCAT('%', :pattern, '%'))")
+    Page<Employee> searchEmployeesByPattern(@Param("pattern") String pattern, Pageable pageable);
+
+    /**
      * Get employee count by department.
      */
     @Query("SELECT e.department as department, COUNT(e) as count FROM Employee e WHERE e.status = 'ACTIVE' GROUP BY e.department")

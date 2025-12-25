@@ -40,13 +40,14 @@ public interface EmployeeService {
     EmployeeResponse getEmployeeById(Long id);
 
     /**
-     * Retrieves all employees with pagination.
+     * Retrieves all employees with pagination and optional regex search.
      *
+     * @param search the search term (regex pattern) to filter employees (optional)
      * @param page the page number (0-indexed)
      * @param size the page size
      * @return paginated employee responses
      */
-    PageResponse<EmployeeResponse> getAllEmployees(int page, int size);
+    PageResponse<EmployeeResponse> getAllEmployees(String search, int page, int size);
 
     /**
      * Deletes an employee by ID.

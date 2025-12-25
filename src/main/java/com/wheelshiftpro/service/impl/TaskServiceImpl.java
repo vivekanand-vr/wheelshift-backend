@@ -41,12 +41,23 @@ public class TaskServiceImpl implements TaskService {
     public TaskResponse createTask(TaskRequest request) {
         log.debug("Creating task: {}", request.getTitle());
 
-        if (request.getAssigneeId() != null && !employeeRepository.existsById(request.getAssigneeId())) {
-            throw new ResourceNotFoundException("Employee", "id", request.getAssigneeId());
+        Task task = taskMapper.toEntity(request);
+        
+        // Set default status if not provided
+        if (task.getStatus() == null) {
+            task.setStatus(TaskStatus.TODO);
+        }
+        
+        // Set default priority if not provided
+        if (task.getPriority() == null) {
+            task.setPriority(TaskPriority.MEDIUM);
         }
 
-        Task task = taskMapper.toEntity(request);
-        task.setStatus(TaskStatus.TODO);
+        // Handle employee assignment if provided
+        if (request.getAssigneeId() != null) {
+            task.setAssignee(employeeRepository.findById(request.getAssigneeId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Employee", "id", request.getAssigneeId())));
+        }
 
         Task saved = taskRepository.save(task);
 
@@ -61,7 +72,18 @@ public class TaskServiceImpl implements TaskService {
         Task task = taskRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Task", "id", id));
 
+        // Update basic fields via mapper
         taskMapper.updateEntityFromRequest(request, task);
+        
+        // Handle employee assignment separately
+        if (request.getAssigneeId() != null) {
+            task.setAssignee(employeeRepository.findById(request.getAssigneeId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Employee", "id", request.getAssigneeId())));
+        } else if (request.getAssigneeId() == null && task.getAssignee() != null) {
+            // If assigneeId is explicitly null in request, unassign the task
+            task.setAssignee(null);
+        }
+        
         Task updated = taskRepository.save(task);
 
         log.info("Updated task ID: {}", id);
