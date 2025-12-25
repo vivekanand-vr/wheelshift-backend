@@ -54,11 +54,12 @@ public class TaskController {
     }
 
     @GetMapping
-    @Operation(summary = "Get all tasks", description = "Retrieves all tasks with pagination")
+    @Operation(summary = "Get all tasks", description = "Retrieves all tasks with pagination and optional text search")
     public ResponseEntity<ApiResponse<PageResponse<TaskResponse>>> getAllTasks(
+            @Parameter(description = "Search text (searches in title and description)") @RequestParam(required = false) String search,
             @Parameter(description = "Page number (0-indexed)") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size") @RequestParam(defaultValue = "20") int size) {
-        PageResponse<TaskResponse> response = taskService.getAllTasks(page, size);
+        PageResponse<TaskResponse> response = taskService.getAllTasks(search, page, size);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -73,6 +74,7 @@ public class TaskController {
     @GetMapping("/search")
     @Operation(summary = "Search tasks", description = "Search tasks with multiple filter criteria")
     public ResponseEntity<ApiResponse<PageResponse<TaskResponse>>> searchTasks(
+            @Parameter(description = "Search text (searches in title and description)") @RequestParam(required = false) String search,
             @Parameter(description = "Assigned employee ID filter") @RequestParam(required = false) Long assignedToId,
             @Parameter(description = "Task status filter") @RequestParam(required = false) TaskStatus status,
             @Parameter(description = "Task priority filter") @RequestParam(required = false) TaskPriority priority,
@@ -80,17 +82,18 @@ public class TaskController {
             @Parameter(description = "End date filter") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @Parameter(description = "Page number") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size") @RequestParam(defaultValue = "20") int size) {
-        PageResponse<TaskResponse> response = taskService.searchTasks(assignedToId, status, priority, startDate, endDate, page, size);
+        PageResponse<TaskResponse> response = taskService.searchTasks(search, assignedToId, status, priority, startDate, endDate, page, size);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @GetMapping("/employee/{employeeId}")
-    @Operation(summary = "Get tasks by employee", description = "Retrieves all tasks assigned to a specific employee")
+    @Operation(summary = "Get tasks by employee", description = "Retrieves all tasks assigned to a specific employee with optional text search")
     public ResponseEntity<ApiResponse<PageResponse<TaskResponse>>> getTasksByEmployee(
             @Parameter(description = "Employee ID") @PathVariable Long employeeId,
+            @Parameter(description = "Search text (searches in title and description)") @RequestParam(required = false) String search,
             @Parameter(description = "Page number") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size") @RequestParam(defaultValue = "20") int size) {
-        PageResponse<TaskResponse> response = taskService.getTasksByEmployee(employeeId, page, size);
+        PageResponse<TaskResponse> response = taskService.getTasksByEmployee(employeeId, search, page, size);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 

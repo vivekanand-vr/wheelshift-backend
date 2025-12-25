@@ -103,11 +103,22 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     @Transactional(readOnly = true)
-    public PageResponse<TaskResponse> getAllTasks(int page, int size) {
-        log.debug("Fetching all tasks - page: {}, size: {}", page, size);
+    public PageResponse<TaskResponse> getAllTasks(String search, int page, int size) {
+        log.debug("Fetching all tasks - search: {}, page: {}, size: {}", search, page, size);
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<Task> tasksPage = taskRepository.findAll(pageable);
+        Page<Task> tasksPage;
+        
+        if (search != null && !search.trim().isEmpty()) {
+            String searchPattern = "%" + search.toLowerCase() + "%";
+            Specification<Task> spec = (root, query, cb) -> cb.or(
+                cb.like(cb.lower(root.get("title")), searchPattern),
+                cb.like(cb.lower(root.get("description")), searchPattern)
+            );
+            tasksPage = taskRepository.findAll(spec, pageable);
+        } else {
+            tasksPage = taskRepository.findAll(pageable);
+        }
 
         return buildPageResponse(tasksPage);
     }
@@ -126,15 +137,23 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     @Transactional(readOnly = true)
-    public PageResponse<TaskResponse> searchTasks(Long assignedToId, TaskStatus status, TaskPriority priority,
+    public PageResponse<TaskResponse> searchTasks(String search, Long assignedToId, TaskStatus status, TaskPriority priority,
                                                    LocalDate startDate, LocalDate endDate, int page, int size) {
-        log.debug("Searching tasks with filters - assignedTo: {}, status: {}, priority: {}, startDate: {}, endDate: {}",
-                assignedToId, status, priority, startDate, endDate);
+        log.debug("Searching tasks with filters - search: {}, assignedTo: {}, status: {}, priority: {}, startDate: {}, endDate: {}",
+                search, assignedToId, status, priority, startDate, endDate);
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 
         // Build specification for filtering
         Specification<Task> spec = (root, query, cb) -> cb.conjunction();
+
+        if (search != null && !search.trim().isEmpty()) {
+            String searchPattern = "%" + search.toLowerCase() + "%";
+            spec = spec.and((root, query, cb) -> cb.or(
+                cb.like(cb.lower(root.get("title")), searchPattern),
+                cb.like(cb.lower(root.get("description")), searchPattern)
+            ));
+        }
 
         if (assignedToId != null) {
             spec = spec.and((root, query, cb) -> cb.equal(root.get("assignee").get("id"), assignedToId));
@@ -165,15 +184,27 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     @Transactional(readOnly = true)
-    public PageResponse<TaskResponse> getTasksByEmployee(Long employeeId, int page, int size) {
-        log.debug("Fetching tasks for employee ID: {}", employeeId);
+    public PageResponse<TaskResponse> getTasksByEmployee(Long employeeId, String search, int page, int size) {
+        log.debug("Fetching tasks for employee ID: {} with search: {}", employeeId, search);
 
         if (!employeeRepository.existsById(employeeId)) {
             throw new ResourceNotFoundException("Employee", "id", employeeId);
         }
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<Task> tasksPage = taskRepository.findByAssigneeId(employeeId, pageable);
+        
+        // Build specification with employee filter and optional text search
+        Specification<Task> spec = (root, query, cb) -> cb.equal(root.get("assignee").get("id"), employeeId);
+        
+        if (search != null && !search.trim().isEmpty()) {
+            String searchPattern = "%" + search.toLowerCase() + "%";
+            spec = spec.and((root, query, cb) -> cb.or(
+                cb.like(cb.lower(root.get("title")), searchPattern),
+                cb.like(cb.lower(root.get("description")), searchPattern)
+            ));
+        }
+        
+        Page<Task> tasksPage = taskRepository.findAll(spec, pageable);
 
         return buildPageResponse(tasksPage);
     }

@@ -44,11 +44,12 @@ public interface TaskService {
     /**
      * Retrieves all tasks with pagination.
      *
+     * @param search optional search text to filter by title/description
      * @param page the page number (0-indexed)
      * @param size the page size
      * @return paginated task responses
      */
-    PageResponse<TaskResponse> getAllTasks(int page, int size);
+    PageResponse<TaskResponse> getAllTasks(String search, int page, int size);
 
     /**
      * Deletes a task.
@@ -61,6 +62,7 @@ public interface TaskService {
     /**
      * Searches tasks with multiple filters.
      *
+     * @param search optional search text to filter by title/description
      * @param assignedToId optional assigned employee ID filter
      * @param status optional task status filter
      * @param priority optional task priority filter
@@ -70,19 +72,20 @@ public interface TaskService {
      * @param size the page size
      * @return paginated search results
      */
-    PageResponse<TaskResponse> searchTasks(Long assignedToId, TaskStatus status, TaskPriority priority,
+    PageResponse<TaskResponse> searchTasks(String search, Long assignedToId, TaskStatus status, TaskPriority priority,
                                            LocalDate startDate, LocalDate endDate, int page, int size);
 
     /**
      * Retrieves tasks assigned to a specific employee.
      *
      * @param employeeId the employee ID
+     * @param search optional search text to filter by title/description (regex pattern)
      * @param page the page number
      * @param size the page size
      * @return paginated tasks assigned to the employee
      * @throws com.wheelshiftpro.exception.ResourceNotFoundException if employee not found
      */
-    PageResponse<TaskResponse> getTasksByEmployee(Long employeeId, int page, int size);
+    PageResponse<TaskResponse> getTasksByEmployee(Long employeeId, String search, int page, int size);
 
     /**
      * Retrieves tasks by status.
