@@ -46,6 +46,18 @@ public class AuthController {
         try {
             log.info("Login attempt for email: {}", request.getEmail());
 
+            // First check if employee exists
+            Employee employee = employeeRepository.findByEmail(request.getEmail())
+                    .orElse(null);
+            
+            if (employee == null) {
+                log.warn("Login failed - User not found: {}", request.getEmail());
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(AuthResponse.builder()
+                                .message("User not registered or not found")
+                                .build());
+            }
+
             // Authenticate the user
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
@@ -64,10 +76,6 @@ public class AuthController {
             session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, securityContext);
             
             log.info("Authentication successful and session created for: {}", request.getEmail());
-            
-            // Fetch employee details
-            Employee employee = employeeRepository.findByEmail(request.getEmail())
-                    .orElseThrow(() -> new RuntimeException("Employee not found"));
 
             // Extract roles and permissions
             Set<RoleType> roles = employee.getRoles().stream()
@@ -93,10 +101,10 @@ public class AuthController {
             return ResponseEntity.ok(response);
 
         } catch (AuthenticationException e) {
-            log.error("Login failed for email: {}", request.getEmail(), e);
+            log.warn("Login failed for email: {} - Invalid password", request.getEmail());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(AuthResponse.builder()
-                            .message("Invalid email or password")
+                            .message("Invalid password")
                             .build());
         }
     }
