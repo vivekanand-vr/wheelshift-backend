@@ -11,7 +11,8 @@ import com.wheelshiftpro.enums.*;
 import com.wheelshiftpro.exception.ResourceNotFoundException;
 import com.wheelshiftpro.repository.*;
 import com.wheelshiftpro.service.DashboardService;
-import com.wheelshiftpro.service.NotificationService;
+import com.wheelshiftpro.service.notifications.NotificationService;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
