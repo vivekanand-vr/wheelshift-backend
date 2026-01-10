@@ -8,10 +8,16 @@ import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
+import org.springframework.security.core.AuthenticationException;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -263,6 +269,165 @@ public class GlobalExceptionHandler {
                 .build();
         
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+
+    /**
+     * Handle HTTP method not supported (e.g., GET instead of POST)
+     */
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleHttpRequestMethodNotSupportedException(
+            HttpRequestMethodNotSupportedException ex, 
+            HttpServletRequest request) {
+        
+        log.warn("HTTP method not supported: {} for {}", ex.getMethod(), request.getRequestURI());
+        
+        String supportedMethods = ex.getSupportedHttpMethods() != null 
+                ? String.join(", ", ex.getSupportedHttpMethods().stream().map(Object::toString).toList())
+                : "Unknown";
+        
+        String detail = String.format("Request method '%s' is not supported for this endpoint. Supported methods: %s", 
+                ex.getMethod(), supportedMethods);
+        
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .type("about:blank")
+                .title("Method Not Allowed")
+                .status(HttpStatus.METHOD_NOT_ALLOWED.value())
+                .detail(detail)
+                .instance(request.getRequestURI())
+                .code("METHOD_NOT_ALLOWED")
+                .timestamp(LocalDateTime.now())
+                .build();
+        
+        return new ResponseEntity<>(errorResponse, HttpStatus.METHOD_NOT_ALLOWED);
+    }
+
+    /**
+     * Handle unsupported media type (e.g., sending XML when only JSON is supported)
+     */
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleHttpMediaTypeNotSupportedException(
+            HttpMediaTypeNotSupportedException ex, 
+            HttpServletRequest request) {
+        
+        log.warn("Media type not supported: {} for {}", ex.getContentType(), request.getRequestURI());
+        
+        String supportedTypes = ex.getSupportedMediaTypes() != null 
+                ? ex.getSupportedMediaTypes().stream().map(Object::toString).collect(java.util.stream.Collectors.joining(", "))
+                : "Unknown";
+        
+        String detail = String.format("Content type '%s' is not supported. Supported types: %s", 
+                ex.getContentType(), supportedTypes);
+        
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .type("about:blank")
+                .title("Unsupported Media Type")
+                .status(HttpStatus.UNSUPPORTED_MEDIA_TYPE.value())
+                .detail(detail)
+                .instance(request.getRequestURI())
+                .code("UNSUPPORTED_MEDIA_TYPE")
+                .timestamp(LocalDateTime.now())
+                .build();
+        
+        return new ResponseEntity<>(errorResponse, HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+    }
+
+    /**
+     * Handle missing required request parameters
+     */
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponse> handleMissingServletRequestParameterException(
+            MissingServletRequestParameterException ex, 
+            HttpServletRequest request) {
+        
+        log.warn("Missing required parameter: {} for {}", ex.getParameterName(), request.getRequestURI());
+        
+        String detail = String.format("Required parameter '%s' of type '%s' is missing", 
+                ex.getParameterName(), ex.getParameterType());
+        
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .type("about:blank")
+                .title("Missing Required Parameter")
+                .status(HttpStatus.BAD_REQUEST.value())
+                .detail(detail)
+                .instance(request.getRequestURI())
+                .code("MISSING_PARAMETER")
+                .timestamp(LocalDateTime.now())
+                .build();
+        
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+
+    /**
+     * Handle method argument type mismatch (e.g., passing string when integer expected)
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatchException(
+            MethodArgumentTypeMismatchException ex, 
+            HttpServletRequest request) {
+        
+        log.warn("Method argument type mismatch: {} for {}", ex.getName(), request.getRequestURI());
+        
+        String requiredType = ex.getRequiredType() != null ? ex.getRequiredType().getSimpleName() : "Unknown";
+        String detail = String.format("Parameter '%s' with value '%s' could not be converted to type '%s'", 
+                ex.getName(), ex.getValue(), requiredType);
+        
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .type("about:blank")
+                .title("Invalid Parameter Type")
+                .status(HttpStatus.BAD_REQUEST.value())
+                .detail(detail)
+                .instance(request.getRequestURI())
+                .code("INVALID_PARAMETER_TYPE")
+                .timestamp(LocalDateTime.now())
+                .build();
+        
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+
+    /**
+     * Handle authorization denied (session expiry, access denied)
+     */
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAuthorizationDeniedException(
+            AuthorizationDeniedException ex, 
+            HttpServletRequest request) {
+        
+        log.warn("Authorization denied for {}: {}", request.getRequestURI(), ex.getMessage());
+        
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .type("about:blank")
+                .title("Session Expired")
+                .status(HttpStatus.UNAUTHORIZED.value())
+                .detail("Your session has expired. Please login again and try.")
+                .instance(request.getRequestURI())
+                .code("SESSION_EXPIRED")
+                .timestamp(LocalDateTime.now())
+                .build();
+        
+        return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
+    }
+
+    /**
+     * Handle authentication exceptions (login failures, etc.)
+     */
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ErrorResponse> handleAuthenticationException(
+            AuthenticationException ex, 
+            HttpServletRequest request) {
+        
+        log.warn("Authentication failed for {}: {}", request.getRequestURI(), ex.getMessage());
+        
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .type("about:blank")
+                .title("Authentication Failed")
+                .status(HttpStatus.UNAUTHORIZED.value())
+                .detail("Authentication failed. Please check your credentials and try again.")
+                .instance(request.getRequestURI())
+                .code("AUTHENTICATION_FAILED")
+                .timestamp(LocalDateTime.now())
+                .build();
+        
+        return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
     }
 
     /**

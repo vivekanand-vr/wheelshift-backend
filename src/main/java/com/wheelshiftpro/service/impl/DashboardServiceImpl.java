@@ -15,6 +15,7 @@ import com.wheelshiftpro.service.notifications.NotificationService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -52,6 +53,7 @@ public class DashboardServiceImpl implements DashboardService {
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
     
     @Override
+    @Cacheable(value = "adminDashboard", key = "#employeeId")
     public AdminDashboardResponse getAdminDashboard(Long employeeId) {
         log.info("Fetching admin dashboard for employee: {}", employeeId);
         
@@ -67,6 +69,7 @@ public class DashboardServiceImpl implements DashboardService {
     }
     
     @Override
+    @Cacheable(value = "salesDashboard", key = "#employeeId")
     public SalesDashboardResponse getSalesDashboard(Long employeeId) {
         log.info("Fetching sales dashboard for employee: {}", employeeId);
         
@@ -81,6 +84,7 @@ public class DashboardServiceImpl implements DashboardService {
     }
     
     @Override
+    @Cacheable(value = "inspectorDashboard", key = "#employeeId")
     public InspectorDashboardResponse getInspectorDashboard(Long employeeId) {
         log.info("Fetching inspector dashboard for employee: {}", employeeId);
         
@@ -96,6 +100,7 @@ public class DashboardServiceImpl implements DashboardService {
     }
     
     @Override
+    @Cacheable(value = "financeDashboard", key = "#employeeId")
     public FinanceDashboardResponse getFinanceDashboard(Long employeeId) {
         log.info("Fetching finance dashboard for employee: {}", employeeId);
         
@@ -110,6 +115,7 @@ public class DashboardServiceImpl implements DashboardService {
     }
     
     @Override
+    @Cacheable(value = "storeManagerDashboard", key = "#employeeId")
     public StoreManagerDashboardResponse getStoreManagerDashboard(Long employeeId) {
         log.info("Fetching store manager dashboard for employee: {}", employeeId);
         

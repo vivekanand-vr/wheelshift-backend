@@ -42,6 +42,7 @@ docker-compose down
 ### Security & System Features
 - ✅ **Role-Based Access Control (RBAC)** - Comprehensive permission system
 - ✅ **Notification System** - Multi-channel notifications with templates
+- ✅ **Redis Caching** - High-performance caching with configurable TTLs
 - ✅ **Audit Logging** - Automatic change tracking
 - ✅ **File Logging** - Application logging with rotation
 - ✅ **Error Handling** - Custom error pages
@@ -183,6 +184,7 @@ WheelShiftPro/
 | RBAC System | ✅ Complete |
 | Notification System | ✅ Complete |
 | Dashboard System | ✅ Complete |
+| Redis Caching | ✅ Complete |
 | Task Management | ✅ Complete |
 | JWT Authentication | ✅ Complete |
 | Swagger Documentation | ✅ Complete |
@@ -200,6 +202,8 @@ WheelShiftPro/
 
 - [Product Documentation](docs/PRODUCT_DOCUMENTATION.md) - Complete system overview and design
 - [Developer Guide](docs/guides/DEVELOPER_GUIDE.md) - Setup and development workflow
+- [Redis Caching Guide](docs/REDIS_CACHING_GUIDE.md) - Comprehensive caching implementation guide
+- [Cache Invalidation Reference](docs/CACHE_INVALIDATION_REFERENCE.md) - Quick reference for cache management
 - [RBAC Guide](docs/features/rbac/README.md) - Role-Based Access Control
 - [Notifications Guide](docs/features/notifications/README.md) - Notification system
 - [Dashboard Guide](docs/features/dashboard/README.md) - Dashboard implementation
