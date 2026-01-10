@@ -2,71 +2,75 @@
 
 > A production-ready Spring Boot application for used car trading and inventory management with comprehensive RBAC and notification systems.
 
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
 # Clone the repository
 git clone <repository-url>
 cd WheelShiftPro
 
-# Configure database (MySQL 8.0+)
-# Update src/main/resources/application.properties
+# Start MySQL and Redis with Docker Compose
+docker-compose up -d mysql redis
 
-# Build and run
+# Build and run the application
 ./mvnw clean install
 ./mvnw spring-boot:run
 
 # Access API documentation
 http://localhost:8080/api/v1/swagger-ui.html
+
+# Stop services when done
+docker-compose down
 ```
 
-## 📋 Features
+## Features
 
 ### Core Business Modules
-- **Vehicle Inventory Management** - Track cars from purchase to sale with complete lifecycle management
-- **Customer (Client) Management** - Maintain client profiles, purchase history, and interactions
-- **Employee Management** - Staff tracking with role assignments and performance metrics
-- **Lead Management (Inquiries)** - Track and convert customer inquiries into sales
-- **Reservation System** - Vehicle holds with deposit management and expiration tracking
-- **Sales Processing** - Complete sales transaction recording and commission tracking
-- **Financial Management** - Track all financial transactions with reporting capabilities
-- **Storage Locations** - Manage multiple facilities with capacity tracking
-- **Car Inspections** - Vehicle health check records and reports
-- **Task Management** - Internal task assignment and tracking system
-- **Event Calendar** - Appointment and event scheduling
+- ✅ **Vehicle Inventory Management** - Complete car lifecycle tracking
+- ✅ **Customer (Client) Management** - Client profiles and purchase history
+- ✅ **Employee Management** - Staff tracking and performance metrics
+- ✅ **Lead Management (Inquiries)** - Inquiry tracking and conversion
+- ✅ **Reservation System** - Vehicle holds with deposit management
+- ✅ **Sales Processing** - Transaction recording and commissions
+- ✅ **Financial Management** - Transaction tracking and reporting
+- ✅ **Storage Locations** - Multi-facility management with capacity tracking
+- ✅ **Car Inspections** - Vehicle inspection records and reports
+- ✅ **Task Management** - Task assignment and tracking (Kanban board)
+- ✅ **Event Calendar** - Appointment and event scheduling
+- ✅ **Dashboard System** - Role-based dashboard views for all user types
 
-### Advanced Features
-- **Role-Based Access Control (RBAC)** - Hierarchical permissions with data scopes and resource-level ACLs
-- **Notification System** - Multi-channel notifications (In-App, Email, SMS, Push) with template engine
-- **Audit Logging** - Automatic tracking of all create/update operations
-- **File Logging** - Comprehensive application logging with rotation
-- **Error Handling** - Custom error pages for 403, 404, 500 and generic errors
+### Security & System Features
+- ✅ **Role-Based Access Control (RBAC)** - Comprehensive permission system
+- ✅ **Notification System** - Multi-channel notifications with templates
+- ✅ **Audit Logging** - Automatic change tracking
+- ✅ **File Logging** - Application logging with rotation
+- ✅ **Error Handling** - Custom error pages
+- ✅ **JWT Authentication** - Secure token-based auth
+
+> **Note:** Check individual feature documentation in `docs/features/` for detailed implementation guides.
 
 ## 🛡️ Security & Authorization
 
-WheelShift Pro implements a comprehensive RBAC system:
+- **6 Built-in Roles** with hierarchical permissions
+- **40+ Fine-grained Permissions** (resource:action format)
+- **Data Scoping** for location/department-based filtering
+- **Resource-level ACLs** for individual access control
+- **JWT Authentication** with secure token management
 
-- **6 Built-in Roles**: Super Admin, Admin, Sales, Inspector, Finance, Store Manager
-- **40+ Permissions**: Fine-grained resource:action format (e.g., `cars:read`, `sales:write`)
-- **Data Scopes**: Filter data by location, department, or assignment
-- **Resource ACLs**: Individual resource-level access control
-- **JWT Authentication**: Secure token-based authentication
-
-[📖 RBAC Documentation](docs/features/rbac/README.md)
+[View RBAC Documentation](docs/features/rbac/README.md)
 
 ## 🔔 Notification System
 
-Multi-channel notification system with:
+- **Multi-channel Support**: In-App, Email, SMS, WhatsApp, Push, Webhooks
+- **Template Engine** with variable substitution
+- **User Preferences** per channel
+- **Event-driven Architecture** for automatic notifications
+- **Delivery Tracking** and status monitoring
 
-- **Channels**: In-App, Email, SMS, WhatsApp, Push Notifications, Webhooks
-- **Templates**: Reusable message templates with variable substitution
-- **Preferences**: User-defined notification preferences per channel
-- **Event-Driven**: Automatic notifications based on business events
-- **Delivery Tracking**: Monitor notification delivery status
+[View Notifications Documentation](docs/features/notifications/README.md)
+[View Dashboard Documentation](docs/features/dashboard/README.md)
 
-[📖 Notifications Documentation](docs/features/notifications/README.md)
-
-## 🏗️ Technology Stack
+## Technology Stack
 
 | Category | Technology |
 |----------|------------|
@@ -83,45 +87,22 @@ Multi-channel notification system with:
 | **Caching** | Redis |
 | **Logging** | Logback with file rotation |
 
-## 📡 API Overview
+## API Overview
 
 Base URL: `http://localhost:8080/api/v1`
 
-### Core Resources (120+ Endpoints)
+**Total Endpoints:** 150+ REST endpoints organized by resource
 
-| Resource | Endpoints | Description |
+### Resource Categories
+
+| Category | Endpoints | Description |
 |----------|-----------|-------------|
-| `/car-models` | 12 | Car make/model/variant catalog |
-| `/cars` | 14 | Vehicle inventory management |
-| `/clients` | 11 | Customer management |
-| `/employees` | 11 | Staff management |
-| `/inquiries` | 12 | Lead tracking |
-| `/reservations` | 13 | Vehicle reservations |
-| `/sales` | 12 | Sales transactions |
-| `/financial-transactions` | 12 | Financial records |
-| `/car-inspections` | 10 | Vehicle inspections |
-| `/storage-locations` | 8 | Facility management |
-| `/tasks` | 13 | Task management |
-| `/events` | 11 | Event scheduling |
+| **Core Business** | 90+ | Vehicle, Client, Employee, Sales, Inquiries, etc. |
+| **RBAC & Auth** | 25+ | Authentication, Roles, Permissions, ACLs |
+| **Notifications** | 20+ | Notifications, Preferences, Templates |
+| **Task & Calendar** | 15+ | Tasks, Events, Calendar operations |
 
-### RBAC Endpoints
-
-| Resource | Endpoints | Description |
-|----------|-----------|-------------|
-| `/auth` | 2 | Login and authentication |
-| `/roles` | 7 | Role management |
-| `/permissions` | 5 | Permission management |
-| `/employee-roles` | 3 | Employee role assignments |
-| `/data-scopes` | 5 | Data scope management |
-| `/resource-acl` | 5 | Resource ACL management |
-
-### Notification Endpoints
-
-| Resource | Endpoints | Description |
-|----------|-----------|-------------|
-| `/notifications` | 10 | Notification management |
-| `/notifications/preferences` | 5 | User preferences |
-| `/notifications/templates` | 7 | Template management |
+**Interactive API Documentation:** [Swagger UI](http://localhost:8080/api/v1/swagger-ui.html)
 
 ## 🗄️ Database Schema
 
@@ -134,7 +115,7 @@ The application uses Flyway for database migrations with a comprehensive schema:
 
 Migration files located in: `src/main/resources/db/migration/`
 
-## 🔧 Configuration
+## Configuration
 
 Key configuration in `application.properties`:
 
@@ -159,7 +140,7 @@ springdoc.api-docs.path=/api/v1/api-docs
 springdoc.swagger-ui.path=/api/v1/swagger-ui.html
 ```
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 WheelShiftPro/
@@ -184,7 +165,7 @@ WheelShiftPro/
     └── guides/         # Developer guides
 ```
 
-## 🧪 Testing
+## Testing
 
 ```bash
 # Run all tests
@@ -194,46 +175,34 @@ WheelShiftPro/
 ./mvnw clean test jacoco:report
 ```
 
-## 📊 Development Status
+## Development Status
 
-| Feature | Status |
-|---------|--------|
+| Module | Status |
+|--------|--------|
 | Core Business APIs | ✅ Complete |
 | RBAC System | ✅ Complete |
 | Notification System | ✅ Complete |
+| Dashboard System | ✅ Complete |
+| Task Management | ✅ Complete |
 | JWT Authentication | ✅ Complete |
 | Swagger Documentation | ✅ Complete |
 | Error Handling | ✅ Complete |
+| Audit Logging | ✅ Complete |
 | File Logging | ✅ Complete |
 | Database Migrations | ✅ Complete |
 | Unit Tests | 🚧 In Progress |
 | Integration Tests | 📋 Planned |
+| End-to-End Tests | 📋 Planned |
 
 **Overall Progress**: 95% Complete
 
-## 📖 Documentation
+## Documentation
 
+- [Product Documentation](docs/PRODUCT_DOCUMENTATION.md) - Complete system overview and design
 - [Developer Guide](docs/guides/DEVELOPER_GUIDE.md) - Setup and development workflow
-- [RBAC Guide](docs/features/rbac/README.md) - Role-Based Access Control implementation
-- [Notifications Guide](docs/features/notifications/README.md) - Notification system usage
-- [API Reference](http://localhost:8080/api/v1/swagger-ui.html) - Interactive API documentation
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'feat: add some amazing feature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## 📝 License
-
-This project is proprietary software. All rights reserved.
-
-## 📧 Contact
-
-For questions or support, please contact the development team.
-
----
-
-**Built with ❤️ using Spring Boot**
+- [RBAC Guide](docs/features/rbac/README.md) - Role-Based Access Control
+- [Notifications Guide](docs/features/notifications/README.md) - Notification system
+- [Dashboard Guide](docs/features/dashboard/README.md) - Dashboard implementation
+- [Tasks Guide](docs/features/tasks/README.md) - Task management system
+- [Documentation Standard](docs/features/DOCUMENTATION_STANDARD.md) - How to document features
+- [API Reference](http://localhost:8080/api/v1/swagger-ui.html) - Interactive API docs
