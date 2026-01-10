@@ -1,15 +1,16 @@
 package com.wheelshiftpro.service.impl;
 
 import com.wheelshiftpro.entity.Employee;
-import com.wheelshiftpro.enums.AccessLevel;
-import com.wheelshiftpro.enums.ResourceType;
-import com.wheelshiftpro.enums.RoleType;
+import com.wheelshiftpro.enums.rbac.AccessLevel;
+import com.wheelshiftpro.enums.rbac.ResourceType;
+import com.wheelshiftpro.enums.rbac.RoleType;
 import com.wheelshiftpro.exception.ResourceNotFoundException;
 import com.wheelshiftpro.repository.EmployeeRepository;
 import com.wheelshiftpro.service.AuthorizationService;
-import com.wheelshiftpro.service.DataScopeService;
-import com.wheelshiftpro.service.PermissionService;
-import com.wheelshiftpro.service.ResourceACLService;
+import com.wheelshiftpro.service.rbac.DataScopeService;
+import com.wheelshiftpro.service.rbac.PermissionService;
+import com.wheelshiftpro.service.rbac.ResourceACLService;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

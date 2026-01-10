@@ -1,12 +1,13 @@
 package com.wheelshiftpro.dto.response;
 
-import com.wheelshiftpro.enums.RoleType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.Set;
+
+import com.wheelshiftpro.enums.rbac.RoleType;
 
 /**
  * DTO for authentication response

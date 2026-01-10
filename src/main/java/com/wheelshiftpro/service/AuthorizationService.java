@@ -1,8 +1,8 @@
 package com.wheelshiftpro.service;
 
-import com.wheelshiftpro.enums.AccessLevel;
-import com.wheelshiftpro.enums.ResourceType;
-import com.wheelshiftpro.enums.RoleType;
+import com.wheelshiftpro.enums.rbac.AccessLevel;
+import com.wheelshiftpro.enums.rbac.ResourceType;
+import com.wheelshiftpro.enums.rbac.RoleType;
 
 /**
  * Service interface for authorization operations.

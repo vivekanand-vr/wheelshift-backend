@@ -1,5 +1,7 @@
 package com.wheelshiftpro.entity;
 
+import com.wheelshiftpro.entity.rbac.EmployeeDataScope;
+import com.wheelshiftpro.entity.rbac.Role;
 import com.wheelshiftpro.enums.EmployeeStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;

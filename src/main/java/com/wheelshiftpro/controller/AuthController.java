@@ -3,7 +3,7 @@ package com.wheelshiftpro.controller;
 import com.wheelshiftpro.dto.request.LoginRequest;
 import com.wheelshiftpro.dto.response.AuthResponse;
 import com.wheelshiftpro.entity.Employee;
-import com.wheelshiftpro.enums.RoleType;
+import com.wheelshiftpro.enums.rbac.RoleType;
 import com.wheelshiftpro.repository.EmployeeRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
