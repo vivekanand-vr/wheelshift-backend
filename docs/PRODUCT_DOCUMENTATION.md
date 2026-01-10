@@ -157,7 +157,7 @@ WheelShift Pro follows a modern **3-tier architecture**:
 - **Services** - Business logic, transaction management
 - **Repositories** - Database operations via Spring Data JPA
 - **Mappers** - Entity-DTO conversion using MapStruct
-- **Security** - JWT authentication, RBAC authorization
+- **Security** - Session-based authentication, RBAC authorization
 - **Exception Handlers** - Centralized error handling
 - **Validators** - Bean validation and custom validators
 - **Schedulers** - Background tasks (reservation expiry, notifications)
@@ -471,10 +471,11 @@ WheelShift Pro follows a modern **3-tier architecture**:
   - Override role-based permissions for specific records
 
 **Architecture:**
-- JWT-based authentication
-- Spring Security integration
+- Session-based authentication with Spring Security
+- HttpSession management
 - Custom authorization filters
 - Permission annotation support (`@PreAuthorize`)
+- Stateful session tracking
 
 **Database Schema:**
 - `Role` - Role definitions
@@ -486,10 +487,11 @@ WheelShift Pro follows a modern **3-tier architecture**:
 
 **Security Features:**
 - Password encryption (BCrypt)
-- Token expiration and refresh
-- Session management
+- HTTP session management
+- Session timeout and invalidation
 - Audit logging for security events
 - Failed login attempt tracking
+- CSRF protection for session-based auth
 
 📖 **Detailed Documentation:** [RBAC Guide](features/rbac/README.md)
 
@@ -1015,7 +1017,7 @@ src/main/resources/db/migration/
 
 - **RESTful** - Standard HTTP methods (GET, POST, PUT, DELETE, PATCH)
 - **Resource-oriented** - URLs represent resources
-- **Stateless** - JWT token-based authentication
+- **Stateful** - Session-based authentication with HttpSession
 - **Versioned** - `/api/v1/` prefix for future compatibility
 - **JSON** - Request and response format
 - **HATEOAS** - Hypermedia links (planned)
@@ -1086,7 +1088,7 @@ src/main/resources/db/migration/
 
 | Category | Base Path | Endpoints | Description |
 |----------|-----------|-----------|-------------|
-| **Authentication** | `/api/v1/auth` | 2 | Login, token refresh |
+| **Authentication** | `/api/v1/auth` | 3 | Login, logout, current user |
 | **Car Models** | `/api/v1/car-models` | 17 | Model catalog management |
 | **Cars** | `/api/v1/cars` | 24 | Vehicle inventory |
 | **Storage** | `/api/v1/storage-locations` | 12 | Facility management |
@@ -1123,7 +1125,7 @@ src/main/resources/db/migration/
 | `201` | Created | Successful POST |
 | `204` | No Content | Successful DELETE |
 | `400` | Bad Request | Validation error |
-| `401` | Unauthorized | Missing/invalid token |
+| `401` | Unauthorized | Missing/invalid session or credentials |
 | `403` | Forbidden | Insufficient permissions |
 | `404` | Not Found | Resource not found |
 | `409` | Conflict | Duplicate resource |
@@ -1139,15 +1141,17 @@ Client                      Server
   │   {email, password}       │
   ├──────────────────────────>│
   │                           │ Verify credentials
-  │                           │ Generate JWT token
+  │                           │ Create HttpSession
+  │                           │ Store SecurityContext
   │   200 OK                  │
-  │   {token, refreshToken}   │
+  │   Set-Cookie: JSESSIONID  │
+  │   {employee, roles, ...}  │
   │<──────────────────────────┤
   │                           │
   │   GET /api/v1/cars        │
-  │   Authorization: Bearer <token>
+  │   Cookie: JSESSIONID=xxx  │
   ├──────────────────────────>│
-  │                           │ Validate token
+  │                           │ Validate session
   │                           │ Check permissions
   │   200 OK                  │
   │   {cars data}             │
@@ -1160,127 +1164,220 @@ Client                      Server
 
 ### 9.1 Authentication
 
-**JWT Token Structure:**
+**Session-Based Authentication:**
+
+WheelShift Pro uses Spring Security's session-based authentication mechanism.
+
+**Authentication Flow:**
+1. User submits credentials via `/api/v1/auth/login`
+2. Spring Security validates credentials against database
+3. Upon success, creates `Authentication` object
+4. Stores `Authentication` in `SecurityContext`
+5. Saves `SecurityContext` in `HttpSession`
+6. Returns session cookie (`JSESSIONID`) to client
+7. Subsequent requests include session cookie for authentication
+
+**Session Structure:**
 ```json
 {
-  "header": {
-    "alg": "HS256",
-    "typ": "JWT"
-  },
-  "payload": {
-    "sub": "employee@example.com",
+  "sessionId": "JSESSIONID=xyz123",
+  "principal": {
     "employeeId": 123,
+    "email": "employee@example.com",
+    "name": "John Doe",
     "roles": ["ADMIN", "SALES"],
-    "iat": 1704902400,
-    "exp": 1704988800
-  }
+    "permissions": ["cars:read", "cars:write", "clients:read", ...]
+  },
+  "authenticated": true,
+  "createdAt": 1704902400,
+  "lastAccessedAt": 1704906000
 }
 ```
 
-**Token Management:**
-- Access token validity: 8 hours
-- Refresh token validity: 30 days
-- Token stored in HTTP-only cookie (recommended)
-- Token blacklist for logout (Redis)
+**Session Management:**
+- Session timeout: 8 hours (configurable)
+- Session stored in server memory (or Redis for distributed deployments)
+- Automatic session renewal on activity
+- Session invalidation on logout
+- CSRF protection enabled
+- Secure cookie flags (HttpOnly, Secure in production)
+- Roles and permissions loaded on login for fast authorization
 
-### 9.2 Authorization
+### 9.2 Role-Based Access Control (RBAC)
 
-**Permission Hierarchy:**
+WheelShift Pro implements a comprehensive multi-layer RBAC system.
+
+**Authorization Hierarchy:**
 ```
-Super Admin
-    └── Full system access
-Admin
-    ├── Business operations
-    ├── Employee management
-    └── Reporting
-Sales
-    ├── Client management
-    ├── Inquiry management
-    └── Sales processing
-Inspector
-    ├── Car inspections
-    └── Inspection reports
-Finance
-    ├── Financial transactions
-    ├── Pricing
-    └── Commissions
-Store Manager
-    ├── Inventory management
-    ├── Storage allocation
-    └── Vehicle movement
+┌─────────────────────────────────┐
+│      SUPER_ADMIN Override       │  ← Always Granted
+├─────────────────────────────────┤
+│      Resource ACL Check         │  ← Explicit per-resource access
+├─────────────────────────────────┤
+│      Data Scope Match           │  ← Location/Department/Assignment
+├─────────────────────────────────┤
+│      Role Permission Check      │  ← Role-based permissions
+├─────────────────────────────────┤
+│           DENY                  │  ← Default deny
+└─────────────────────────────────┘
 ```
+
+**Built-in Roles:**
+
+| Role | Access Level | Permissions |
+|------|--------------|-------------|
+| **SUPER_ADMIN** | Full system access | `*:*` (all permissions) |
+| **ADMIN** | Administrative | `employees:*`, `roles:*`, `permissions:*`, `locations:*`, `reports:read` |
+| **SALES** | Sales operations | `inquiries:*`, `reservations:*`, `sales:*`, `clients:read`, `cars:read` |
+| **INSPECTOR** | Vehicle inspections | `inspections:*`, `cars:read`, `movements:write` |
+| **FINANCE** | Financial operations | `transactions:*`, `sales:read`, `reports:*` |
+| **STORE_MANAGER** | Location management | `cars:*`, `movements:*`, `locations:read`, `tasks:*` |
 
 **Permission Format:** `resource:action`
 
 Examples:
 - `cars:read` - View car records
 - `cars:write` - Create/update cars
-- `sales:delete` - Delete sales records
-- `employees:manage` - Manage employees
-- `reports:view` - View reports
+- `cars:delete` - Delete cars
+- `cars:*` - All car operations
+- `*:*` - All operations (SUPER_ADMIN only)
 
-### 9.3 Data Scoping
+**Available Resources:**
+```
+cars, car-models, clients, employees, inquiries, reservations,
+sales, transactions, inspections, locations, tasks, events,
+roles, permissions, acl, notifications
+```
+
+### 9.3 Data Scopes
+
+Data scopes restrict employee access to specific organizational boundaries.
 
 **Scope Types:**
 
-1. **Location Scope** - Filter by storage location
-   ```java
-   @DataScope(type = ScopeType.LOCATION)
-   public List<Car> findAll() { ... }
+1. **Location Scope** - Limit to specific storage locations
+   ```json
+   {
+     "employeeId": 5,
+     "scopeType": "LOCATION",
+     "scopeValue": "LOC-001",
+     "effect": "INCLUDE"
+   }
    ```
+   *Result: Employee sees only resources in LOC-001*
 
-2. **Department Scope** - Filter by employee department
-   ```java
-   @DataScope(type = ScopeType.DEPARTMENT)
-   public List<Employee> findAll() { ... }
+2. **Department Scope** - Limit to department resources
+   ```json
+   {
+     "employeeId": 8,
+     "scopeType": "DEPARTMENT",
+     "scopeValue": "FINANCE",
+     "effect": "INCLUDE"
+   }
    ```
+   *Result: Employee sees only finance-related resources*
 
-3. **Assignment Scope** - Show only assigned records
-   ```java
-   @DataScope(type = ScopeType.ASSIGNED)
-   public List<Inquiry> findAll() { ... }
+3. **Assignment Scope** - Limit to assigned resources
+   ```json
+   {
+     "employeeId": 10,
+     "scopeType": "ASSIGNMENT",
+     "scopeValue": "SELF",
+     "effect": "INCLUDE"
+   }
    ```
+   *Result: Employee sees only their assigned inquiries/reservations*
+
+**Scope Effects:**
+- **INCLUDE** - Grant access to specified scope
+- **EXCLUDE** - Deny access to specified scope
 
 ### 9.4 Resource ACLs
+
+Resource Access Control Lists provide fine-grained, per-record access control.
 
 **ACL Structure:**
 ```json
 {
   "resourceType": "CAR",
   "resourceId": 123,
-  "principalType": "EMPLOYEE",
-  "principalId": 456,
-  "permissions": ["READ", "UPDATE"],
+  "subjectType": "EMPLOYEE",
+  "subjectId": 456,
+  "accessLevel": "WRITE",
+  "reason": "Assigned to manage this vehicle",
   "grantedBy": 1,
-  "grantedAt": "2026-01-01T00:00:00Z"
+  "createdAt": "2026-01-01T00:00:00Z"
 }
 ```
 
+**Access Levels:**
+- **READ** - View only
+- **WRITE** - View and modify
+- **ADMIN** - Full control (including ACL management)
+
+**Subject Types:**
+- **EMPLOYEE** - Individual employee
+- **ROLE** - All employees with a role
+- **DEPARTMENT** - All employees in a department
+
 **Use Cases:**
 - Grant specific employee access to a high-value car
-- Restrict sale deletion to Finance team
+- Temporary inspector access to review specific vehicle
 - Allow client to view their purchase history
+- Restrict sale deletion to specific finance staff
 
-### 9.5 Security Best Practices
+### 9.5 API Endpoints
+
+**RBAC Management:**
+```
+POST   /api/v1/rbac/roles                    Create role
+GET    /api/v1/rbac/roles                    List all roles
+POST   /api/v1/rbac/roles/{id}/permissions   Assign permission to role
+DELETE /api/v1/rbac/roles/{id}/permissions   Remove permission from role
+
+POST   /api/v1/rbac/permissions              Create permission
+GET    /api/v1/rbac/permissions              List all permissions
+
+POST   /api/v1/rbac/data-scopes              Create data scope
+GET    /api/v1/rbac/data-scopes/employee/{id} Get employee scopes
+DELETE /api/v1/rbac/data-scopes/{id}         Remove data scope
+
+POST   /api/v1/rbac/acl/{type}/{id}          Grant ACL
+GET    /api/v1/rbac/acl/{type}/{id}          Get resource ACL
+DELETE /api/v1/rbac/acl/{id}                 Remove ACL entry
+```
+
+**For detailed RBAC usage, see:**
+- `docs/RBAC_USAGE_GUIDE.md` - Complete usage guide
+- `docs/RBAC_IMPLEMENTATION_SUMMARY.md` - Technical implementation details
+
+### 9.6 Security Best Practices
 
 **Implemented:**
 - ✅ Password hashing (BCrypt with salt)
-- ✅ JWT token-based authentication
-- ✅ Role-based access control
+- ✅ Session-based authentication with Spring Security
+- ✅ Multi-layer role-based access control
+- ✅ Fine-grained permission system
+- ✅ Data scoping for multi-location operations
+- ✅ Resource-level ACLs
 - ✅ SQL injection prevention (Prepared statements)
 - ✅ XSS protection (Input validation)
 - ✅ CSRF protection (for cookie-based auth)
 - ✅ HTTPS enforcement (production)
-- ✅ Rate limiting (planned)
-- ✅ Audit logging
+- ✅ Audit logging with authorization tracking
 - ✅ Secure password requirements
+- ✅ Super admin protection
+- ✅ System role immutability
 
 **Planned:**
+- 🔜 JWT token-based authentication for stateless API access
 - 🔜 Two-factor authentication (2FA)
 - 🔜 IP whitelisting for admin access
 - 🔜 OAuth2 integration
 - 🔜 API key authentication for external integrations
 - 🔜 Encryption at rest for sensitive data
+- 🔜 Rate limiting per endpoint
+- 🔜 Distributed session management (Redis session store)
 
 ---
 
