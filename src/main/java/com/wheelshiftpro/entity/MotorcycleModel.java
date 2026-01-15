@@ -10,6 +10,9 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Entity representing a motorcycle model catalog.
  * Contains make, model, variant, and basic specifications for motorcycles.
@@ -78,6 +81,10 @@ public class MotorcycleModel extends BaseEntity {
     @Column(name = "is_active")
     @Builder.Default
     private Boolean isActive = true;
+
+    @OneToMany(mappedBy = "motorcycleModel", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<Motorcycle> motorcycles = new ArrayList<>();
 
     /**
      * Get the full model name (make + model + variant)

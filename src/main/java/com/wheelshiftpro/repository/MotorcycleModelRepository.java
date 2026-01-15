@@ -1,6 +1,7 @@
 package com.wheelshiftpro.repository;
 
 import com.wheelshiftpro.entity.MotorcycleModel;
+import com.wheelshiftpro.enums.FuelType;
 import com.wheelshiftpro.enums.MotorcycleVehicleType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -71,4 +72,42 @@ public interface MotorcycleModelRepository extends JpaRepository<MotorcycleModel
      */
     boolean existsByMakeAndModelAndVariantAndYear(
             String make, String model, String variant, Integer year);
+
+    /**
+     * Check if model exists by make, model and variant
+     */
+    boolean existsByMakeAndModelAndVariant(String make, String model, String variant);
+
+    /**
+     * Search motorcycle models with multiple filters
+     */
+    @Query("SELECT mm FROM MotorcycleModel mm WHERE " +
+           "(:make IS NULL OR LOWER(mm.make) LIKE LOWER(CONCAT('%', :make, '%'))) AND " +
+           "(:model IS NULL OR LOWER(mm.model) LIKE LOWER(CONCAT('%', :model, '%'))) AND " +
+           "(:fuelType IS NULL OR mm.fuelType = :fuelType) AND " +
+           "(:vehicleType IS NULL OR mm.vehicleType = :vehicleType)")
+    Page<MotorcycleModel> searchMotorcycleModels(
+            @Param("make") String make,
+            @Param("model") String model,
+            @Param("fuelType") FuelType fuelType,
+            @Param("vehicleType") MotorcycleVehicleType vehicleType,
+            Pageable pageable);
+
+    /**
+     * Find all distinct makes
+     */
+    @Query("SELECT DISTINCT mm.make FROM MotorcycleModel mm ORDER BY mm.make")
+    List<String> findDistinctMakes();
+
+    /**
+     * Find distinct models by make
+     */
+    @Query("SELECT DISTINCT mm.model FROM MotorcycleModel mm WHERE mm.make = :make ORDER BY mm.model")
+    List<String> findDistinctModelsByMake(@Param("make") String make);
+
+    /**
+     * Find distinct variants by make and model
+     */
+    @Query("SELECT DISTINCT mm.variant FROM MotorcycleModel mm WHERE mm.make = :make AND mm.model = :model ORDER BY mm.variant")
+    List<String> findDistinctVariantsByMakeAndModel(@Param("make") String make, @Param("model") String model);
 }
