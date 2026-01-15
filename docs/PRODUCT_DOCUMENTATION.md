@@ -31,7 +31,8 @@ WheelShift Pro is a comprehensive enterprise management system designed to strea
 ### 1.2 Scope
 
 The system covers:
-- **Complete Vehicle Lifecycle Management** - Purchase, inspection, inventory, reservation, and sales
+- **Complete Vehicle Lifecycle Management** - Purchase, inspection, inventory, reservation, and sales for both cars and motorcycles
+- **Dual Vehicle Inventory** - Separate management for 4-wheeler (cars) and 2-wheeler (motorcycles/scooters) inventory
 - **Customer Relationship Management** - Client profiles, inquiry tracking, and purchase history
 - **Employee & Sales Management** - Staff management, performance tracking, and commission calculations
 - **Financial Operations** - Transaction tracking, reporting, and audit trails
@@ -192,7 +193,85 @@ WheelShift Pro follows a modern **3-tier architecture**:
 - Block deletion of sold/reserved vehicles
 - Automatic status transitions
 
-### 4.2 Customer (Client) Management
+### 4.2 Motorcycle Inventory Management
+
+**Purpose:** Comprehensive tracking of all 2-wheeler vehicles (motorcycles, scooters, bikes) from acquisition to sale.
+
+**Key Capabilities:**
+- Complete motorcycle specifications (VIN, registration, model, year, mileage, engine capacity, etc.)
+- Support for multiple vehicle types (Motorcycle, Scooter, Sport Bike, Cruiser, Off-Road, etc.)
+- Status tracking (Available, Reserved, Sold, Maintenance, Inspection Pending, etc.)
+- Purchase and selling price management
+- Storage location assignment with capacity validation
+- Advanced filtering and search (by make, model, engine capacity, price range)
+- Motorcycle-specific attributes (engine number, chassis number, pollution certificate)
+- Vehicle history and transaction trail
+- Bulk operations support
+- Electric vehicle support (electric scooters and motorcycles)
+
+**Data Model:**
+- `Motorcycle` - Primary 2-wheeler entity
+- `MotorcycleModel` - Make/model/variant catalog (80+ models across 8+ brands)
+- `MotorcycleDetailedSpecs` - Extended specifications (engine, dimensions, features, braking, suspension)
+- `MotorcycleInspection` - Inspection records and condition assessments
+- `StorageLocation` - Shared storage facilities (supports both cars and motorcycles)
+
+**Motorcycle-Specific Features:**
+- **Engine Specifications**: Type, power (BHP), torque (Nm), cooling system, fuel tank capacity
+- **Dimensions**: Length, width, height, wheelbase, ground clearance, kerb weight
+- **Braking System**: Front/rear brake types, ABS availability
+- **Suspension**: Front and rear suspension specifications
+- **Features**: Electric/kick start, digital console, USB charging, LED lights
+- **Performance Metrics**: Power-to-weight ratio calculation
+- **Fuel Types**: Petrol, Electric, Hybrid support
+- **Transmission Types**: Manual, CVT, Automatic, Semi-Automatic
+- **Vehicle Categories**: Motorcycle, Scooter, Sport Bike, Cruiser, Off-Road, Touring, Naked, Cafe Racer
+
+**Supported Brands:**
+- Honda (Activa, CB Shine, CB Hornet, Dio, Unicorn, SP 125)
+- Hero (Splendor, HF Deluxe, Passion Pro, Glamour, Xtreme 160R, Maestro Edge)
+- Yamaha (R15, MT-15, FZ-S, FZ-X, Fascino, Ray ZR)
+- Royal Enfield (Classic 350, Meteor 350, Himalayan, Hunter 350, Bullet 350)
+- TVS (Apache RTR, Raider, Jupiter, NTORQ, iQube Electric)
+- Bajaj (Pulsar, Dominar, Avenger, CT 110X, Platina, Chetak Electric)
+- Suzuki (Gixxer, Access 125, Burgman Street, V-Strom SX)
+- KTM (Duke series, RC series, Adventure series)
+- Ather (450X, 450S Electric)
+- Ola Electric (S1 Pro, S1 Air)
+
+**Business Rules:**
+- Unique VIN number per motorcycle (17 characters)
+- Unique registration number per motorcycle
+- Prevent double reservation/sale
+- Auto-update storage location capacity (shared with cars)
+- Block deletion of sold/reserved motorcycles
+- Automatic status transitions (Available → Reserved → Sold)
+- Insurance and pollution certificate expiry tracking
+- Accident history recording
+- Finance status tracking
+- Previous owners count tracking
+
+**Integration Points:**
+- **Inquiries**: Customers can inquire about specific motorcycles
+- **Reservations**: Motorcycles can be reserved with deposit tracking
+- **Sales**: Complete sale process with commission tracking
+- **Financial Transactions**: All expenses (purchase, repair, maintenance) tracked per motorcycle
+- **Events**: Calendar events can be linked to motorcycles (inspection dates, servicing, etc.)
+- **Storage Locations**: Motorcycles share storage facilities with cars
+- **Inspections**: Comprehensive inspection system with condition reports
+
+**Statistics & Analytics:**
+- Total motorcycle inventory count by status
+- Average selling price by make/model
+- Total inventory value
+- Motorcycles needing attention (maintenance, inspection pending)
+- Recently added motorcycles
+- Price range distribution
+- Mileage range analysis
+- Age distribution
+- Brand-wise inventory
+
+### 4.3 Customer (Client) Management
 
 **Purpose:** Maintain comprehensive client profiles and interaction history.
 
@@ -215,7 +294,7 @@ WheelShift Pro follows a modern **3-tier architecture**:
 - Auto-update last purchase date
 - Soft delete for inactive clients
 
-### 4.3 Employee Management
+### 4.4 Employee Management
 
 **Purpose:** Staff management with performance tracking and role assignments.
 
@@ -241,7 +320,7 @@ WheelShift Pro follows a modern **3-tier architecture**:
 - Auto-update last login on authentication
 - Prevent deletion of employees with active assignments
 
-### 4.4 Lead Management (Inquiries)
+### 4.5 Lead Management (Inquiries)
 
 **Purpose:** Track and manage customer inquiries from initial contact to conversion.
 
@@ -250,14 +329,15 @@ WheelShift Pro follows a modern **3-tier architecture**:
 - Status workflow (Open → In Progress → Responded → Closed)
 - Employee assignment for follow-up
 - Response tracking with timestamps
-- Car-specific inquiry tracking
+- Vehicle-specific inquiry tracking (cars and motorcycles)
 - Advanced filtering and search
 - Unassigned inquiry queue
 - Conversion tracking
 
 **Data Model:**
 - `Inquiry` - Customer inquiry entity
-- Relationships: Many-to-one with Car, Client, Employee
+- Relationships: Many-to-one with Car OR Motorcycle, Client, Employee
+- Vehicle type discriminator for polymorphic vehicle reference
 
 **Business Rules:**
 - Auto-set response date when response added
@@ -265,7 +345,7 @@ WheelShift Pro follows a modern **3-tier architecture**:
 - Track inquiry-to-sale conversion
 - Allow reassignment of inquiries
 
-### 4.5 Reservation System
+### 4.6 Reservation System
 
 **Purpose:** Manage vehicle holds with deposit tracking and expiration management.
 
@@ -280,16 +360,17 @@ WheelShift Pro follows a modern **3-tier architecture**:
 
 **Data Model:**
 - `Reservation` - Vehicle hold entity
-- Relationships: One-to-one with Car, Many-to-one with Client
+- Relationships: One-to-one with Car OR Motorcycle, Many-to-one with Client
+- Vehicle type discriminator for polymorphic vehicle reference
 
 **Business Rules:**
-- One reservation per vehicle at a time
+- One reservation per vehicle (car or motorcycle) at a time
 - Auto-revert car status on expiry/cancellation
 - Block new reservations for reserved vehicles
 - Auto-update car status on confirmation
 - Deposit payment validation
 
-### 4.6 Sales Processing
+### 4.7 Sales Processing
 
 **Purpose:** Record and manage completed vehicle sales transactions.
 
@@ -305,24 +386,25 @@ WheelShift Pro follows a modern **3-tier architecture**:
 
 **Data Model:**
 - `Sale` - Sales transaction entity
-- Relationships: One-to-one with Car, Many-to-one with Client, Employee
+- Relationships: One-to-one with Car OR Motorcycle, Many-to-one with Client, Employee
+- Vehicle type discriminator for polymorphic vehicle reference
 
 **Business Rules:**
-- One sale per vehicle (unique constraint)
-- Auto-update car status to SOLD
+- One sale per vehicle (car or motorcycle) unique constraint
+- Auto-update car/motorcycle status to SOLD
 - Auto-update client purchase count
 - Calculate total commission based on rate
 - Prevent duplicate sales
 - Auto-record sale date
 
-### 4.7 Financial Management
+### 4.8 Financial Management
 
 **Purpose:** Track all financial transactions related to vehicles.
 
 **Key Capabilities:**
 - Multi-category transaction tracking (Purchase, Sale, Repair, Insurance, etc.)
 - Transaction recording with vendor and receipt details
-- Car-specific financial history
+- Vehicle-specific financial history (cars and motorcycles)
 - Transaction type filtering
 - Date range reports
 - Receipt document management
@@ -331,16 +413,17 @@ WheelShift Pro follows a modern **3-tier architecture**:
 
 **Data Model:**
 - `FinancialTransaction` - Transaction entity
-- Relationships: Many-to-one with Car
+- Relationships: Many-to-one with Car OR Motorcycle
+- Vehicle type discriminator for polymorphic vehicle reference
 
 **Business Rules:**
-- All transactions must be linked to a car
+- All transactions must be linked to a vehicle (car or motorcycle)
 - Support multiple transaction types
 - Receipt URL validation
 - Auto-record transaction date
 - Prevent modification of old transactions (optional)
 
-### 4.8 Storage Locations
+### 4.9 Storage Locations
 
 **Purpose:** Manage multiple storage facilities with capacity tracking.
 
@@ -363,7 +446,7 @@ WheelShift Pro follows a modern **3-tier architecture**:
 - Block deletion of locations with vehicles
 - Alert on near-capacity conditions
 
-### 4.9 Car Inspections
+### 4.10 Car Inspections
 
 **Purpose:** Record and track vehicle inspection reports and condition assessments.
 
@@ -388,7 +471,7 @@ WheelShift Pro follows a modern **3-tier architecture**:
 - Auto-record inspection date
 - Block sale of failed inspections (optional)
 
-### 4.10 Task Management
+### 4.11 Task Management
 
 **Purpose:** Internal task assignment and tracking with Kanban board visualization.
 
@@ -416,7 +499,7 @@ WheelShift Pro follows a modern **3-tier architecture**:
 
 📖 **Detailed Documentation:** [Task Management Guide](features/tasks/README.md)
 
-### 4.11 Event Calendar
+### 4.12 Event Calendar
 
 **Purpose:** Schedule and manage business events, appointments, and important dates.
 
@@ -851,43 +934,71 @@ public void refreshCache() { ... }
 
 ### 7.1 Schema Overview
 
-The database consists of **28+ tables** organized into logical groups:
+The database consists of **35+ tables** organized into logical groups with support for both 4-wheeler (cars) and 2-wheeler (motorcycles) inventory:
 
-**Core Business Tables (15):**
-- `car_model` - Vehicle model catalog
-- `car` - Vehicle inventory
-- `car_detailed_specs` - Extended specifications
-- `storage_location` - Storage facilities
-- `car_inspection` - Inspection records
-- `client` - Customer profiles
-- `employee` - Staff management
-- `inquiry` - Customer inquiries
-- `reservation` - Vehicle holds
-- `sale` - Sales transactions
-- `financial_transaction` - Financial records
-- `task` - Task management
-- `task_status` - Task statuses
-- `event` - Calendar events
-- `audit_log` - Change tracking
+**Core Business Tables - Cars (7):**
+- `car_models` - Car model catalog
+- `cars` - Car inventory
+- `car_detailed_specs` - Extended car specifications
+- `car_inspections` - Car inspection records
+- `car_movements` - Car movement history
+- `car_features` - Car features catalog
+
+**Core Business Tables - Motorcycles (4):**
+- `motorcycle_models` - Motorcycle model catalog (80+ models)
+- `motorcycles` - Motorcycle inventory
+- `motorcycle_detailed_specs` - Extended motorcycle specifications
+- `motorcycle_inspections` - Motorcycle inspection records
+
+**Shared Business Tables (9):**
+- `storage_locations` - Storage facilities (shared by cars and motorcycles)
+- `clients` - Customer profiles
+- `employees` - Staff management
+- `inquiries` - Customer inquiries (polymorphic: cars OR motorcycles)
+- `reservations` - Vehicle holds (polymorphic: cars OR motorcycles)
+- `sales` - Sales transactions (polymorphic: cars OR motorcycles)
+- `financial_transactions` - Financial records (polymorphic: cars OR motorcycles)
+- `tasks` - Task management
+- `events` - Calendar events (optional vehicle linking)
 
 **RBAC Tables (6):**
-- `role` - Role definitions
-- `permission` - Permission definitions
-- `role_permission` - Role-permission mapping
-- `employee_role` - User-role assignments
-- `data_scope` - Data scoping rules
-- `resource_acl` - Resource-level ACLs
+- `roles` - Role definitions
+- `permissions` - Permission definitions
+- `role_permissions` - Role-permission mapping
+- `employee_roles` - User-role assignments
+- `data_scopes` - Data scoping rules
+- `resource_acls` - Resource-level ACLs
 
 **Notification Tables (7):**
-- `notification` - Notification records
-- `notification_template` - Message templates
-- `notification_preference` - User preferences
-- `notification_delivery` - Delivery tracking
-- `notification_channel` - Channel configs
-- `notification_event` - Event definitions
-- `notification_schedule` - Scheduled notifications
+- `notifications` - Notification records
+- `notification_templates` - Message templates
+- `notification_preferences` - User preferences
+- `notification_deliveries` - Delivery tracking
+- `notification_channels` - Channel configs
+- `notification_events` - Event definitions
+- `notification_schedules` - Scheduled notifications
 
-### 7.2 Core Entity Relationships
+📊 **Detailed Database Design**: See [DATABASE_DESIGN.md](DATABASE_DESIGN.md) for complete Entity-Relationship Diagram with Mermaid visualization
+
+### 7.2 Polymorphic Vehicle Relationships
+
+The system uses a **polymorphic relationship pattern** for transactions that support both cars and motorcycles:
+
+**Implementation:**
+- Each transaction table (inquiries, reservations, sales, financial_transactions) has:
+  - `car_id` - Foreign key to cars table (nullable)
+  - `motorcycle_id` - Foreign key to motorcycles table (nullable)
+  - `vehicle_type` - Enum discriminator (CAR or MOTORCYCLE)
+- Database check constraints ensure only ONE vehicle reference is set
+- Application layer enforces vehicle type consistency
+
+**Benefits:**
+- Clean separation of car and motorcycle data
+- Shared business logic for transactions
+- Type-safe vehicle access
+- Easy querying and reporting across vehicle types
+
+### 7.3 Core Entity Relationships
 
 ```
 ┌─────────────┐      ┌─────────────┐      ┌─────────────┐

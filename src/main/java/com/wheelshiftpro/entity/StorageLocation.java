@@ -60,6 +60,10 @@ public class StorageLocation extends BaseEntity {
     @Builder.Default
     private List<Car> cars = new ArrayList<>();
 
+    @OneToMany(mappedBy = "storageLocation", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<Motorcycle> motorcycles = new ArrayList<>();
+
     /**
      * Checks if the location has available capacity.
      * @return true if there is space available, false otherwise

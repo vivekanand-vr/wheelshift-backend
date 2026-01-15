@@ -1,6 +1,7 @@
 package com.wheelshiftpro.entity;
 
 import com.wheelshiftpro.enums.PaymentMethod;
+import com.wheelshiftpro.enums.VehicleType;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
@@ -29,9 +30,17 @@ public class Sale extends BaseEntity {
     private Long id;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "car_id", nullable = false, unique = true, foreignKey = @ForeignKey(name = "fk_sale_car"))
-    @NotNull(message = "Car is required")
+    @JoinColumn(name = "car_id", unique = true, foreignKey = @ForeignKey(name = "fk_sale_car"))
     private Car car;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "motorcycle_id", unique = true, foreignKey = @ForeignKey(name = "fk_sale_motorcycle"))
+    private Motorcycle motorcycle;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "vehicle_type", length = 20)
+    @Builder.Default
+    private VehicleType vehicleType = VehicleType.CAR;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "client_id", nullable = false, foreignKey = @ForeignKey(name = "fk_sale_client"))

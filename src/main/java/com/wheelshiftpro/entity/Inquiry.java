@@ -1,6 +1,7 @@
 package com.wheelshiftpro.entity;
 
 import com.wheelshiftpro.enums.InquiryStatus;
+import com.wheelshiftpro.enums.VehicleType;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -32,6 +33,15 @@ public class Inquiry extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "car_id", foreignKey = @ForeignKey(name = "fk_inquiry_car"))
     private Car car;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "motorcycle_id", foreignKey = @ForeignKey(name = "fk_inquiry_motorcycle"))
+    private Motorcycle motorcycle;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "vehicle_type", length = 20)
+    @Builder.Default
+    private VehicleType vehicleType = VehicleType.CAR;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "client_id", nullable = false, foreignKey = @ForeignKey(name = "fk_inquiry_client"))

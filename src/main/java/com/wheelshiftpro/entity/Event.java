@@ -1,5 +1,6 @@
 package com.wheelshiftpro.entity;
 
+import com.wheelshiftpro.enums.VehicleType;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -37,6 +38,14 @@ public class Event extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "car_id", foreignKey = @ForeignKey(name = "fk_event_car"))
     private Car car;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "motorcycle_id", foreignKey = @ForeignKey(name = "fk_event_motorcycle"))
+    private Motorcycle motorcycle;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "vehicle_type", length = 20)
+    private VehicleType vehicleType;
 
     @Size(max = 128, message = "Title must not exceed 128 characters")
     @Column(name = "title", length = 128)
