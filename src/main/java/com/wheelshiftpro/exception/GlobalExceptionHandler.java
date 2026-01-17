@@ -18,6 +18,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -385,7 +386,76 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Handle authorization denied (session expiry, access denied)
+     * Handle session expiry specifically
+     */
+    @ExceptionHandler(SessionExpiredException.class)
+    public ResponseEntity<ErrorResponse> handleSessionExpiredException(
+            SessionExpiredException ex, 
+            HttpServletRequest request) {
+        
+        log.warn("Session expired for {}: {}", request.getRequestURI(), ex.getMessage());
+        
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .type("about:blank")
+                .title("Session Expired")
+                .status(HttpStatus.UNAUTHORIZED.value())
+                .detail("Your session has expired. Please login again.")
+                .instance(request.getRequestURI())
+                .code("SESSION_EXPIRED")
+                .timestamp(LocalDateTime.now())
+                .build();
+        
+        return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
+    }
+
+    /**
+     * Handle insufficient permissions (403 Forbidden)
+     */
+    @ExceptionHandler(InsufficientPermissionException.class)
+    public ResponseEntity<ErrorResponse> handleInsufficientPermissionException(
+            InsufficientPermissionException ex, 
+            HttpServletRequest request) {
+        
+        log.warn("Insufficient permissions for {}: {}", request.getRequestURI(), ex.getMessage());
+        
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .type("about:blank")
+                .title("Insufficient Permissions")
+                .status(HttpStatus.FORBIDDEN.value())
+                .detail("You do not have sufficient permissions to access this resource.")
+                .instance(request.getRequestURI())
+                .code("INSUFFICIENT_PERMISSIONS")
+                .timestamp(LocalDateTime.now())
+                .build();
+        
+        return new ResponseEntity<>(errorResponse, HttpStatus.FORBIDDEN);
+    }
+
+    /**
+     * Handle Spring Security AccessDeniedException (403 Forbidden)
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDeniedException(
+            AccessDeniedException ex, 
+            HttpServletRequest request) {
+        
+        log.warn("Access denied for {}: {}", request.getRequestURI(), ex.getMessage());
+        
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .type("about:blank")
+                .title("Access Denied")
+                .status(HttpStatus.FORBIDDEN.value())
+                .detail("You do not have permission to access this resource.")
+                .instance(request.getRequestURI())
+                .code("ACCESS_DENIED")
+                .timestamp(LocalDateTime.now())
+                .build();
+        
+        return new ResponseEntity<>(errorResponse, HttpStatus.FORBIDDEN);
+    }
+
+    /**
+     * Handle authorization denied (fallback for other auth issues)
      */
     @ExceptionHandler(AuthorizationDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAuthorizationDeniedException(
@@ -396,11 +466,11 @@ public class GlobalExceptionHandler {
         
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .type("about:blank")
-                .title("Session Expired")
+                .title("Authorization Failed")
                 .status(HttpStatus.UNAUTHORIZED.value())
-                .detail("Your session has expired. Please login again and try.")
+                .detail("Authorization failed. Please login and try again.")
                 .instance(request.getRequestURI())
-                .code("SESSION_EXPIRED")
+                .code("AUTHORIZATION_FAILED")
                 .timestamp(LocalDateTime.now())
                 .build();
         

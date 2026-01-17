@@ -2,8 +2,10 @@ package com.wheelshiftpro.controller;
 
 import com.wheelshiftpro.dto.request.LoginRequest;
 import com.wheelshiftpro.dto.response.AuthResponse;
+import com.wheelshiftpro.dto.response.SessionValidationResponse;
 import com.wheelshiftpro.entity.Employee;
 import com.wheelshiftpro.enums.rbac.RoleType;
+import com.wheelshiftpro.exception.SessionExpiredException;
 import com.wheelshiftpro.repository.EmployeeRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -138,6 +140,61 @@ public class AuthController {
                 .build();
 
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/validate-session")
+    @Operation(summary = "Validate session", description = "Check if current session is valid and active")
+    public ResponseEntity<SessionValidationResponse> validateSession(
+            Authentication authentication, 
+            HttpServletRequest request) {
+        
+        HttpSession session = request.getSession(false);
+        
+        // Check if session exists
+        if (session == null) {
+            log.warn("Session validation failed: No session found");
+            return ResponseEntity.ok(SessionValidationResponse.builder()
+                    .valid(false)
+                    .expired(true)
+                    .message("No active session found")
+                    .errorCode("NO_SESSION")
+                    .build());
+        }
+        
+        // Check if authentication is valid
+        if (authentication == null || !authentication.isAuthenticated()) {
+            log.warn("Session validation failed: No valid authentication");
+            return ResponseEntity.ok(SessionValidationResponse.builder()
+                    .valid(false)
+                    .expired(true)
+                    .message("Session expired or invalid")
+                    .errorCode("SESSION_EXPIRED")
+                    .build());
+        }
+        
+        try {
+            String email = authentication.getName();
+            Employee employee = employeeRepository.findByEmail(email)
+                    .orElseThrow(() -> new SessionExpiredException("Employee not found for authenticated user"));
+            
+            log.debug("Session validation successful for employee: {}", employee.getId());
+            return ResponseEntity.ok(SessionValidationResponse.builder()
+                    .valid(true)
+                    .expired(false)
+                    .message("Session is valid")
+                    .employeeId(employee.getId())
+                    .email(employee.getEmail())
+                    .build());
+                    
+        } catch (Exception e) {
+            log.error("Session validation error: {}", e.getMessage());
+            return ResponseEntity.ok(SessionValidationResponse.builder()
+                    .valid(false)
+                    .expired(true)
+                    .message("Session validation failed")
+                    .errorCode("VALIDATION_ERROR")
+                    .build());
+        }
     }
 
     @PostMapping("/logout")

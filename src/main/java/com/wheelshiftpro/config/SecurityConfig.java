@@ -44,8 +44,8 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/health").permitAll()
                         
                         // RBAC endpoints - Super Admin only
-                        .requestMatchers("/api/v1/rbac/roles/**").hasRole("SUPER_ADMIN")
-                        .requestMatchers("/api/v1/rbac/permissions/**").hasRole("SUPER_ADMIN")
+                        .requestMatchers("/api/v1/rbac/roles/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
+                        .requestMatchers("/api/v1/rbac/permissions/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/v1/rbac/employees/*/roles/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/rbac/employees/*/roles/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
                         .requestMatchers("/api/v1/rbac/employees/*/scopes/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
