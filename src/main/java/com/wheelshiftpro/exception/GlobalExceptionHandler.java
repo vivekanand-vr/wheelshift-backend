@@ -501,6 +501,34 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handle IllegalArgumentException (business rule violations that shouldn't happen)
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgumentException(
+            IllegalArgumentException ex, 
+            HttpServletRequest request) {
+        
+        log.error("Illegal argument error: {}", ex.getMessage(), ex);
+        
+        // Provide a clear error message based on the exception
+        String detail = ex.getMessage() != null && !ex.getMessage().isEmpty() 
+                ? ex.getMessage() 
+                : "The requested operation is not allowed due to business rules.";
+        
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .type("about:blank")
+                .title("Operation Not Allowed")
+                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .detail(detail)
+                .instance(request.getRequestURI())
+                .code("OPERATION_NOT_ALLOWED")
+                .timestamp(LocalDateTime.now())
+                .build();
+        
+        return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    /**
      * Handle all other exceptions
      */
     @ExceptionHandler(Exception.class)

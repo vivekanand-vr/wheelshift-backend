@@ -61,4 +61,9 @@ public interface PermissionService {
      * Check if employee has a specific permission
      */
     boolean hasPermission(Long employeeId, String permissionName);
+
+    /**
+     * Get all permission names for an employee (as strings)
+     */
+    Set<String> getEmployeePermissions(Long employeeId);
 }
