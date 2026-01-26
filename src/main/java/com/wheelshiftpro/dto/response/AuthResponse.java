@@ -26,8 +26,8 @@ public class AuthResponse {
     private String message;
 
     /**
-     * For future JWT implementation
+     * JWT access token
      */
-    private String token;
+    private String accessToken;
     private String tokenType;
 }
