@@ -49,6 +49,13 @@
 - Unique constraint on `(resource_type, resource_id, subject_type, subject_id, access)`
 - Indexes on resource and subject lookups
 
+#### `employee_permissions`
+- Direct permission assignments to individual employees (independent of roles)
+- Fields: `id`, `employee_id`, `permission_id`, `granted_by`, `reason`, audit fields
+- Unique constraint on `(employee_id, permission_id)` preventing duplicates
+- Allows temporary or exceptional permission grants outside role structure
+- Index on `employee_id` for fast lookups
+
 ---
 
 ### 2. Entity Layer
@@ -149,6 +156,26 @@ public class ResourceACL extends BaseEntity {
 - Multiple subject types
 - Audit trail with grantedBy
 - Composite unique constraint
+
+#### EmployeePermission Entity (`EmployeePermission.java`)
+
+```java
+@Entity
+@Table(name = "employee_permissions")
+public class EmployeePermission extends BaseEntity {
+    private Long id;
+    private Employee employee;
+    private Permission permission;
+    private Long grantedBy;             // Admin who granted this
+    private String reason;              // Why this permission was granted
+}
+```
+
+**Features:**
+- Direct employee-to-permission mapping
+- Audit trail with `grantedBy` and `reason`
+- Unique constraint prevents duplicate assignments
+- Independent of role-based permissions
 
 #### Employee Entity (Enhanced)
 
@@ -305,6 +332,20 @@ public interface ResourceACLRepository extends JpaRepository<ResourceACL, Long> 
 }
 ```
 
+#### EmployeePermissionRepository
+
+```java
+public interface EmployeePermissionRepository extends JpaRepository<EmployeePermission, Long> {
+    List<EmployeePermission> findByEmployeeId(Long employeeId);
+    Optional<EmployeePermission> findByEmployeeIdAndPermissionId(Long employeeId, Long permissionId);
+    boolean existsByEmployeeIdAndPermissionId(Long employeeId, Long permissionId);
+    void deleteByEmployeeId(Long employeeId);
+    
+    @Query("SELECT p.name FROM EmployeePermission ep JOIN ep.permission p WHERE ep.employee.id = :employeeId")
+    Set<String> findPermissionNamesByEmployeeId(@Param("employeeId") Long employeeId);
+}
+```
+
 ---
 
 ### 5. Service Layer
@@ -385,8 +426,31 @@ public interface PermissionService {
 
 **Implementation:**
 - Loads employee with roles and permissions
+- **Checks both role-based AND custom employee permissions**
 - Checks for wildcard permissions (`*:*`, `cars:*`)
 - Caches results for performance
+
+#### EmployeePermissionService
+
+```java
+public interface EmployeePermissionService {
+    EmployeePermissionResponse assignPermissionToEmployee(Long employeeId, 
+        EmployeePermissionRequest request, Long grantedBy);
+    void removePermissionFromEmployee(Long employeeId, Long permissionId);
+    List<EmployeePermissionResponse> getEmployeeCustomPermissions(Long employeeId);
+    Set<String> getEmployeeCustomPermissionNames(Long employeeId);
+    void removeAllCustomPermissions(Long employeeId);
+    EmployeePermissionResponse getEmployeePermissionById(Long id);
+    boolean hasCustomPermission(Long employeeId, String permissionName);
+}
+```
+
+**Implementation:**
+- Manages direct employee-to-permission assignments
+- Validates employee and permission existence
+- Prevents duplicate assignments
+- Provides audit trail (grantedBy, reason)
+- Integrates with main authorization flow
 
 #### RoleService
 
@@ -572,6 +636,45 @@ public class EmployeeRoleController {
 }
 ```
 
+#### EmployeePermissionController
+
+```java
+@RestController
+@RequestMapping("/api/v1/rbac/employee-permissions")
+public class EmployeePermissionController {
+    @PostMapping("/employees/{employeeId}")
+    public ResponseEntity<EmployeePermissionResponse> assignPermissionToEmployee(
+        @PathVariable Long employeeId,
+        @Valid @RequestBody EmployeePermissionRequest request,
+        @AuthenticationPrincipal EmployeeUserDetails currentUser);
+    
+    @DeleteMapping("/employees/{employeeId}/permissions/{permissionId}")
+    public ResponseEntity<Void> removePermissionFromEmployee(
+        @PathVariable Long employeeId,
+        @PathVariable Long permissionId);
+    
+    @GetMapping("/employees/{employeeId}")
+    public ResponseEntity<List<EmployeePermissionResponse>> getEmployeeCustomPermissions(
+        @PathVariable Long employeeId);
+    
+    @GetMapping("/employees/{employeeId}/permission-names")
+    public ResponseEntity<Set<String>> getEmployeeCustomPermissionNames(
+        @PathVariable Long employeeId);
+    
+    @DeleteMapping("/employees/{employeeId}")
+    public ResponseEntity<Void> removeAllCustomPermissions(@PathVariable Long employeeId);
+    
+    @GetMapping("/{id}")
+    public ResponseEntity<EmployeePermissionResponse> getEmployeePermissionById(
+        @PathVariable Long id);
+}
+```
+
+**Security:**
+- Requires `rbac:write` permission for assignment/removal operations
+- Requires `rbac:read` permission for query operations
+- Tracks who granted permission via currentUser
+
 ---
 
 ### 7. DTOs (Data Transfer Objects)
@@ -635,6 +738,13 @@ public class AssignRolesRequest {
     @NotEmpty
     private Set<Long> roleIds;
 }
+
+public class EmployeePermissionRequest {
+    @NotNull(message = "Permission ID is required")
+    private Long permissionId;
+    
+    private String reason;  // Reason for granting this permission
+}
 ```
 
 #### Response DTOs
@@ -679,6 +789,22 @@ public class ResourceACLResponse {
     private String reason;
     private Long grantedBy;
     private LocalDateTime createdAt;
+}
+
+public class EmployeePermissionResponse {
+    private Long id;
+    private Long employeeId;
+    private String employeeName;
+    private String employeeEmail;
+    private Long permissionId;
+    private String permissionName;
+    private String permissionResource;
+    private String permissionAction;
+    private Long grantedBy;
+    private String grantedByName;
+    private String reason;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }
 ```
 
@@ -848,8 +974,28 @@ Service Layer
 AuthorizationService.hasPermission()
   ├─→ isSuperAdmin() → GRANT
   ├─→ Check Resource ACL → GRANT if match
+  ├─→ Check Custom Employee Permissions → GRANT if match (NEW)
   ├─→ Check Data Scope → Apply filter
-  └─→ Check Role Permission → GRANT/DENY
+  └─→ Check Role Permissions → GRANT/DENY
+```
+
+**Custom Permissions Integration:**
+
+```java
+public boolean hasPermission(Long employeeId, String permissionName) {
+    // 1. SUPER_ADMIN override
+    if (isSuperAdmin(employeeId)) {
+        return true;
+    }
+    
+    // 2. Check custom employee permissions (NEW)
+    if (employeePermissionService.hasCustomPermission(employeeId, permissionName)) {
+        return true;
+    }
+    
+    // 3. Check role-based permissions
+    return permissionService.hasPermission(employeeId, permissionName);
+}
 ```
 
 ### 2. Data Scope Application
@@ -1063,29 +1209,37 @@ To add RBAC support for a new resource:
 - `entity/Permission.java`
 - `entity/EmployeeDataScope.java`
 - `entity/ResourceACL.java`
+- `entity/rbac/EmployeePermission.java` *(custom permissions)*
 - `service/AuthorizationService.java`
 - `service/impl/AuthorizationServiceImpl.java`
 - `service/RoleService.java`
 - `service/PermissionService.java`
 - `service/DataScopeService.java`
 - `service/ResourceACLService.java`
+- `service/rbac/EmployeePermissionService.java` *(custom permissions)*
+- `service/impl/rbac/EmployeePermissionServiceImpl.java` *(custom permissions)*
 - `controller/RoleController.java`
 - `controller/PermissionController.java`
 - `controller/DataScopeController.java`
 - `controller/ResourceACLController.java`
 - `controller/EmployeeRoleController.java`
+- `controller/rbac/EmployeePermissionController.java` *(custom permissions)*
 - `repository/RoleRepository.java`
 - `repository/PermissionRepository.java`
 - `repository/EmployeeDataScopeRepository.java`
 - `repository/ResourceACLRepository.java`
+- `repository/rbac/EmployeePermissionRepository.java` *(custom permissions)*
 - `dto/request/RoleRequest.java`
 - `dto/request/PermissionRequest.java`
 - `dto/request/DataScopeRequest.java`
 - `dto/request/ResourceACLRequest.java`
+- `dto/request/rbac/EmployeePermissionRequest.java` *(custom permissions)*
 - `dto/response/RoleResponse.java`
 - `dto/response/PermissionResponse.java`
 - `dto/response/DataScopeResponse.java`
 - `dto/response/ResourceACLResponse.java`
+- `dto/response/rbac/EmployeePermissionResponse.java` *(custom permissions)*
+- `mapper/rbac/EmployeePermissionMapper.java` *(custom permissions)*
 - `enums/RoleType.java`
 - `enums/AccessLevel.java`
 - `enums/SubjectType.java`
@@ -1098,6 +1252,7 @@ To add RBAC support for a new resource:
 - `security/JwtTokenProvider.java` - Include roles/permissions in token
 - `security/EmployeeDetails.java` - Load authorities from roles
 - `config/SecurityConfig.java` - Enable method security
+- `service/impl/rbac/PermissionServiceImpl.java` - Added custom employee permissions support
 
 ### Database Migrations
 
@@ -1105,6 +1260,7 @@ To add RBAC support for a new resource:
 - `V5__Seed_RBAC_Data.sql` - Seed roles and permissions
 - `V7__Assign_Employee_Roles.sql` - Assign roles to employees
 - `V8__Fix_Employee_Roles_And_Add_SuperAdmin.sql` - Refinements
+- `V12__Add_Employee_Custom_Permissions.sql` - Add employee_permissions table for custom permissions
 
 ---
 
@@ -1125,21 +1281,23 @@ The RBAC implementation provides a comprehensive, flexible, and secure authoriza
 ✅ **Fine-grained permissions** with resource:action format  
 ✅ **Data scoping** for multi-location/department operations  
 ✅ **Resource-level ACLs** for exception handling  
+✅ **Custom employee permissions** for individual access grants *(NEW)*  
 ✅ **Extensible design** for future enhancements  
 ✅ **Production-ready** with proper validation and security  
 
 **Total Implementation:**
-- **16 new entities/enums**
-- **4 database tables + 2 join tables**
-- **9 service interfaces + implementations**
-- **5 controllers**
+- **17 new entities/enums** *(+1 EmployeePermission)*
+- **5 database tables + 2 join tables** *(+1 employee_permissions)*
+- **10 service interfaces + implementations** *(+1 EmployeePermissionService)*
+- **6 controllers** *(+1 EmployeePermissionController)*
 - **50+ permissions seeded**
 - **6 system roles**
 - **Comprehensive authorization checks**
 
-**Lines of Code:** ~5,000+ (excluding tests and migrations)
+**Lines of Code:** ~5,500+ (excluding tests and migrations)
 
 ---
 
 **For usage instructions, see:** `RBAC_USAGE_GUIDE.md`  
-**For API reference, see:** OpenAPI docs at `/swagger-ui.html`
+**For custom permissions guide, see:** `CUSTOM_PERMISSIONS_GUIDE.md`  
+**For API reference, see:** OpenAPI docs at `/swagger-ui.html` and `EMPLOYEE_PERMISSIONS_API.md`

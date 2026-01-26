@@ -12,7 +12,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,7 +32,6 @@ public class EmployeePermissionController {
     private final EmployeePermissionService employeePermissionService;
 
     @PostMapping("/employees/{employeeId}")
-    @PreAuthorize("hasAuthority('rbac:write')")
     @Operation(summary = "Assign custom permission to employee", 
                description = "Super admin can assign a custom permission to an employee (independent of roles)")
     public ResponseEntity<EmployeePermissionResponse> assignPermissionToEmployee(
@@ -50,7 +48,6 @@ public class EmployeePermissionController {
     }
 
     @DeleteMapping("/employees/{employeeId}/permissions/{permissionId}")
-    @PreAuthorize("hasAuthority('rbac:write')")
     @Operation(summary = "Remove custom permission from employee", 
                description = "Remove a custom permission assignment from an employee")
     public ResponseEntity<Void> removePermissionFromEmployee(
@@ -65,7 +62,6 @@ public class EmployeePermissionController {
     }
 
     @GetMapping("/employees/{employeeId}")
-    @PreAuthorize("hasAuthority('rbac:read')")
     @Operation(summary = "Get employee's custom permissions", 
                description = "Get all custom permissions assigned to an employee")
     public ResponseEntity<List<EmployeePermissionResponse>> getEmployeeCustomPermissions(
@@ -80,7 +76,6 @@ public class EmployeePermissionController {
     }
 
     @GetMapping("/employees/{employeeId}/permission-names")
-    @PreAuthorize("hasAuthority('rbac:read')")
     @Operation(summary = "Get employee's custom permission names", 
                description = "Get custom permission names (e.g., 'cars:write') for an employee")
     public ResponseEntity<Set<String>> getEmployeeCustomPermissionNames(
@@ -95,7 +90,6 @@ public class EmployeePermissionController {
     }
 
     @DeleteMapping("/employees/{employeeId}")
-    @PreAuthorize("hasAuthority('rbac:write')")
     @Operation(summary = "Remove all custom permissions from employee", 
                description = "Remove all custom permission assignments from an employee")
     public ResponseEntity<Void> removeAllCustomPermissions(
@@ -109,7 +103,6 @@ public class EmployeePermissionController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('rbac:read')")
     @Operation(summary = "Get employee permission by ID", 
                description = "Get a specific employee permission assignment by ID")
     public ResponseEntity<EmployeePermissionResponse> getEmployeePermissionById(
