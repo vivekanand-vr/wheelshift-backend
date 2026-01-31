@@ -33,6 +33,11 @@ public interface DataScopeService {
     Set<DataScopeResponse> getScopesByEmployeeId(Long employeeId);
 
     /**
+     * Get a specific scope by ID
+     */
+    DataScopeResponse getScopeById(Long scopeId);
+
+    /**
      * Get scopes by employee and scope type
      */
     List<DataScopeResponse> getScopesByEmployeeIdAndType(Long employeeId, ScopeType scopeType);

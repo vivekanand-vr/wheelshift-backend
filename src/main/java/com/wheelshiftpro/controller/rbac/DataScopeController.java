@@ -32,6 +32,13 @@ public class DataScopeController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/scopes/{scopeId}")
+    @Operation(summary = "Get scope by ID", description = "Retrieve a specific data scope by ID")
+    public ResponseEntity<DataScopeResponse> getScopeById(@PathVariable Long scopeId) {
+        DataScopeResponse response = dataScopeService.getScopeById(scopeId);
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping("/{employeeId}/scopes")
     @Operation(summary = "Add scope to employee", description = "Add a data scope to an employee (Admin or Super Admin)")
     public ResponseEntity<DataScopeResponse> addScopeToEmployee(

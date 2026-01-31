@@ -8,14 +8,21 @@ Comprehensive RBAC system with hierarchical roles, fine-grained permissions, dat
 
 1. **Roles** - User roles in the system (SUPER_ADMIN, ADMIN, SALES, etc.)
 2. **Permissions** - Fine-grained access controls (`resource:action` format)
-3. **Data Scopes** - Filter data by location, department, or assignment
-4. **Resource ACLs** - Individual resource-level access control
+3. **Custom Employee Permissions** - ⭐ **NEW!** Direct permission assignment to individual employees
+4. **Data Scopes** - Filter data by location, department, or assignment
+5. **Resource ACLs** - Individual resource-level access control
 
 ## Authorization Precedence
 
 ```
-Resource ACL > Data Scope > Role Permission
+Resource ACL > Custom Employee Permissions > Data Scope > Role Permission
 ```
+
+**Explanation:**
+- **Resource ACL** (highest): Override all other permissions for specific resources
+- **Custom Employee Permissions**: Direct permissions assigned to individual employees by super admins
+- **Data Scope**: Filter what data employees can see
+- **Role Permission** (base): Default permissions from employee's assigned roles
 
 ## Built-in Roles & Permissions
 
@@ -170,6 +177,44 @@ Filter data access based on organizational boundaries:
 
 Employee can only see cars, inquiries, etc. in location LOC-001.
 
+## ⭐ Custom Employee Permissions (NEW!)
+
+Assign permissions **directly to individual employees**, independent of their roles.
+
+### Use Case
+
+**Example:** A SALES employee needs temporary access to manage cars (normally only STORE_MANAGER has this).
+
+**Solution:** Super admin assigns `cars:write` permission directly to the employee:
+
+```bash
+POST /api/v1/rbac/employee-permissions/employees/5
+{
+  "permissionId": 15,  // cars:write
+  "reason": "Temporary access for Q4 sales campaign"
+}
+```
+
+### How It Works
+
+```
+Employee's Final Permissions = Role Permissions + Custom Permissions
+```
+
+The system automatically merges both when checking permissions:
+- **Role gives:** `["cars:read", "reservations:write"]`
+- **Custom adds:** `["cars:write", "transactions:read"]`
+- **Total access:** All 4 permissions
+
+### Benefits
+
+✅ **Flexible** - Grant any permission to any employee  
+✅ **Temporary** - Easy to add/remove when needed  
+✅ **Auditable** - Tracks who granted it and why  
+✅ **Independent** - Doesn't affect role definitions  
+
+**📚 See [Custom Permissions Guide](CUSTOM_PERMISSIONS_GUIDE.md) for complete documentation**
+
 ## Resource ACLs
 
 Override role permissions for specific resources:
@@ -225,6 +270,17 @@ Endpoints
 | GET | `/api/v1/resource-acl/resource/{type}/{id}` | Get resource ACLs |
 | POST | `/api/v1/resource-acl` | Grant resource access |
 | DELETE | `/api/v1/resource-acl/{id}` | Revoke resource access |
+
+### ⭐ Custom Employee Permissions (NEW!)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/v1/rbac/employee-permissions/employees/{employeeId}` | Assign custom permission to employee |
+| DELETE | `/api/v1/rbac/employee-permissions/employees/{employeeId}/permissions/{permissionId}` | Remove custom permission |
+| GET | `/api/v1/rbac/employee-permissions/employees/{employeeId}` | Get employee's custom permissions |
+| GET | `/api/v1/rbac/employee-permissions/employees/{employeeId}/permission-names` | Get custom permission names |
+| DELETE | `/api/v1/rbac/employee-permissions/employees/{employeeId}` | Remove all custom permissions |
+
+**📚 See [Custom Permissions Guide](CUSTOM_PERMISSIONS_GUIDE.md) for detailed documentation**
 ```java
 @RestController
 @RequestMapping("/api/v1/cars")
@@ -298,14 +354,30 @@ public class CarController {
 ### Entities (4)
 - `Role`, `Permission`, `EmployeeDataScope`, `ResourceACL`
 
-### Services (5)
-- `RoleService`, `PermissionService`, `DataScopeService`, `ResourceACLService`, `AuthorizationService`
+### Services (6)
+- `RoleService`, `PermissionService`, `DataScopeService`, `ResourceACLService`, `AuthorizationService`, `AuthorizationHelperService`
 
 ### Controllers (6)
 - `AuthController`, `RoleController`, `PermissionController`, `EmployeeRoleController`, `DataScopeController`, `ResourceACLController`
 
 ### Security (2)
 - `EmployeeUserDetails`, `EmployeeUserDetailsService`
+
+---
+
+## 📚 Documentation
+
+### Complete Guides
+- **[RBAC Complete Beginner's Guide](./RBAC_COMPLETE_GUIDE.md)** - Comprehensive guide with ASCII diagrams
+- **[API Endpoints Reference](./RBAC_ENDPOINTS.md)** - Complete list of all RBAC endpoints
+- **[Helper Methods Guide](./RBAC_HELPER_METHODS.md)** - Authorization helper methods documentation
+- **⭐ [Custom Employee Permissions Guide](./CUSTOM_PERMISSIONS_GUIDE.md)** - Direct permission assignment to employees (NEW!)
+
+### Technical Documentation
+- **[Implementation Summary](../../rbac/RBAC_IMPLEMENTATION_SUMMARY.md)** - Detailed implementation overview
+- **[Usage Guide](../../rbac/RBAC_USAGE_GUIDE.md)** - How to use the RBAC system
+
+---
 
 ## Troubleshooting
 

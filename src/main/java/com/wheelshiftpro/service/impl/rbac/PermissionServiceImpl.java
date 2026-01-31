@@ -4,8 +4,10 @@ import com.wheelshiftpro.dto.request.rbac.PermissionRequest;
 import com.wheelshiftpro.dto.response.rbac.PermissionResponse;
 import com.wheelshiftpro.entity.Employee;
 import com.wheelshiftpro.entity.rbac.Permission;
+import com.wheelshiftpro.exception.DuplicateResourceException;
 import com.wheelshiftpro.exception.ResourceNotFoundException;
 import com.wheelshiftpro.repository.EmployeeRepository;
+import com.wheelshiftpro.repository.rbac.EmployeePermissionRepository;
 import com.wheelshiftpro.repository.rbac.PermissionRepository;
 import com.wheelshiftpro.service.rbac.PermissionService;
 
@@ -14,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -29,6 +32,7 @@ public class PermissionServiceImpl implements PermissionService {
 
     private final PermissionRepository permissionRepository;
     private final EmployeeRepository employeeRepository;
+    private final EmployeePermissionRepository employeePermissionRepository;
 
     @Override
     public PermissionResponse createPermission(PermissionRequest request) {
@@ -37,7 +41,7 @@ public class PermissionServiceImpl implements PermissionService {
         String permissionName = Permission.buildPermissionName(request.getResource(), request.getAction());
 
         if (permissionRepository.existsByName(permissionName)) {
-            throw new IllegalArgumentException("Permission already exists: " + permissionName);
+            throw new DuplicateResourceException("Permission", "name", permissionName);
         }
 
         Permission permission = Permission.builder()
@@ -138,10 +142,51 @@ public class PermissionServiceImpl implements PermissionService {
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found with ID: " + employeeId));
         log.atInfo().log("Employee found: {} with email: {}", employee.getId(), employee.getEmail());
-        Set<Permission> permissions = permissionRepository.findByEmployeeId(employeeId);
-
-        return permissions.stream()
+        
+        // Check role-based permissions
+        Set<Permission> rolePermissions = permissionRepository.findByEmployeeId(employeeId);
+        boolean hasRolePermission = rolePermissions.stream()
                 .anyMatch(p -> p.getName().equals(permissionName));
+        
+        if (hasRolePermission) {
+            log.debug("Employee {} has permission {} through roles", employeeId, permissionName);
+            return true;
+        }
+        
+        // Check custom employee permissions
+        Set<String> customPermissions = new HashSet<>(employeePermissionRepository.findPermissionNamesByEmployeeId(employeeId));
+        boolean hasCustomPermission = customPermissions.contains(permissionName);
+        
+        if (hasCustomPermission) {
+            log.debug("Employee {} has custom permission {}", employeeId, permissionName);
+        }
+        
+        return hasCustomPermission;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Set<String> getEmployeePermissions(Long employeeId) {
+        log.debug("Fetching permission names for employee ID: {}", employeeId);
+        
+        // Verify employee exists
+        employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found with ID: " + employeeId));
+        
+        // Get role-based permissions
+        Set<Permission> rolePermissions = permissionRepository.findByEmployeeId(employeeId);
+        Set<String> allPermissions = rolePermissions.stream()
+                .map(Permission::getName)
+                .collect(Collectors.toCollection(HashSet::new));
+        
+        // Add custom employee permissions
+        Set<String> customPermissions = new HashSet<>(employeePermissionRepository.findPermissionNamesByEmployeeId(employeeId));
+        allPermissions.addAll(customPermissions);
+        
+        log.debug("Employee {} has {} total permissions ({} from roles, {} custom)", 
+                  employeeId, allPermissions.size(), rolePermissions.size(), customPermissions.size());
+        
+        return allPermissions;
     }
 
     private PermissionResponse mapToResponse(Permission permission) {

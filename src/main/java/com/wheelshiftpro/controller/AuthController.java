@@ -7,6 +7,7 @@ import com.wheelshiftpro.entity.Employee;
 import com.wheelshiftpro.enums.rbac.RoleType;
 import com.wheelshiftpro.exception.SessionExpiredException;
 import com.wheelshiftpro.repository.EmployeeRepository;
+import com.wheelshiftpro.security.JwtTokenProvider;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -18,13 +19,8 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.web.bind.annotation.*;
-
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -36,15 +32,16 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
 @Slf4j
-@Tag(name = "Authentication", description = "Authentication and authorization endpoints")
+@Tag(name = "Authentication", description = "JWT-based authentication and authorization endpoints")
 public class AuthController {
 
     private final AuthenticationManager authenticationManager;
     private final EmployeeRepository employeeRepository;
+    private final JwtTokenProvider jwtTokenProvider;
 
     @PostMapping("/login")
-    @Operation(summary = "Login", description = "Authenticate an employee and return user details with roles and permissions")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
+    @Operation(summary = "Login", description = "Authenticate an employee and return JWT token with user details, roles and permissions")
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         try {
             log.info("Login attempt for email: {}", request.getEmail());
 
@@ -68,16 +65,13 @@ public class AuthController {
                     )
             );
             
-            // Store authentication in security context
-            SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
-            securityContext.setAuthentication(authentication);
-            SecurityContextHolder.setContext(securityContext);
+            // Set authentication in security context
+            SecurityContextHolder.getContext().setAuthentication(authentication);
             
-            // Save security context to session
-            HttpSession session = httpRequest.getSession(true);
-            session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, securityContext);
+            // Generate JWT token
+            String jwt = jwtTokenProvider.generateToken(authentication);
             
-            log.info("Authentication successful and session created for: {}", request.getEmail());
+            log.info("Authentication successful and JWT token generated for: {}", request.getEmail());
 
             // Extract roles and permissions
             Set<RoleType> roles = employee.getRoles().stream()
@@ -95,6 +89,7 @@ public class AuthController {
                     .name(employee.getName())
                     .roles(roles)
                     .permissions(permissions)
+                    .accessToken(jwt)
                     .message("Login successful")
                     .tokenType("Bearer")
                     .build();
@@ -143,32 +138,17 @@ public class AuthController {
     }
 
     @GetMapping("/validate-session")
-    @Operation(summary = "Validate session", description = "Check if current session is valid and active")
-    public ResponseEntity<SessionValidationResponse> validateSession(
-            Authentication authentication, 
-            HttpServletRequest request) {
-        
-        HttpSession session = request.getSession(false);
-        
-        // Check if session exists
-        if (session == null) {
-            log.warn("Session validation failed: No session found");
-            return ResponseEntity.ok(SessionValidationResponse.builder()
-                    .valid(false)
-                    .expired(true)
-                    .message("No active session found")
-                    .errorCode("NO_SESSION")
-                    .build());
-        }
+    @Operation(summary = "Validate token", description = "Check if current JWT token is valid and active")
+    public ResponseEntity<SessionValidationResponse> validateSession(Authentication authentication) {
         
         // Check if authentication is valid
         if (authentication == null || !authentication.isAuthenticated()) {
-            log.warn("Session validation failed: No valid authentication");
+            log.warn("Token validation failed: No valid authentication");
             return ResponseEntity.ok(SessionValidationResponse.builder()
                     .valid(false)
                     .expired(true)
-                    .message("Session expired or invalid")
-                    .errorCode("SESSION_EXPIRED")
+                    .message("Token expired or invalid")
+                    .errorCode("TOKEN_EXPIRED")
                     .build());
         }
         
@@ -177,41 +157,35 @@ public class AuthController {
             Employee employee = employeeRepository.findByEmail(email)
                     .orElseThrow(() -> new SessionExpiredException("Employee not found for authenticated user"));
             
-            log.debug("Session validation successful for employee: {}", employee.getId());
+            log.debug("Token validation successful for employee: {}", employee.getId());
             return ResponseEntity.ok(SessionValidationResponse.builder()
                     .valid(true)
                     .expired(false)
-                    .message("Session is valid")
+                    .message("Token is valid")
                     .employeeId(employee.getId())
                     .email(employee.getEmail())
                     .build());
                     
         } catch (Exception e) {
-            log.error("Session validation error: {}", e.getMessage());
+            log.error("Token validation error: {}", e.getMessage());
             return ResponseEntity.ok(SessionValidationResponse.builder()
                     .valid(false)
                     .expired(true)
-                    .message("Session validation failed")
+                    .message("Token validation failed")
                     .errorCode("VALIDATION_ERROR")
                     .build());
         }
     }
 
     @PostMapping("/logout")
-    @Operation(summary = "Logout", description = "Logout current user")
-    public ResponseEntity<AuthResponse> logout(HttpServletRequest request) {
+    @Operation(summary = "Logout", description = "Logout current user (client should discard JWT token)")
+    public ResponseEntity<AuthResponse> logout() {
         // Clear security context
         SecurityContextHolder.clearContext();
         
-        // Invalidate session
-        HttpSession session = request.getSession(false);
-        if (session != null) {
-            session.invalidate();
-        }
-        
         log.info("Logout successful");
         return ResponseEntity.ok(AuthResponse.builder()
-                .message("Logout successful")
+                .message("Logout successful. Please discard the JWT token on client side.")
                 .build());
     }
 }

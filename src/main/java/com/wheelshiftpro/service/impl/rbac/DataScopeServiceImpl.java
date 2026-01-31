@@ -98,6 +98,15 @@ public class DataScopeServiceImpl implements DataScopeService {
 
     @Override
     @Transactional(readOnly = true)
+    public DataScopeResponse getScopeById(Long scopeId) {
+        log.debug("Fetching scope with ID: {}", scopeId);
+        EmployeeDataScope scope = dataScopeRepository.findById(scopeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Scope not found with ID: " + scopeId));
+        return mapToResponse(scope);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<DataScopeResponse> getScopesByEmployeeIdAndType(Long employeeId, ScopeType scopeType) {
         log.debug("Fetching {} scopes for employee ID: {}", scopeType, employeeId);
         return dataScopeRepository.findByEmployeeIdAndScopeType(employeeId, scopeType).stream()

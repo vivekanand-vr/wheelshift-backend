@@ -46,7 +46,7 @@ docker-compose down
 - ✅ **Audit Logging** - Automatic change tracking
 - ✅ **File Logging** - Application logging with rotation
 - ✅ **Error Handling** - Custom error pages
-- ✅ **JWT Authentication** - Secure token-based auth
+- ✅ **JWT Authentication** - Secure token-based authentication
 
 > **Note:** Check individual feature documentation in `docs/features/` for detailed implementation guides.
 
@@ -135,6 +135,10 @@ spring.jpa.show-sql=false
 
 # Flyway
 spring.flyway.enabled=true
+
+# JWT Authentication
+jwt.secret=your-secret-key-here
+jwt.expiration=86400000
 
 # API Documentation
 springdoc.api-docs.path=/api/v1/api-docs

@@ -3,8 +3,6 @@ package com.wheelshiftpro.service;
 import com.wheelshiftpro.entity.Employee;
 import com.wheelshiftpro.exception.SessionExpiredException;
 import com.wheelshiftpro.repository.EmployeeRepository;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
@@ -14,7 +12,9 @@ import org.springframework.stereotype.Service;
 import java.util.Optional;
 
 /**
- * Service for session management and validation utilities
+ * Service for authentication management and validation utilities.
+ * Note: Despite the class name, this service now works with JWT tokens,
+ * not HTTP sessions. The name is kept for backward compatibility.
  */
 @Service
 @RequiredArgsConstructor
@@ -24,19 +24,13 @@ public class SessionService {
     private final EmployeeRepository employeeRepository;
 
     /**
-     * Validate if the current session is active and valid
+     * Validate if the current authentication is active and valid
      */
-    public boolean isSessionValid(HttpServletRequest request) {
+    public boolean isAuthenticationValid() {
         try {
-            HttpSession session = request.getSession(false);
-            if (session == null) {
-                log.debug("No active session found");
-                return false;
-            }
-
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             if (authentication == null || !authentication.isAuthenticated()) {
-                log.debug("No valid authentication in session");
+                log.debug("No valid authentication found");
                 return false;
             }
 
@@ -50,7 +44,7 @@ public class SessionService {
 
             return true;
         } catch (Exception e) {
-            log.error("Error validating session: {}", e.getMessage());
+            log.error("Error validating authentication: {}", e.getMessage());
             return false;
         }
     }
@@ -86,7 +80,7 @@ public class SessionService {
             return employee.getRoles().stream()
                     .anyMatch(role -> role.getName().name().equals(roleName));
         } catch (SessionExpiredException e) {
-            log.debug("Cannot check role for expired session: {}", e.getMessage());
+            log.debug("Cannot check role for expired authentication: {}", e.getMessage());
             return false;
         }
     }
@@ -101,44 +95,16 @@ public class SessionService {
                     .flatMap(role -> role.getPermissions().stream())
                     .anyMatch(permission -> permission.getName().equals(permissionName));
         } catch (SessionExpiredException e) {
-            log.debug("Cannot check permission for expired session: {}", e.getMessage());
+            log.debug("Cannot check permission for expired authentication: {}", e.getMessage());
             return false;
         }
     }
 
     /**
-     * Get session timeout in seconds from the session
+     * Clear the current security context
      */
-    public int getSessionTimeoutSeconds(HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-        if (session != null) {
-            return session.getMaxInactiveInterval();
-        }
-        return 0; // Default when no session
-    }
-
-    /**
-     * Extend session timeout (refresh the session)
-     */
-    public void extendSession(HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-        if (session != null) {
-            // Access the session to update last access time
-            session.getLastAccessedTime();
-            log.debug("Session extended for session ID: {}", session.getId());
-        }
-    }
-
-    /**
-     * Invalidate current session
-     */
-    public void invalidateSession(HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-        if (session != null) {
-            String sessionId = session.getId();
-            session.invalidate();
-            SecurityContextHolder.clearContext();
-            log.info("Session invalidated: {}", sessionId);
-        }
+    public void clearAuthentication() {
+        SecurityContextHolder.clearContext();
+        log.info("Security context cleared");
     }
 }
