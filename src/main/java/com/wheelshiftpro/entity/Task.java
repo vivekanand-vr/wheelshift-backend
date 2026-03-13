@@ -60,4 +60,7 @@ public class Task extends BaseEntity {
     @Column(name = "tags", columnDefinition = "JSON")
     @Builder.Default
     private List<String> tags = new ArrayList<>();
+
+    @Column(name = "attachment_file_ids", columnDefinition = "TEXT")
+    private String attachmentFileIds;
 }

@@ -10,7 +10,8 @@ import java.time.LocalDate;
 
 /**
  * Entity representing a motorcycle in the inventory.
- * Contains all information about a specific motorcycle including VIN, model, pricing, status, etc.
+ * Contains all information about a specific motorcycle including VIN, model,
+ * pricing, status, etc.
  * 
  * @author WheelShift Pro Development Team
  * @version 1.0
@@ -47,9 +48,17 @@ public class Motorcycle extends BaseEntity {
 
     @NotNull(message = "Motorcycle model is required")
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "motorcycle_model_id", nullable = false, 
-                foreignKey = @ForeignKey(name = "fk_motorcycle_model"))
+    @JoinColumn(name = "motorcycle_model_id", nullable = false, foreignKey = @ForeignKey(name = "fk_motorcycle_model"))
     private MotorcycleModel motorcycleModel;
+
+    @Column(name = "primary_image_id", length = 64)
+    private String primaryImageId;
+
+    @Column(name = "gallery_image_ids", columnDefinition = "TEXT")
+    private String galleryImageIds;
+
+    @Column(name = "document_file_ids", columnDefinition = "TEXT")
+    private String documentFileIds;
 
     @Size(max = 50, message = "Color must not exceed 50 characters")
     @Column(length = 50)
@@ -75,8 +84,7 @@ public class Motorcycle extends BaseEntity {
     private MotorcycleStatus status = MotorcycleStatus.AVAILABLE;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "storage_location_id", 
-                foreignKey = @ForeignKey(name = "fk_motorcycle_storage"))
+    @JoinColumn(name = "storage_location_id", foreignKey = @ForeignKey(name = "fk_motorcycle_storage"))
     private StorageLocation storageLocation;
 
     @NotNull(message = "Purchase price is required")

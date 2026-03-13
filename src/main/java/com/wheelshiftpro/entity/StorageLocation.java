@@ -37,6 +37,9 @@ public class StorageLocation extends BaseEntity {
     @Column(name = "address", length = 256, nullable = false)
     private String address;
 
+    @Column(name = "location_image_id", length = 64)
+    private String locationImageId;
+
     @Size(max = 64, message = "Contact person must not exceed 64 characters")
     @Column(name = "contact_person", length = 64)
     private String contactPerson;
@@ -66,6 +69,7 @@ public class StorageLocation extends BaseEntity {
 
     /**
      * Checks if the location has available capacity.
+     * 
      * @return true if there is space available, false otherwise
      */
     public boolean hasCapacity() {
@@ -74,6 +78,7 @@ public class StorageLocation extends BaseEntity {
 
     /**
      * Gets the available capacity.
+     * 
      * @return number of available slots
      */
     public Integer getAvailableCapacity() {

@@ -12,19 +12,18 @@ import java.util.List;
 
 /**
  * Entity representing a car in the inventory.
- * Core entity managing the complete lifecycle of a vehicle from purchase to sale.
+ * Core entity managing the complete lifecycle of a vehicle from purchase to
+ * sale.
  */
 @Entity
-@Table(name = "cars",
-       uniqueConstraints = {
-           @UniqueConstraint(name = "uk_vin_number", columnNames = "vin_number"),
-           @UniqueConstraint(name = "uk_registration_number", columnNames = "registration_number")
-       },
-       indexes = {
-           @Index(name = "idx_status_year", columnList = "status, year"),
-           @Index(name = "idx_storage_location", columnList = "storage_location_id"),
-           @Index(name = "idx_car_model", columnList = "car_model_id")
-       })
+@Table(name = "cars", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_vin_number", columnNames = "vin_number"),
+        @UniqueConstraint(name = "uk_registration_number", columnNames = "registration_number")
+}, indexes = {
+        @Index(name = "idx_status_year", columnList = "status, year"),
+        @Index(name = "idx_storage_location", columnList = "storage_location_id"),
+        @Index(name = "idx_car_model", columnList = "car_model_id")
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -49,6 +48,15 @@ public class Car extends BaseEntity {
     @Size(max = 32, message = "Registration number must not exceed 32 characters")
     @Column(name = "registration_number", length = 32, unique = true)
     private String registrationNumber;
+
+    @Column(name = "primary_image_id", length = 64)
+    private String primaryImageId;
+
+    @Column(name = "gallery_image_ids", columnDefinition = "TEXT")
+    private String galleryImageIds;
+
+    @Column(name = "document_file_ids", columnDefinition = "TEXT")
+    private String documentFileIds;
 
     @NotNull(message = "Year is required")
     @Min(value = 1980, message = "Year must be at least 1980")
@@ -112,6 +120,7 @@ public class Car extends BaseEntity {
 
     /**
      * Checks if the car can be reserved.
+     * 
      * @return true if car is available for reservation
      */
     public boolean canBeReserved() {
@@ -120,6 +129,7 @@ public class Car extends BaseEntity {
 
     /**
      * Checks if the car can be sold.
+     * 
      * @return true if car can be sold
      */
     public boolean canBeSold() {

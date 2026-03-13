@@ -39,6 +39,12 @@ public class CarInspection extends BaseEntity {
     @Column(name = "inspector_name", length = 64)
     private String inspectorName;
 
+    @Column(name = "inspection_image_ids", columnDefinition = "TEXT")
+    private String inspectionImageIds;
+
+    @Column(name = "inspection_report_file_id", length = 64)
+    private String inspectionReportFileId;
+
     @Column(name = "exterior_condition", columnDefinition = "TEXT")
     private String exteriorCondition;
 

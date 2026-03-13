@@ -19,11 +19,11 @@ import java.util.Set;
 
 /**
  * Entity representing an employee in the system.
- * Manages employee information, credentials, and relationships with sales and inquiries.
+ * Manages employee information, credentials, and relationships with sales and
+ * inquiries.
  */
 @Entity
-@Table(name = "employees",
-       uniqueConstraints = @UniqueConstraint(name = "uk_employee_email", columnNames = "email"))
+@Table(name = "employees", uniqueConstraints = @UniqueConstraint(name = "uk_employee_email", columnNames = "email"))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -50,6 +50,9 @@ public class Employee extends BaseEntity {
     @Size(max = 255, message = "Password hash must not exceed 255 characters")
     @Column(name = "password_hash", length = 255, nullable = false)
     private String passwordHash;
+
+    @Column(name = "profile_image_id", length = 64)
+    private String profileImageId;
 
     @Size(max = 32, message = "Phone must not exceed 32 characters")
     @Column(name = "phone", length = 32)
@@ -88,12 +91,8 @@ public class Employee extends BaseEntity {
     private List<Task> assignedTasks = new ArrayList<>();
 
     @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(
-        name = "employee_roles",
-        joinColumns = @JoinColumn(name = "employee_id"),
-        inverseJoinColumns = @JoinColumn(name = "role_id"),
-        uniqueConstraints = @UniqueConstraint(name = "uk_employee_role", columnNames = {"employee_id", "role_id"})
-    )
+    @JoinTable(name = "employee_roles", joinColumns = @JoinColumn(name = "employee_id"), inverseJoinColumns = @JoinColumn(name = "role_id"), uniqueConstraints = @UniqueConstraint(name = "uk_employee_role", columnNames = {
+            "employee_id", "role_id" }))
     @Builder.Default
     private Set<Role> roles = new HashSet<>();
 

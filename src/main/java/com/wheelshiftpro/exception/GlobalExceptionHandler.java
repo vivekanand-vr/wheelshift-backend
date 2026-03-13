@@ -273,6 +273,29 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handle File Storage Related Exceptions
+     */
+    @ExceptionHandler(FileStorageException.class)
+    public ResponseEntity<ErrorResponse> handleFileStorageException(
+            FileStorageException ex, 
+            HttpServletRequest request) {
+        
+        log.error("File storage error: {}", ex.getMessage(), ex);
+        
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .type("about:blank")
+                .title("File Storage Error")
+                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .detail(ex.getMessage())
+                .instance(request.getRequestURI())
+                .code("FILE_STORAGE_ERROR")
+                .timestamp(LocalDateTime.now())
+                .build();
+        
+        return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    /**
      * Handle HTTP method not supported (e.g., GET instead of POST)
      */
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)

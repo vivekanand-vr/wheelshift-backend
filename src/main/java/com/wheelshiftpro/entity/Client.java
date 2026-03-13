@@ -17,8 +17,7 @@ import java.util.List;
  * Tracks client information and purchase history.
  */
 @Entity
-@Table(name = "clients",
-       uniqueConstraints = @UniqueConstraint(name = "uk_client_email", columnNames = "email"))
+@Table(name = "clients", uniqueConstraints = @UniqueConstraint(name = "uk_client_email", columnNames = "email"))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -44,6 +43,12 @@ public class Client extends BaseEntity {
     @Size(max = 32, message = "Phone must not exceed 32 characters")
     @Column(name = "phone", length = 32)
     private String phone;
+
+    @Column(name = "profile_image_id", length = 64)
+    private String profileImageId;
+
+    @Column(name = "document_file_ids", columnDefinition = "TEXT")
+    private String documentFileIds;
 
     @Size(max = 128, message = "Location must not exceed 128 characters")
     @Column(name = "location", length = 128)

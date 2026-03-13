@@ -21,8 +21,8 @@ import java.util.List;
  * @version 1.0
  */
 @Entity
-@Table(name = "motorcycle_models", 
-       uniqueConstraints = @UniqueConstraint(columnNames = {"make", "model", "variant", "year"}))
+@Table(name = "motorcycle_models", uniqueConstraints = @UniqueConstraint(columnNames = { "make", "model", "variant",
+        "year" }))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -43,6 +43,9 @@ public class MotorcycleModel extends BaseEntity {
     @Size(max = 100, message = "Model must not exceed 100 characters")
     @Column(nullable = false, length = 100)
     private String model;
+
+    @Column(name = "model_image_id", length = 64)
+    private String modelImageId;
 
     @Size(max = 100, message = "Variant must not exceed 100 characters")
     @Column(length = 100)

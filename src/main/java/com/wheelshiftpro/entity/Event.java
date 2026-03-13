@@ -11,7 +11,8 @@ import java.time.LocalDateTime;
 
 /**
  * Entity representing a calendar event.
- * Tracks important business dates including inspections, reservations, and custom events.
+ * Tracks important business dates including inspections, reservations, and
+ * custom events.
  */
 @Entity
 @Table(name = "events")
@@ -57,4 +58,7 @@ public class Event extends BaseEntity {
 
     @Column(name = "end_time")
     private LocalDateTime endTime;
+
+    @Column(name = "attachment_file_ids", columnDefinition = "TEXT")
+    private String attachmentFileIds;
 }

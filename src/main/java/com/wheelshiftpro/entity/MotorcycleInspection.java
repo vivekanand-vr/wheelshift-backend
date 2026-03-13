@@ -32,8 +32,7 @@ public class MotorcycleInspection extends BaseEntity {
 
     @NotNull(message = "Motorcycle is required")
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "motorcycle_id", nullable = false,
-                foreignKey = @ForeignKey(name = "fk_motorcycle_inspection_motorcycle"))
+    @JoinColumn(name = "motorcycle_id", nullable = false, foreignKey = @ForeignKey(name = "fk_motorcycle_inspection_motorcycle"))
     private Motorcycle motorcycle;
 
     @NotNull(message = "Inspection date is required")
@@ -41,14 +40,19 @@ public class MotorcycleInspection extends BaseEntity {
     private LocalDate inspectionDate;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "inspector_id",
-                foreignKey = @ForeignKey(name = "fk_motorcycle_inspection_inspector"))
+    @JoinColumn(name = "inspector_id", foreignKey = @ForeignKey(name = "fk_motorcycle_inspection_inspector"))
     private Employee inspector;
 
     @NotBlank(message = "Overall condition is required")
     @Size(max = 20, message = "Overall condition must not exceed 20 characters")
     @Column(name = "overall_condition", nullable = false, length = 20)
     private String overallCondition;
+
+    @Column(name = "inspection_image_ids", columnDefinition = "TEXT")
+    private String inspectionImageIds;
+
+    @Column(name = "inspection_report_file_id", length = 64)
+    private String inspectionReportFileId;
 
     // Condition Assessment
     @Size(max = 20)

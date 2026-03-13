@@ -15,12 +15,11 @@ import java.util.List;
  * Contains make, model, variant, and technical specifications.
  */
 @Entity
-@Table(name = "car_models", 
-       uniqueConstraints = @UniqueConstraint(columnNames = {"make", "model", "variant"}),
-       indexes = {
-           @Index(name = "idx_fuel_type", columnList = "fuel_type"),
-           @Index(name = "idx_body_type", columnList = "body_type")
-       })
+@Table(name = "car_models", uniqueConstraints = @UniqueConstraint(columnNames = { "make", "model",
+        "variant" }), indexes = {
+                @Index(name = "idx_fuel_type", columnList = "fuel_type"),
+                @Index(name = "idx_body_type", columnList = "body_type")
+        })
 @Getter
 @Setter
 @NoArgsConstructor
@@ -41,6 +40,9 @@ public class CarModel extends BaseEntity {
     @Size(max = 64, message = "Model must not exceed 64 characters")
     @Column(name = "model", length = 64, nullable = false)
     private String model;
+
+    @Column(name = "model_image_id", length = 64)
+    private String modelImageId;
 
     @NotBlank(message = "Variant is required")
     @Size(max = 64, message = "Variant must not exceed 64 characters")

@@ -15,8 +15,7 @@ import java.time.LocalDateTime;
  * Ensures one active reservation per car.
  */
 @Entity
-@Table(name = "reservations",
-       uniqueConstraints = @UniqueConstraint(name = "uk_reservation_car", columnNames = "car_id"))
+@Table(name = "reservations", uniqueConstraints = @UniqueConstraint(name = "uk_reservation_car", columnNames = "car_id"))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -71,8 +70,12 @@ public class Reservation extends BaseEntity {
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
 
+    @Column(name = "reservation_document_ids", columnDefinition = "TEXT")
+    private String reservationDocumentIds;
+
     /**
      * Checks if the reservation has expired.
+     * 
      * @return true if current time is past expiry date
      */
     public boolean isExpired() {
@@ -81,6 +84,7 @@ public class Reservation extends BaseEntity {
 
     /**
      * Checks if the reservation can be converted to sale.
+     * 
      * @return true if reservation is confirmed
      */
     public boolean canConvertToSale() {
