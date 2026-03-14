@@ -4,6 +4,7 @@ import com.wheelshiftpro.dto.request.CarRequest;
 import com.wheelshiftpro.dto.response.CarResponse;
 import com.wheelshiftpro.dto.response.PageResponse;
 import com.wheelshiftpro.entity.Car;
+import com.wheelshiftpro.entity.CarModel;
 import com.wheelshiftpro.entity.CarMovement;
 import com.wheelshiftpro.entity.StorageLocation;
 import com.wheelshiftpro.enums.CarStatus;
@@ -50,13 +51,33 @@ public class CarServiceImpl implements CarService {
             throw new DuplicateResourceException("Car", "VIN", request.getVinNumber());
         }
 
-        if (!carModelRepository.existsById(request.getCarModelId())) {
-            throw new ResourceNotFoundException("CarModel", "id", request.getCarModelId());
-        }
+        // if (!carModelRepository.existsById(request.getCarModelId())) {
+        // throw new ResourceNotFoundException("CarModel", "id",
+        // request.getCarModelId());
+        // }
 
+        // if (request.getStorageLocationId() != null) {
+        // StorageLocation location =
+        // storageLocationRepository.findById(request.getStorageLocationId())
+        // .orElseThrow(() -> new ResourceNotFoundException("StorageLocation", "id",
+        // request.getStorageLocationId()));
+
+        // if (!location.hasCapacity()) {
+        // throw new BusinessException("Storage location has reached maximum capacity",
+        // "LOCATION_FULL");
+        // }
+        // }
+
+        // Fetch CarModel and set it on the entity after mapping
+        CarModel carModel = carModelRepository.findById(request.getCarModelId())
+                .orElseThrow(() -> new ResourceNotFoundException("CarModel", "id", request.getCarModelId()));
+
+        // Fetch StorageLocation and set it on the entity after mapping
+        StorageLocation location = null;
         if (request.getStorageLocationId() != null) {
-            StorageLocation location = storageLocationRepository.findById(request.getStorageLocationId())
-                    .orElseThrow(() -> new ResourceNotFoundException("StorageLocation", "id", request.getStorageLocationId()));
+            location = storageLocationRepository.findById(request.getStorageLocationId())
+                    .orElseThrow(() -> new ResourceNotFoundException("StorageLocation", "id",
+                            request.getStorageLocationId()));
 
             if (!location.hasCapacity()) {
                 throw new BusinessException("Storage location has reached maximum capacity", "LOCATION_FULL");
@@ -64,10 +85,12 @@ public class CarServiceImpl implements CarService {
         }
 
         Car car = carMapper.toEntity(request);
+        car.setCarModel(carModel); // ✅ Set CarModel on entity
+        car.setStorageLocation(location); // ✅ Set StorageLocation on entity
+
         Car saved = carRepository.save(car);
 
         if (saved.getStorageLocation() != null) {
-            StorageLocation location = saved.getStorageLocation();
             location.setCurrentVehicleCount(location.getCurrentVehicleCount() + 1);
             storageLocationRepository.save(location);
         }
@@ -82,6 +105,21 @@ public class CarServiceImpl implements CarService {
 
         Car car = carRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Car", "id", id));
+
+        // Update carModel only if a new one is provided in the request
+        if (request.getCarModelId() != null) {
+            CarModel carModel = carModelRepository.findById(request.getCarModelId())
+                    .orElseThrow(() -> new ResourceNotFoundException("CarModel", "id", request.getCarModelId()));
+            car.setCarModel(carModel);
+        }
+
+        // Update storageLocation only if provided
+        if (request.getStorageLocationId() != null) {
+            StorageLocation location = storageLocationRepository.findById(request.getStorageLocationId())
+                    .orElseThrow(() -> new ResourceNotFoundException("StorageLocation", "id",
+                            request.getStorageLocationId()));
+            car.setStorageLocation(location);
+        }
 
         carMapper.updateEntityFromRequest(request, car);
         Car updated = carRepository.save(car);
@@ -136,9 +174,9 @@ public class CarServiceImpl implements CarService {
     @Override
     @Transactional(readOnly = true)
     public PageResponse<CarResponse> searchCars(CarStatus status, Long locationId, String make,
-                                                String model, Integer minYear, Integer maxYear,
-                                                BigDecimal minPrice, BigDecimal maxPrice,
-                                                int page, int size) {
+            String model, Integer minYear, Integer maxYear,
+            BigDecimal minPrice, BigDecimal maxPrice,
+            int page, int size) {
         log.debug("Searching cars with filters");
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
@@ -240,8 +278,7 @@ public class CarServiceImpl implements CarService {
 
         return Map.of(
                 "totalCars", totalCars,
-                "availableCars", availableCars
-        );
+                "availableCars", availableCars);
     }
 
     @Override

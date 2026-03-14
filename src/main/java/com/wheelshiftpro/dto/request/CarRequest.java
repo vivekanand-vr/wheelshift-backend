@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -62,6 +63,12 @@ public class CarRequest {
     private Integer cargoCapacityLiters;
     private BigDecimal acceleration0To100;
     private Integer topSpeedKmh;
+
+    // File IDs for images and documents
+    @Size(max = 64, message = "Primary image ID must not exceed 64 characters")
+    private String primaryImageId;
+    private List<String> galleryImageIds;
+    private List<String> documentFileIds;
 
     // Additional features as key-value pairs
     private Map<String, String> features;
