@@ -28,14 +28,13 @@ erDiagram
         BIGINT car_model_id FK
         VARCHAR color
         INT mileage_km
-        INT manufacture_year
-        DATE registration_date
+        INT year
+        INT engine_cc
         VARCHAR status
         BIGINT storage_location_id FK
         DECIMAL purchase_price
         DATE purchase_date
         DECIMAL selling_price
-        DECIMAL minimum_price
         INT previous_owners
         DATE insurance_expiry_date
         BOOLEAN is_financed
@@ -43,23 +42,12 @@ erDiagram
         VARCHAR primary_image_id "Primary car image"
         TEXT gallery_image_ids "Gallery images (comma-separated)"
         TEXT document_file_ids "Documents (comma-separated)"
-        TIMESTAMP created_at
-        TIMESTAMP updated_at
-    }
-
-    CAR_DETAILED_SPECS {
-        BIGINT id PK
-        BIGINT car_id FK
-        VARCHAR engine_type
-        INT engine_capacity_cc
-        DECIMAL max_power_bhp
-        DECIMAL max_torque_nm
-        INT length_mm
-        INT width_mm
-        INT height_mm
-        BOOLEAN has_abs
-        BOOLEAN has_airbags
-        TEXT features
+        INT doors "Merged from car_detailed_specs"
+        INT seats "Merged from car_detailed_specs"
+        INT cargo_capacity_liters "Merged from car_detailed_specs"
+        DECIMAL acceleration_0_100 "Merged from car_detailed_specs"
+        INT top_speed_kmh "Merged from car_detailed_specs"
+        JSON features "Merged from car_features as JSON"
         TIMESTAMP created_at
         TIMESTAMP updated_at
     }
@@ -108,38 +96,31 @@ erDiagram
         VARCHAR primary_image_id "Primary motorcycle image"
         TEXT gallery_image_ids "Gallery images (comma-separated)"
         TEXT document_file_ids "Documents (comma-separated)"
-        TIMESTAMP created_at
-        TIMESTAMP updated_at
-    }
-
-    MOTORCYCLE_DETAILED_SPECS {
-        BIGINT id PK
-        BIGINT motorcycle_id FK
-        VARCHAR engine_type
-        DECIMAL max_power_bhp
-        DECIMAL max_torque_nm
-        VARCHAR cooling_system
-        DECIMAL fuel_tank_capacity
-        DECIMAL claimed_mileage_kmpl
-        INT length_mm
-        INT width_mm
-        INT height_mm
-        INT wheelbase_mm
-        INT ground_clearance_mm
-        INT kerb_weight_kg
-        VARCHAR front_brake_type
-        VARCHAR rear_brake_type
-        BOOLEAN abs_available
-        VARCHAR front_suspension
-        VARCHAR rear_suspension
-        VARCHAR front_tyre_size
-        VARCHAR rear_tyre_size
-        BOOLEAN has_electric_start
-        BOOLEAN has_kick_start
-        BOOLEAN has_digital_console
-        BOOLEAN has_usb_charging
-        BOOLEAN has_led_lights
-        TEXT additional_features
+        VARCHAR engine_type "Merged from motorcycle_detailed_specs"
+        DECIMAL max_power_bhp "Merged from motorcycle_detailed_specs"
+        DECIMAL max_torque_nm "Merged from motorcycle_detailed_specs"
+        VARCHAR cooling_system "Merged from motorcycle_detailed_specs"
+        DECIMAL fuel_tank_capacity "Merged from motorcycle_detailed_specs"
+        DECIMAL claimed_mileage_kmpl "Merged from motorcycle_detailed_specs"
+        INT length_mm "Merged from motorcycle_detailed_specs"
+        INT width_mm "Merged from motorcycle_detailed_specs"
+        INT height_mm "Merged from motorcycle_detailed_specs"
+        INT wheelbase_mm "Merged from motorcycle_detailed_specs"
+        INT ground_clearance_mm "Merged from motorcycle_detailed_specs"
+        INT kerb_weight_kg "Merged from motorcycle_detailed_specs"
+        VARCHAR front_brake_type "Merged from motorcycle_detailed_specs"
+        VARCHAR rear_brake_type "Merged from motorcycle_detailed_specs"
+        BOOLEAN abs_available "Merged from motorcycle_detailed_specs"
+        VARCHAR front_suspension "Merged from motorcycle_detailed_specs"
+        VARCHAR rear_suspension "Merged from motorcycle_detailed_specs"
+        VARCHAR front_tyre_size "Merged from motorcycle_detailed_specs"
+        VARCHAR rear_tyre_size "Merged from motorcycle_detailed_specs"
+        BOOLEAN has_electric_start "Merged from motorcycle_detailed_specs"
+        BOOLEAN has_kick_start "Merged from motorcycle_detailed_specs"
+        BOOLEAN has_digital_console "Merged from motorcycle_detailed_specs"
+        BOOLEAN has_usb_charging "Merged from motorcycle_detailed_specs"
+        BOOLEAN has_led_lights "Merged from motorcycle_detailed_specs"
+        TEXT additional_features "Merged from motorcycle_detailed_specs"
         TIMESTAMP created_at
         TIMESTAMP updated_at
     }
@@ -417,13 +398,11 @@ erDiagram
     }
 
     %% Relationships - Cars
-    CARS ||--o{ CAR_DETAILED_SPECS : "has specs"
     CARS }o--|| CAR_MODELS : "is model"
     CARS }o--o| STORAGE_LOCATIONS : "stored at"
     CARS ||--o{ CAR_INSPECTIONS : "inspected"
 
     %% Relationships - Motorcycles
-    MOTORCYCLES ||--o{ MOTORCYCLE_DETAILED_SPECS : "has specs"
     MOTORCYCLES }o--|| MOTORCYCLE_MODELS : "is model"
     MOTORCYCLES }o--o| STORAGE_LOCATIONS : "stored at"
     MOTORCYCLES ||--o{ MOTORCYCLE_INSPECTIONS : "inspected"
@@ -502,9 +481,10 @@ erDiagram
 - Check constraints validate business rules
 - File IDs are **not** foreign keys (allows flexibility for deleted files)
 
-### 4. **Normalization**
+### 4. **Denormalization for Performance** (Updated)
 - Separate model catalogs (car_models, motorcycle_models)
-- Detailed specs in separate tables (one-to-one relationships)
+- **Detailed specs merged into main tables** (cars, motorcycles) for better query performance
+- **Car features stored as JSON** in cars table for flexibility
 - Transaction history preserved independently
 - File metadata centralized in file_metadata table
 
@@ -560,8 +540,8 @@ erDiagram
 
 | Entity | Related To |
 |--------|------------|
-| **Cars** | → Car Models, Storage Locations, Detailed Specs, Inspections, Movements |
-| **Motorcycles** | → Motorcycle Models, Storage Locations, Detailed Specs, Inspections, Movements |
+| **Cars** | → Car Models, Storage Locations, Inspections, Movements |
+| **Motorcycles** | → Motorcycle Models, Storage Locations, Inspections, Movements |
 | **Inquiries** | → Cars OR Motorcycles, Clients, Employees |
 | **Reservations** | → Cars OR Motorcycles, Clients |
 | **Sales** | → Cars OR Motorcycles, Clients, Employees |
@@ -625,7 +605,44 @@ Entity → File ID (VARCHAR) → File Metadata Table → S3 Storage Path
 - Application code remains unchanged
 - URLs updated automatically via file_metadata table
 
+## Recent Schema Changes (V15 & V16)
+
+### V15: Car Table Structure Simplification
+**Date:** March 15, 2026
+
+**Changes:**
+1. **Merged `car_detailed_specs` into `cars` table**
+   - Added: `doors`, `seats`, `cargo_capacity_liters`, `acceleration_0_100`, `top_speed_kmh`
+   - Eliminated separate one-to-one relationship
+   - Improved query performance (no joins needed)
+
+2. **Merged `car_features` into `cars` table as JSON**
+   - Added: `features` (JSON column)
+   - Replaced key-value table with flexible JSON storage
+   - Simplified feature management
+
+**Benefits:**
+- Fewer joins in queries → Better performance
+- Simpler codebase (no separate entities/DTOs)
+- JSON features allow dynamic attributes
+- Single table for complete car information
+
+### V16: Motorcycle Table Structure Simplification
+**Date:** March 15, 2026
+
+**Changes:**
+1. **Merged `motorcycle_detailed_specs` into `motorcycles` table**
+   - Added 21 fields: engine specs, dimensions, braking, suspension, tires, features
+   - Eliminated separate one-to-one relationship
+   - Consistent with car table structure
+
+**Benefits:**
+- Consistent data model between cars and motorcycles
+- Improved query performance
+- Simplified mapper and service layer code
+- Single source of truth for motorcycle data
+
 ---
 
-**Last Updated:** January 31, 2026
-**Version:** 2.0 (with File Storage Integration)
+**Last Updated:** March 15, 2026
+**Version:** 2.1 (with Table Structure Simplification)
