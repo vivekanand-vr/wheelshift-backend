@@ -6,6 +6,7 @@ import com.wheelshiftpro.dto.response.CarResponse;
 import com.wheelshiftpro.dto.response.PageResponse;
 import com.wheelshiftpro.enums.CarStatus;
 import com.wheelshiftpro.service.CarService;
+import com.wheelshiftpro.validation.OnCreate;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -13,6 +14,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -28,7 +30,7 @@ public class CarController {
     @PostMapping
     @Operation(summary = "Create a new car", description = "Adds a new car to the inventory")
     public ResponseEntity<ApiResponse<CarResponse>> createCar(
-            @Valid @RequestBody CarRequest request) {
+            @Validated(OnCreate.class) @RequestBody CarRequest request) {
         CarResponse response = carService.createCar(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Car created successfully", response));

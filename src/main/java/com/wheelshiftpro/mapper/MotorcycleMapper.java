@@ -5,6 +5,7 @@ import com.wheelshiftpro.dto.response.MotorcycleResponse;
 import com.wheelshiftpro.entity.Motorcycle;
 import com.wheelshiftpro.entity.MotorcycleModel;
 import com.wheelshiftpro.entity.StorageLocation;
+import com.wheelshiftpro.utils.FileUrlBuilder;
 import org.mapstruct.*;
 
 import java.util.List;
@@ -13,7 +14,9 @@ import java.util.List;
  * MapStruct mapper for Motorcycle entity and DTOs.
  * Simplified after merging MotorcycleDetailedSpecs into Motorcycle entity.
  */
-@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE,
+        nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE,
+        imports = { FileUrlBuilder.class })
 public interface MotorcycleMapper {
 
     /**
@@ -33,6 +36,16 @@ public interface MotorcycleMapper {
     @Mapping(target = "isInsuranceExpired", expression = "java(entity.isInsuranceExpired())")
     @Mapping(target = "isPollutionCertificateExpired", expression = "java(entity.isPollutionCertificateExpired())")
     @Mapping(target = "fullIdentification", expression = "java(entity.getFullIdentification())")
+    
+    // File IDs
+    @Mapping(target = "primaryImageId", source = "primaryImageId")
+    @Mapping(target = "galleryImageIds", source = "galleryImageIds")
+    @Mapping(target = "documentFileIds", source = "documentFileIds")
+    
+    // Generate file URLs using FileUrlBuilder
+    @Mapping(target = "primaryImageUrl", expression = "java(FileUrlBuilder.buildFileUrl(entity.getPrimaryImageId()))")
+    @Mapping(target = "galleryImageUrls", expression = "java(FileUrlBuilder.buildFileUrls(entity.getGalleryImageIds()))")
+    @Mapping(target = "documentFileUrls", expression = "java(FileUrlBuilder.buildFileUrls(entity.getDocumentFileIds()))")
     MotorcycleResponse toResponse(Motorcycle entity);
 
     /**
@@ -40,6 +53,11 @@ public interface MotorcycleMapper {
      */
     @Mapping(target = "motorcycleModel", ignore = true)
     @Mapping(target = "storageLocation", ignore = true)
+    
+    // File IDs conversion
+    @Mapping(target = "primaryImageId", source = "primaryImageId")
+    @Mapping(target = "galleryImageIds", expression = "java(FileUrlBuilder.joinList(request.getGalleryImageIds()))")
+    @Mapping(target = "documentFileIds", expression = "java(FileUrlBuilder.joinList(request.getDocumentFileIds()))")
     Motorcycle toEntity(MotorcycleRequest request);
 
     /**
@@ -54,6 +72,10 @@ public interface MotorcycleMapper {
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     @Mapping(target = "motorcycleModel", ignore = true)
     @Mapping(target = "storageLocation", ignore = true)
+    
+    // File IDs conversion
+    @Mapping(target = "galleryImageIds", expression = "java(FileUrlBuilder.joinList(request.getGalleryImageIds()))")
+    @Mapping(target = "documentFileIds", expression = "java(FileUrlBuilder.joinList(request.getDocumentFileIds()))")
     void updateEntityFromRequest(MotorcycleRequest request, @MappingTarget Motorcycle entity);
 
     /**

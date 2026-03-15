@@ -2,6 +2,7 @@ package com.wheelshiftpro.dto.request;
 
 import com.wheelshiftpro.enums.CoolingSystem;
 import com.wheelshiftpro.enums.MotorcycleStatus;
+import com.wheelshiftpro.validation.OnCreate;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -10,6 +11,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 /**
  * DTO for creating or updating a motorcycle.
@@ -20,7 +22,7 @@ import java.time.LocalDate;
 @Builder
 public class MotorcycleRequest {
 
-    @NotBlank(message = "VIN number is required")
+    @NotBlank(groups = OnCreate.class, message = "VIN number is required")
     @Size(min = 17, max = 17, message = "VIN number must be exactly 17 characters")
     private String vinNumber;
 
@@ -33,7 +35,7 @@ public class MotorcycleRequest {
     @Size(max = 50, message = "Chassis number must not exceed 50 characters")
     private String chassisNumber;
 
-    @NotNull(message = "Motorcycle model ID is required")
+    @NotNull(groups = OnCreate.class, message = "Motorcycle model ID is required")
     private Long motorcycleModelId;
 
     @Size(max = 50, message = "Color must not exceed 50 characters")
@@ -42,7 +44,7 @@ public class MotorcycleRequest {
     @Min(value = 0, message = "Mileage must be at least 0")
     private Integer mileageKm;
 
-    @NotNull(message = "Manufacture year is required")
+    @NotNull(groups = OnCreate.class, message = "Manufacture year is required")
     @Min(value = 1900, message = "Manufacture year must be at least 1900")
     private Integer manufactureYear;
 
@@ -52,11 +54,11 @@ public class MotorcycleRequest {
 
     private Long storageLocationId;
 
-    @NotNull(message = "Purchase price is required")
+    @NotNull(groups = OnCreate.class, message = "Purchase price is required")
     @DecimalMin(value = "0.0", inclusive = false, message = "Purchase price must be greater than 0")
     private BigDecimal purchasePrice;
 
-    @NotNull(message = "Purchase date is required")
+    @NotNull(groups = OnCreate.class, message = "Purchase date is required")
     private LocalDate purchaseDate;
 
     @DecimalMin(value = "0.0", inclusive = false, message = "Selling price must be greater than 0")
@@ -77,6 +79,12 @@ public class MotorcycleRequest {
     private Boolean isAccidental;
 
     private String description;
+
+    // File IDs for images and documents
+    @Size(max = 64, message = "Primary image ID must not exceed 64 characters")
+    private String primaryImageId;
+    private List<String> galleryImageIds;
+    private List<String> documentFileIds;
 
     // Detailed Specs (merged from MotorcycleDetailedSpecsRequest)
     // Engine Specifications
