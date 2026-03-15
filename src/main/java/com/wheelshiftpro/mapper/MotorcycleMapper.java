@@ -11,6 +11,7 @@ import java.util.List;
 
 /**
  * MapStruct mapper for Motorcycle entity and DTOs.
+ * Simplified after merging MotorcycleDetailedSpecs into Motorcycle entity.
  */
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface MotorcycleMapper {
@@ -27,6 +28,7 @@ public interface MotorcycleMapper {
     @Mapping(target = "storageLocationId", source = "storageLocation.id")
     @Mapping(target = "storageLocationName", source = "storageLocation.name")
     @Mapping(target = "profitMargin", expression = "java(entity.calculateProfitMargin())")
+    @Mapping(target = "powerToWeightRatio", expression = "java(entity.getPowerToWeightRatio())")
     @Mapping(target = "ageInYears", expression = "java(entity.getAgeInYears())")
     @Mapping(target = "isInsuranceExpired", expression = "java(entity.isInsuranceExpired())")
     @Mapping(target = "isPollutionCertificateExpired", expression = "java(entity.isPollutionCertificateExpired())")
@@ -38,7 +40,6 @@ public interface MotorcycleMapper {
      */
     @Mapping(target = "motorcycleModel", ignore = true)
     @Mapping(target = "storageLocation", ignore = true)
-    @Mapping(target = "detailedSpecs", ignore = true)
     Motorcycle toEntity(MotorcycleRequest request);
 
     /**
@@ -53,7 +54,6 @@ public interface MotorcycleMapper {
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     @Mapping(target = "motorcycleModel", ignore = true)
     @Mapping(target = "storageLocation", ignore = true)
-    @Mapping(target = "detailedSpecs", ignore = true)
     void updateEntityFromRequest(MotorcycleRequest request, @MappingTarget Motorcycle entity);
 
     /**

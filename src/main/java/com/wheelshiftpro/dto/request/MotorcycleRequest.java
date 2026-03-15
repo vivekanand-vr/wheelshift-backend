@@ -1,5 +1,6 @@
 package com.wheelshiftpro.dto.request;
 
+import com.wheelshiftpro.enums.CoolingSystem;
 import com.wheelshiftpro.enums.MotorcycleStatus;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
@@ -76,4 +77,48 @@ public class MotorcycleRequest {
     private Boolean isAccidental;
 
     private String description;
+
+    // Detailed Specs (merged from MotorcycleDetailedSpecsRequest)
+    // Engine Specifications
+    private String engineType;
+    private BigDecimal maxPowerBhp;
+    private BigDecimal maxTorqueNm;
+    private CoolingSystem coolingSystem;
+    private BigDecimal fuelTankCapacity;
+    private BigDecimal claimedMileageKmpl;
+
+    // Dimensions
+    @Min(value = 0, message = "Length must be at least 0")
+    private Integer lengthMm;
+    @Min(value = 0, message = "Width must be at least 0")
+    private Integer widthMm;
+    @Min(value = 0, message = "Height must be at least 0")
+    private Integer heightMm;
+    @Min(value = 0, message = "Wheelbase must be at least 0")
+    private Integer wheelbaseMm;
+    @Min(value = 0, message = "Ground clearance must be at least 0")
+    private Integer groundClearanceMm;
+    @Min(value = 0, message = "Kerb weight must be at least 0")
+    private Integer kerbWeightKg;
+
+    // Braking System
+    private String frontBrakeType;
+    private String rearBrakeType;
+    private Boolean absAvailable;
+
+    // Suspension
+    private String frontSuspension;
+    private String rearSuspension;
+
+    // Tires
+    private String frontTyreSize;
+    private String rearTyreSize;
+
+    // Features
+    private Boolean hasElectricStart;
+    private Boolean hasKickStart;
+    private Boolean hasDigitalConsole;
+    private Boolean hasUsbCharging;
+    private Boolean hasLedLights;
+    private String additionalFeatures;
 }

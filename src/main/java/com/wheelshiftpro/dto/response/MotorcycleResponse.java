@@ -1,5 +1,6 @@
 package com.wheelshiftpro.dto.response;
 
+import com.wheelshiftpro.enums.CoolingSystem;
 import com.wheelshiftpro.enums.MotorcycleStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -54,8 +55,47 @@ public class MotorcycleResponse {
     private Boolean isAccidental;
     private String description;
     
+    // Detailed Specs (merged from MotorcycleDetailedSpecsResponse)
+    // Engine Specifications
+    private String engineType;
+    private BigDecimal maxPowerBhp;
+    private BigDecimal maxTorqueNm;
+    private CoolingSystem coolingSystem;
+    private BigDecimal fuelTankCapacity;
+    private BigDecimal claimedMileageKmpl;
+    
+    // Dimensions
+    private Integer lengthMm;
+    private Integer widthMm;
+    private Integer heightMm;
+    private Integer wheelbaseMm;
+    private Integer groundClearanceMm;
+    private Integer kerbWeightKg;
+    
+    // Braking System
+    private String frontBrakeType;
+    private String rearBrakeType;
+    private Boolean absAvailable;
+    
+    // Suspension
+    private String frontSuspension;
+    private String rearSuspension;
+    
+    // Tires
+    private String frontTyreSize;
+    private String rearTyreSize;
+    
+    // Features
+    private Boolean hasElectricStart;
+    private Boolean hasKickStart;
+    private Boolean hasDigitalConsole;
+    private Boolean hasUsbCharging;
+    private Boolean hasLedLights;
+    private String additionalFeatures;
+    
     // Computed fields
     private BigDecimal profitMargin;
+    private BigDecimal powerToWeightRatio;
     private Integer ageInYears;
     private Boolean isInsuranceExpired;
     private Boolean isPollutionCertificateExpired;
