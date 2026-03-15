@@ -4,11 +4,14 @@ import com.wheelshiftpro.enums.CarStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Entity representing a car in the inventory.
@@ -97,13 +100,32 @@ public class Car extends BaseEntity {
     @Column(name = "selling_price", precision = 12, scale = 2)
     private BigDecimal sellingPrice;
 
-    @OneToOne(mappedBy = "car", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
-    private CarDetailedSpecs detailedSpecs;
+    // Detailed Specs (merged from CarDetailedSpecs)
+    @Min(value = 0, message = "Doors cannot be negative")
+    @Column(name = "doors")
+    private Integer doors;
 
-    @OneToMany(mappedBy = "car", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
-    @Builder.Default
-    private List<CarFeature> features = new ArrayList<>();
+    @Min(value = 0, message = "Seats cannot be negative")
+    @Column(name = "seats")
+    private Integer seats;
 
+    @Min(value = 0, message = "Cargo capacity cannot be negative")
+    @Column(name = "cargo_capacity_liters")
+    private Integer cargoCapacityLiters;
+
+    @Column(name = "acceleration_0_100", precision = 5, scale = 2)
+    private BigDecimal acceleration0To100;
+
+    @Min(value = 0, message = "Top speed cannot be negative")
+    @Column(name = "top_speed_kmh")
+    private Integer topSpeedKmh;
+
+    // Features stored as JSON (replaces CarFeature entity)
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "features", columnDefinition = "JSON")
+    private Map<String, String> features;
+
+    // Relationships
     @OneToMany(mappedBy = "car", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @Builder.Default
     private List<CarInspection> inspections = new ArrayList<>();
