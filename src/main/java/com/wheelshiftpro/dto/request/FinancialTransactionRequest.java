@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * DTO for creating a financial transaction.
@@ -23,6 +24,8 @@ public class FinancialTransactionRequest {
 
     @NotNull(message = "Car ID is required")
     private Long carId;
+
+    private Long motorcycleId;
 
     @NotNull(message = "Transaction type is required")
     private TransactionType transactionType;
@@ -41,4 +44,6 @@ public class FinancialTransactionRequest {
 
     @Size(max = 512, message = "Receipt URL must not exceed 512 characters")
     private String receiptUrl;
+
+    private List<String> transactionFileIds;
 }

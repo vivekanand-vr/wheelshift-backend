@@ -11,8 +11,8 @@
 | **Employee** | ✅ profileImageId | - | - | - | ⏳ Pending |
 | **Client** | ✅ profileImageId | - | ✅ documentFileIds | - | ⏳ Pending |
 | **StorageLocation** | ✅ locationImageId | - | - | - | ⏳ Pending |
-| **Sale** | - | - | ✅ saleDocumentIds | - | ⏳ Pending |
-| **FinancialTransaction** | - | - | ✅ transactionFileIds | - | ⏳ Pending |
+| **Sale** | - | - | ✅ saleDocumentIds | - | ✅ **UPDATED** (Entity + DTOs + Mapper) |
+| **FinancialTransaction** | - | - | ✅ transactionFileIds | - | ✅ **UPDATED** (Entity + DTOs + Mapper) |
 | **Event** | - | - | - | ✅ attachmentFileIds | ✅ **UPDATED** (Entity + DTOs + Mapper) |
 | **Inquiry** | - | - | - | ✅ attachmentFileIds | ✅ **UPDATED** (Entity + DTOs + Mapper) |
 | **Reservation** | - | - | ✅ reservationDocumentIds | - | ⏳ Pending |
