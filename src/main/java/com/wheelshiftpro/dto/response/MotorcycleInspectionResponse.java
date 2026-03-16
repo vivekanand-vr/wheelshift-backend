@@ -11,32 +11,43 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * DTO for car inspection response.
+ * DTO for motorcycle inspection response.
  */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class CarInspectionResponse {
+public class MotorcycleInspectionResponse {
 
     private Long id;
-    private Long carId;
-    private String carVin;
+    private Long motorcycleId;
+    private String motorcycleVin;
     private LocalDate inspectionDate;
+    private Long inspectorId;
     private String inspectorName;
+    private String overallCondition;
     private List<String> inspectionImageIds;
     private String inspectionReportFileId;
     private List<String> inspectionImageUrls;
     private String inspectionReportFileUrl;
-    private String exteriorCondition;
-    private String interiorCondition;
-    private String mechanicalCondition;
+
+    // Condition Assessment
+    private String engineCondition;
+    private String transmissionCondition;
+    private String suspensionCondition;
+    private String brakeCondition;
+    private String tyreCondition;
     private String electricalCondition;
-    private String accidentHistory;
-    private String requiredRepairs;
+    private String bodyCondition;
+
+    // Issues & Repairs
+    private Boolean hasAccidentHistory;
+    private Boolean requiresRepair;
     private BigDecimal estimatedRepairCost;
-    private Boolean inspectionPass;
-    private String reportUrl;
+    private String repairNotes;
+
+    private Boolean passed;
+    private String notes;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

@@ -1,19 +1,19 @@
 ## Summary of changes in Entities
 
-| Entity | Single Image | Gallery/Multiple Images | Documents | Report/Attachments |
-| --- | --- | --- | --- | --- |
-| **CarModel** | ✅ modelImageId | - | - | - |
-| **MotorcycleModel** | ✅ modelImageId | - | - | - |
-| **Car** | ✅ primaryImageId | ✅ galleryImageIds | ✅ documentFileIds | - |
-| **Motorcycle** | ✅ primaryImageId | ✅ galleryImageIds | ✅ documentFileIds | - |
-| **CarInspection** | - | ✅ inspectionImageIds | - | ✅ inspectionReportFileId |
-| **MotorcycleInspection** | - | ✅ inspectionImageIds | - | ✅ inspectionReportFileId |
-| **Employee** | ✅ profileImageId | - | - | - |
-| **Client** | ✅ profileImageId | - | ✅ documentFileIds | - |
-| **StorageLocation** | ✅ locationImageId | - | - | - |
-| **Sale** | - | - | ✅ saleDocumentIds | - |
-| **FinancialTransaction** | - | - | ✅ transactionFileIds | - |
-| **Event** | - | - | - | ✅ attachmentFileIds |
-| **Inquiry** | - | - | - | ✅ attachmentFileIds |
-| **Reservation** | - | - | ✅ reservationDocumentIds | - |
-| **Task** | - | - | - | ✅ attachmentFileIds |
+| Entity | Single Image | Gallery/Multiple Images | Documents | Report/Attachments | Status |
+| --- | --- | --- | --- | --- | --- |
+| **CarModel** | ✅ modelImageId | - | - | - | ✅ **UPDATED** (Entity + DTOs + Mapper) |
+| **MotorcycleModel** | ✅ modelImageId | - | - | - | ✅ **UPDATED** (Entity + DTOs + Mapper) |
+| **Car** | ✅ primaryImageId | ✅ galleryImageIds | ✅ documentFileIds | - | ✅ **UPDATED** (Entity + DTOs + Mapper) |
+| **Motorcycle** | ✅ primaryImageId | ✅ galleryImageIds | ✅ documentFileIds | - | ✅ **UPDATED** (Entity + DTOs + Mapper) |
+| **CarInspection** | - | ✅ inspectionImageIds | - | ✅ inspectionReportFileId | ✅ **UPDATED** (Entity + DTOs + Mapper) |
+| **MotorcycleInspection** | - | ✅ inspectionImageIds | - | ✅ inspectionReportFileId | ✅ **UPDATED** (Entity + DTOs + Mapper) |
+| **Employee** | ✅ profileImageId | - | - | - | ⏳ Pending |
+| **Client** | ✅ profileImageId | - | ✅ documentFileIds | - | ⏳ Pending |
+| **StorageLocation** | ✅ locationImageId | - | - | - | ⏳ Pending |
+| **Sale** | - | - | ✅ saleDocumentIds | - | ⏳ Pending |
+| **FinancialTransaction** | - | - | ✅ transactionFileIds | - | ⏳ Pending |
+| **Event** | - | - | - | ✅ attachmentFileIds | ⏳ Pending |
+| **Inquiry** | - | - | - | ✅ attachmentFileIds | ⏳ Pending |
+| **Reservation** | - | - | ✅ reservationDocumentIds | - | ⏳ Pending |
+| **Task** | - | - | - | ✅ attachmentFileIds | ⏳ Pending |
