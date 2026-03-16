@@ -6,8 +6,8 @@
 | **MotorcycleModel** | ✅ modelImageId | - | - | - | ✅ **UPDATED** (Entity + DTOs + Mapper) |
 | **Car** | ✅ primaryImageId | ✅ galleryImageIds | ✅ documentFileIds | - | ✅ **UPDATED** (Entity + DTOs + Mapper) |
 | **Motorcycle** | ✅ primaryImageId | ✅ galleryImageIds | ✅ documentFileIds | - | ✅ **UPDATED** (Entity + DTOs + Mapper) |
-| **CarInspection** | - | ✅ inspectionImageIds | - | ✅ inspectionReportFileId | ✅ **UPDATED** (Entity + DTOs + Mapper) |
-| **MotorcycleInspection** | - | ✅ inspectionImageIds | - | ✅ inspectionReportFileId | ✅ **UPDATED** (Entity + DTOs + Mapper) |
+| **CarInspection** | - | ✅ inspectionImageIds | - | ✅ inspectionReportFileId | ✅ **COMPLETE** (Full Stack: Entity + DTOs + Mapper + Service + Controller) |
+| **MotorcycleInspection** | - | ✅ inspectionImageIds | - | ✅ inspectionReportFileId | ✅ **COMPLETE** (Full Stack: Entity + DTOs + Mapper + Service + Controller) |
 | **Employee** | ✅ profileImageId | - | - | - | ⏳ Pending |
 | **Client** | ✅ profileImageId | - | ✅ documentFileIds | - | ⏳ Pending |
 | **StorageLocation** | ✅ locationImageId | - | - | - | ⏳ Pending |
