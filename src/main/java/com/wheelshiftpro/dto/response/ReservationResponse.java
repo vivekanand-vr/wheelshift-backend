@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * DTO for reservation response.
@@ -21,6 +22,8 @@ public class ReservationResponse {
     private Long id;
     private Long carId;
     private String carVin;
+    private Long motorcycleId;
+    private String motorcycleVin;
     private Long clientId;
     private String clientName;
     private String clientEmail;
@@ -30,6 +33,8 @@ public class ReservationResponse {
     private BigDecimal depositAmount;
     private Boolean depositPaid;
     private String notes;
+    private List<String> reservationDocumentIds;
+    private List<String> reservationDocumentUrls;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

@@ -19,6 +19,8 @@ public class StorageLocationResponse {
     private Long id;
     private String name;
     private String address;
+    private String locationImageId;
+    private String locationImageUrl;
     private String contactPerson;
     private String contactNumber;
     private Integer totalCapacity;

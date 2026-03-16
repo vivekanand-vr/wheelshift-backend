@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * DTO for client response.
@@ -22,6 +23,10 @@ public class ClientResponse {
     private String name;
     private String email;
     private String phone;
+    private String profileImageId;
+    private String profileImageUrl;
+    private List<String> documentFileIds;
+    private List<String> documentFileUrls;
     private String location;
     private ClientStatus status;
     private Integer totalPurchases;

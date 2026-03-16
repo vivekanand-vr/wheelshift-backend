@@ -9,6 +9,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 /**
  * DTO for creating or updating a client.
  */
@@ -29,6 +31,9 @@ public class ClientRequest {
 
     @Size(max = 32, message = "Phone must not exceed 32 characters")
     private String phone;
+
+    private String profileImageId;
+    private List<String> documentFileIds;
 
     @Size(max = 128, message = "Location must not exceed 128 characters")
     private String location;

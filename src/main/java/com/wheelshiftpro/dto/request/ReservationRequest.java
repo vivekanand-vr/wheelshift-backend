@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * DTO for creating or updating a reservation.
@@ -22,6 +23,8 @@ public class ReservationRequest {
 
     @NotNull(message = "Car ID is required")
     private Long carId;
+
+    private Long motorcycleId;
 
     @NotNull(message = "Client ID is required")
     private Long clientId;
@@ -40,4 +43,6 @@ public class ReservationRequest {
     private Boolean depositPaid;
 
     private String notes;
+
+    private List<String> reservationDocumentIds;
 }

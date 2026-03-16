@@ -26,6 +26,8 @@ public class StorageLocationRequest {
     @Size(max = 256, message = "Address must not exceed 256 characters")
     private String address;
 
+    private String locationImageId;
+
     @Size(max = 64, message = "Contact person must not exceed 64 characters")
     private String contactPerson;
 

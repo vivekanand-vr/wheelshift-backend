@@ -36,6 +36,8 @@ public class EmployeeRequest {
     @Size(max = 32, message = "Phone must not exceed 32 characters")
     private String phone;
 
+    private String profileImageId;
+
     @Size(max = 64, message = "Position must not exceed 64 characters")
     private String position;
 

@@ -28,6 +28,8 @@ public class TaskResponse {
     private LocalDateTime dueDate;
     private TaskPriority priority;
     private List<String> tags;
+    private List<String> attachmentFileIds;
+    private List<String> attachmentFileUrls;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }
