@@ -8,6 +8,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 /**
  * DTO for creating or updating an inquiry.
  */
@@ -18,6 +20,7 @@ import lombok.NoArgsConstructor;
 public class InquiryRequest {
 
     private Long carId;
+    private Long motorcycleId;
 
     @NotNull(message = "Client ID is required")
     private Long clientId;
@@ -32,4 +35,6 @@ public class InquiryRequest {
     private InquiryStatus status;
 
     private String response;
+
+    private List<String> attachmentFileIds;
 }

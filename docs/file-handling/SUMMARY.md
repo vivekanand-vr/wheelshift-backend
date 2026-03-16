@@ -13,7 +13,7 @@
 | **StorageLocation** | ✅ locationImageId | - | - | - | ⏳ Pending |
 | **Sale** | - | - | ✅ saleDocumentIds | - | ⏳ Pending |
 | **FinancialTransaction** | - | - | ✅ transactionFileIds | - | ⏳ Pending |
-| **Event** | - | - | - | ✅ attachmentFileIds | ⏳ Pending |
-| **Inquiry** | - | - | - | ✅ attachmentFileIds | ⏳ Pending |
+| **Event** | - | - | - | ✅ attachmentFileIds | ✅ **UPDATED** (Entity + DTOs + Mapper) |
+| **Inquiry** | - | - | - | ✅ attachmentFileIds | ✅ **UPDATED** (Entity + DTOs + Mapper) |
 | **Reservation** | - | - | ✅ reservationDocumentIds | - | ⏳ Pending |
 | **Task** | - | - | - | ✅ attachmentFileIds | ⏳ Pending |

@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * DTO for event response.
@@ -21,9 +22,13 @@ public class EventResponse {
     private String name;
     private Long carId;
     private String carVin;
+    private Long motorcycleId;
+    private String motorcycleVin;
     private String title;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
+    private List<String> attachmentFileIds;
+    private List<String> attachmentFileUrls;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }
