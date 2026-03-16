@@ -14,6 +14,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,6 +29,7 @@ public class CarController {
     private final CarService carService;
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')") // Only admins and managers can create cars
     @Operation(summary = "Create a new car", description = "Adds a new car to the inventory")
     public ResponseEntity<ApiResponse<CarResponse>> createCar(
             @Validated(OnCreate.class) @RequestBody CarRequest request) {
