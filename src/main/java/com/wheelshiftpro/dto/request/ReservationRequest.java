@@ -1,6 +1,7 @@
 package com.wheelshiftpro.dto.request;
 
 import com.wheelshiftpro.enums.ReservationStatus;
+import com.wheelshiftpro.validation.VehicleIdRequired;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -19,9 +20,9 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@VehicleIdRequired
 public class ReservationRequest {
 
-    @NotNull(message = "Car ID is required")
     private Long carId;
 
     private Long motorcycleId;

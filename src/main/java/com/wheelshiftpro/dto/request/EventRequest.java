@@ -1,5 +1,6 @@
 package com.wheelshiftpro.dto.request;
 
+import com.wheelshiftpro.validation.VehicleIdRequired;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -18,6 +19,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@VehicleIdRequired
 public class EventRequest {
 
     @NotBlank(message = "Type is required")
