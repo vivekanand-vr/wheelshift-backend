@@ -3,6 +3,7 @@ package com.wheelshiftpro.mapper;
 import com.wheelshiftpro.dto.request.CarInspectionRequest;
 import com.wheelshiftpro.dto.response.CarInspectionResponse;
 import com.wheelshiftpro.entity.CarInspection;
+import com.wheelshiftpro.utils.FileUrlBuilder;
 import org.mapstruct.*;
 
 import java.util.List;
@@ -10,7 +11,7 @@ import java.util.List;
 /**
  * MapStruct mapper for CarInspection entity and DTOs.
  */
-@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE, imports = { FileUrlBuilder.class })
 public interface CarInspectionMapper {
 
     /**
@@ -18,6 +19,9 @@ public interface CarInspectionMapper {
      */
     @Mapping(source = "car.id", target = "carId")
     @Mapping(source = "car.vinNumber", target = "carVin")
+    @Mapping(target = "inspectionImageIds", expression = "java(FileUrlBuilder.splitToList(carInspection.getInspectionImageIds()))")
+    @Mapping(target = "inspectionImageUrls", expression = "java(FileUrlBuilder.buildFileUrls(carInspection.getInspectionImageIds()))")
+    @Mapping(target = "inspectionReportFileUrl", expression = "java(FileUrlBuilder.buildFileUrl(carInspection.getInspectionReportFileId()))")
     CarInspectionResponse toResponse(CarInspection carInspection);
 
     /**
@@ -25,6 +29,7 @@ public interface CarInspectionMapper {
      */
     @Mapping(target = "id", ignore = true)
     @Mapping(source = "carId", target = "car.id")
+    @Mapping(target = "inspectionImageIds", expression = "java(FileUrlBuilder.joinList(request.getInspectionImageIds()))")
     CarInspection toEntity(CarInspectionRequest request);
 
     /**
@@ -39,5 +44,6 @@ public interface CarInspectionMapper {
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     @Mapping(target = "id", ignore = true)
     @Mapping(source = "carId", target = "car.id")
+    @Mapping(target = "inspectionImageIds", expression = "java(FileUrlBuilder.joinList(request.getInspectionImageIds()))")
     void updateEntityFromRequest(CarInspectionRequest request, @MappingTarget CarInspection carInspection);
 }

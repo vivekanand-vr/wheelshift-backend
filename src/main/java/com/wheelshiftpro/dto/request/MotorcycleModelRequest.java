@@ -32,6 +32,9 @@ public class MotorcycleModelRequest {
     @Size(max = 100, message = "Variant must not exceed 100 characters")
     private String variant;
 
+    @Size(max = 64, message = "Model image ID must not exceed 64 characters")
+    private String modelImageId;
+
     @NotNull(message = "Year is required")
     @Min(value = 1900, message = "Year must be at least 1900")
     private Integer year;

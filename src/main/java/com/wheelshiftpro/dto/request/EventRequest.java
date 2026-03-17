@@ -1,5 +1,6 @@
 package com.wheelshiftpro.dto.request;
 
+import com.wheelshiftpro.validation.VehicleIdRequired;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -9,6 +10,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * DTO for creating or updating an event.
@@ -17,6 +19,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@VehicleIdRequired
 public class EventRequest {
 
     @NotBlank(message = "Type is required")
@@ -27,6 +30,7 @@ public class EventRequest {
     private String name;
 
     private Long carId;
+    private Long motorcycleId;
 
     @Size(max = 128, message = "Title must not exceed 128 characters")
     private String title;
@@ -35,4 +39,6 @@ public class EventRequest {
     private LocalDateTime startTime;
 
     private LocalDateTime endTime;
+
+    private List<String> attachmentFileIds;
 }

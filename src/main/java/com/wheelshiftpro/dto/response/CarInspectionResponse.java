@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * DTO for car inspection response.
@@ -23,6 +24,10 @@ public class CarInspectionResponse {
     private String carVin;
     private LocalDate inspectionDate;
     private String inspectorName;
+    private List<String> inspectionImageIds;
+    private String inspectionReportFileId;
+    private List<String> inspectionImageUrls;
+    private String inspectionReportFileUrl;
     private String exteriorCondition;
     private String interiorCondition;
     private String mechanicalCondition;

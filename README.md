@@ -4,15 +4,44 @@
 
 ## Quick Start
 
+### Option 1: Run Everything with Docker (Recommended)
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd WheelShiftPro
+
+# Start all services (MySQL, Redis, Redis Insights, and Application)
+docker-compose -f docker-compose-dev.yml up -d
+
+# View logs
+docker-compose -f docker-compose-dev.yml logs -f ws-pro
+
+# Stop all services
+docker-compose -f docker-compose-dev.yml down
+
+# Stop and remove all data (clean slate)
+docker-compose -f docker-compose-dev.yml down -v
+```
+
+**Access Services:**
+- Application: http://localhost:8080
+- Swagger UI: http://localhost:8080/api/v1/swagger-ui.html
+- phpMyAdmin: http://localhost:8081
+- Redis Commander: http://localhost:8082
+- Redis Insights: http://localhost:5540
+
+### Option 2: Local Development
+
 ```bash
 # Clone the repository
 git clone <repository-url>
 cd WheelShiftPro
 
 # Start MySQL and Redis with Docker Compose
-docker-compose up -d mysql redis
+docker-compose -f docker-compose-dev.yml up -d mysql redis
 
-# Build and run the application
+# Build and run the application locally
 ./mvnw clean install
 ./mvnw spring-boot:run
 
@@ -20,37 +49,39 @@ docker-compose up -d mysql redis
 http://localhost:8080/api/v1/swagger-ui.html
 
 # Stop services when done
-docker-compose down
+docker-compose -f docker-compose-dev.yml down
 ```
+
+**For detailed Docker setup and hot-reload configuration, see [DOCKER_GUIDE.md](DOCKER_GUIDE.md)**
 
 ## Features
 
 ### Core Business Modules
-- ✅ **Vehicle Inventory Management** - Complete car lifecycle tracking
-- ✅ **Customer (Client) Management** - Client profiles and purchase history
-- ✅ **Employee Management** - Staff tracking and performance metrics
-- ✅ **Lead Management (Inquiries)** - Inquiry tracking and conversion
-- ✅ **Reservation System** - Vehicle holds with deposit management
-- ✅ **Sales Processing** - Transaction recording and commissions
-- ✅ **Financial Management** - Transaction tracking and reporting
-- ✅ **Storage Locations** - Multi-facility management with capacity tracking
-- ✅ **Car Inspections** - Vehicle inspection records and reports
-- ✅ **Task Management** - Task assignment and tracking (Kanban board)
-- ✅ **Event Calendar** - Appointment and event scheduling
-- ✅ **Dashboard System** - Role-based dashboard views for all user types
+- **Vehicle Inventory Management** - Complete car lifecycle tracking
+- **Customer (Client) Management** - Client profiles and purchase history
+- **Employee Management** - Staff tracking and performance metrics
+- **Lead Management (Inquiries)** - Inquiry tracking and conversion
+- **Reservation System** - Vehicle holds with deposit management
+- **Sales Processing** - Transaction recording and commissions
+- **Financial Management** - Transaction tracking and reporting
+- **Storage Locations** - Multi-facility management with capacity tracking
+- **Car Inspections** - Vehicle inspection records and reports
+- **Task Management** - Task assignment and tracking (Kanban board)
+- **Event Calendar** - Appointment and event scheduling
+- **Dashboard System** - Role-based dashboard views for all user types
 
 ### Security & System Features
-- ✅ **Role-Based Access Control (RBAC)** - Comprehensive permission system
-- ✅ **Notification System** - Multi-channel notifications with templates
-- ✅ **Redis Caching** - High-performance caching with configurable TTLs
-- ✅ **Audit Logging** - Automatic change tracking
-- ✅ **File Logging** - Application logging with rotation
-- ✅ **Error Handling** - Custom error pages
-- ✅ **JWT Authentication** - Secure token-based authentication
+- **Role-Based Access Control (RBAC)** - Comprehensive permission system
+- **Notification System** - Multi-channel notifications with templates
+- **Redis Caching** - High-performance caching with configurable TTLs
+- **Audit Logging** - Automatic change tracking
+- **File Logging** - Application logging with rotation
+- **Error Handling** - Custom error pages
+- **JWT Authentication** - Secure token-based authentication
 
 > **Note:** Check individual feature documentation in `docs/features/` for detailed implementation guides.
 
-## 🛡️ Security & Authorization
+## Security & Authorization
 
 - **6 Built-in Roles** with hierarchical permissions
 - **40+ Fine-grained Permissions** (resource:action format)
@@ -60,7 +91,7 @@ docker-compose down
 
 [View RBAC Documentation](docs/features/rbac/README.md)
 
-## 🔔 Notification System
+## Notification System
 
 - **Multi-channel Support**: In-App, Email, SMS, WhatsApp, Push, Webhooks
 - **Template Engine** with variable substitution
@@ -105,7 +136,7 @@ Base URL: `http://localhost:8080/api/v1`
 
 **Interactive API Documentation:** [Swagger UI](http://localhost:8080/api/v1/swagger-ui.html)
 
-## 🗄️ Database Schema
+## Database Schema
 
 The application uses Flyway for database migrations with a comprehensive schema:
 
@@ -184,21 +215,22 @@ WheelShiftPro/
 
 | Module | Status |
 |--------|--------|
-| Core Business APIs | ✅ Complete |
-| RBAC System | ✅ Complete |
-| Notification System | ✅ Complete |
-| Dashboard System | ✅ Complete |
-| Redis Caching | ✅ Complete |
-| Task Management | ✅ Complete |
-| JWT Authentication | ✅ Complete |
-| Swagger Documentation | ✅ Complete |
-| Error Handling | ✅ Complete |
-| Audit Logging | ✅ Complete |
-| File Logging | ✅ Complete |
-| Database Migrations | ✅ Complete |
-| Unit Tests | 🚧 In Progress |
-| Integration Tests | 📋 Planned |
-| End-to-End Tests | 📋 Planned |
+| Core Business APIs | Complete |
+| RBAC System | Complete |
+| Notification System | Complete |
+| Dashboard System | Complete |
+| Redis Caching | Complete |
+| Task Management | Complete |
+| JWT Authentication | Complete |
+| Swagger Documentation | Complete |
+| Error Handling | Complete |
+| Audit Logging | Complete |
+| File Logging | Complete |
+| Database Migrations | Complete |
+| Docker Setup | Complete |
+| Unit Tests | In Progress |
+| Integration Tests | Planned |
+| End-to-End Tests | Planned |
 
 **Overall Progress**: 95% Complete
 

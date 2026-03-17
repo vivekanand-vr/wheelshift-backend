@@ -1,6 +1,7 @@
 package com.wheelshiftpro.dto.request;
 
 import com.wheelshiftpro.enums.PaymentMethod;
+import com.wheelshiftpro.validation.VehicleIdRequired;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -11,6 +12,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * DTO for creating or updating a sale.
@@ -19,10 +21,12 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@VehicleIdRequired
 public class SaleRequest {
 
-    @NotNull(message = "Car ID is required")
     private Long carId;
+
+    private Long motorcycleId;
 
     @NotNull(message = "Client ID is required")
     private Long clientId;
@@ -44,4 +48,6 @@ public class SaleRequest {
 
     @Size(max = 512, message = "Documents URL must not exceed 512 characters")
     private String documentsUrl;
+
+    private List<String> saleDocumentIds;
 }

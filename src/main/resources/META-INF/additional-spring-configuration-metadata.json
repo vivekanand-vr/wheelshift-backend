@@ -1,0 +1,42 @@
+{"properties": [
+  {
+    "name": "file.storage.access-url",
+    "type": "java.lang.String",
+    "description": "Assets URL for file retrival from storage"
+  },
+  {
+    "name": "file.storage.base-path",
+    "type": "java.lang.String",
+    "description": "Base path for file storage in local development"
+  },
+  {
+    "name": "file.storage.base-url",
+    "type": "java.lang.String",
+    "description": "Access url for accessing the files stored in storage by the frontend"
+  },
+  {
+    "name": "file.storage.max-file-size",
+    "type": "java.lang.String",
+    "description": "Limit for file size that can be uploaded to storage"
+  },
+  {
+    "name": "file.storage.max-request-size",
+    "type": "java.lang.String",
+    "description": "Limit for maximum request size that can be sent to storage"
+  },
+  {
+    "name": "jwt.secret",
+    "type": "java.lang.String",
+    "description": "JWT Secret key used for signig and verifying JWT tokes"
+  },
+  {
+    "name": "jwt.expiration",
+    "type": "java.lang.String",
+    "description": "JWT Expiration time in milliseconds"
+  },
+  {
+    "name": "file.storage.type",
+    "type": "java.lang.String",
+    "description": "Type of file storage to be used, can be either local or s3"
+  }
+]}

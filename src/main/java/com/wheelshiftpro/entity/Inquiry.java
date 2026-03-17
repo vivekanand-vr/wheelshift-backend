@@ -14,11 +14,10 @@ import java.time.LocalDateTime;
  * Tracks inquiry lifecycle from creation to closure.
  */
 @Entity
-@Table(name = "inquiries",
-       indexes = {
-           @Index(name = "idx_inquiry_status_employee", columnList = "status, assigned_employee_id"),
-           @Index(name = "idx_inquiry_car_client", columnList = "car_id, client_id")
-       })
+@Table(name = "inquiries", indexes = {
+        @Index(name = "idx_inquiry_status_employee", columnList = "status, assigned_employee_id"),
+        @Index(name = "idx_inquiry_car_client", columnList = "car_id, client_id")
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -70,4 +69,7 @@ public class Inquiry extends BaseEntity {
 
     @Column(name = "response_date")
     private LocalDateTime responseDate;
+
+    @Column(name = "attachment_file_ids", columnDefinition = "TEXT")
+    private String attachmentFileIds;
 }

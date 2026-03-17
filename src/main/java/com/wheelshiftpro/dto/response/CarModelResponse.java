@@ -22,6 +22,8 @@ public class CarModelResponse {
     private String make;
     private String model;
     private String variant;
+    private String modelImageId;
+    private String modelImageUrl;
     private String emissionNorm;
     private FuelType fuelType;
     private String bodyType;

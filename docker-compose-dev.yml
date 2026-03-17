@@ -67,10 +67,86 @@ services:
     networks:
       - wheelshift-network
 
+  # Redis Insights - Advanced Redis GUI
+  redis-insights:
+    image: redis/redisinsight:latest
+    container_name: wheelshift-redis-insights
+    restart: always
+    ports:
+      - "5540:5540"
+    volumes:
+      - redis_insights_data:/data
+    depends_on:
+      - redis
+    networks:
+      - wheelshift-network
+
+  # WheelShiftPro Spring Boot Application
+  ws-pro:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: wheelshift-backend
+    restart: always
+    ports:
+      - "8080:8080"  # Application port
+      - "5005:5005"  # Debug port
+    environment:
+      # Database Configuration
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/wheelshift_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: wheelshift_user
+      SPRING_DATASOURCE_PASSWORD: wheelshift_pass_2025
+      
+      # Redis Configuration
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      
+      # Application Configuration
+      SPRING_PROFILES_ACTIVE: dev
+      SERVER_PORT: 8080
+      
+      # File Storage Configuration
+      FILE_STORAGE_BASE_PATH: /app/uploads
+      FILE_STORAGE_TYPE: local
+    volumes:
+      # Source code - for hot reload
+      - ./src:/app/src:rw
+      - ./pom.xml:/app/pom.xml:ro
+      
+      # Maven repository cache (to avoid re-downloading dependencies)
+      - maven_repo:/root/.m2
+      
+      # Target directory - for compiled classes
+      - ./target:/app/target:rw
+      
+      # Uploads directory - persistent file storage
+      - ./uploads:/app/uploads:rw
+      
+      # Logs directory
+      - ./logs:/app/logs:rw
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - wheelshift-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+
 volumes:
   mysql_data:
     driver: local
   redis_data:
+    driver: local
+  redis_insights_data:
+    driver: local
+  maven_repo:
     driver: local
 
 networks:

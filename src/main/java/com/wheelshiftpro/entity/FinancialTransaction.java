@@ -13,13 +13,13 @@ import java.time.LocalDateTime;
 
 /**
  * Entity representing a financial transaction related to a car.
- * Tracks all monetary activities including purchases, repairs, deposits, sales, and fees.
+ * Tracks all monetary activities including purchases, repairs, deposits, sales,
+ * and fees.
  */
 @Entity
-@Table(name = "financial_transactions",
-       indexes = {
-           @Index(name = "idx_transaction_car_type_date", columnList = "car_id, transaction_type, transaction_date")
-       })
+@Table(name = "financial_transactions", indexes = {
+        @Index(name = "idx_transaction_car_type_date", columnList = "car_id, transaction_type, transaction_date")
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -38,6 +38,9 @@ public class FinancialTransaction extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "motorcycle_id", foreignKey = @ForeignKey(name = "fk_transaction_motorcycle"))
     private Motorcycle motorcycle;
+
+    @Column(name = "transaction_file_ids", columnDefinition = "TEXT")
+    private String transactionFileIds;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "vehicle_type", length = 20)

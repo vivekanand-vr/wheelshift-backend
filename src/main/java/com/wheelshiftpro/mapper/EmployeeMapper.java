@@ -3,6 +3,7 @@ package com.wheelshiftpro.mapper;
 import com.wheelshiftpro.dto.request.EmployeeRequest;
 import com.wheelshiftpro.dto.response.EmployeeResponse;
 import com.wheelshiftpro.entity.Employee;
+import com.wheelshiftpro.utils.FileUrlBuilder;
 import org.mapstruct.*;
 
 import java.util.List;
@@ -10,12 +11,13 @@ import java.util.List;
 /**
  * MapStruct mapper for Employee entity and DTOs.
  */
-@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE, imports = { FileUrlBuilder.class })
 public interface EmployeeMapper {
 
     /**
      * Converts Employee entity to EmployeeResponse DTO.
      */
+    @Mapping(target = "profileImageUrl", expression = "java(FileUrlBuilder.buildFileUrl(employee.getProfileImageId()))")
     EmployeeResponse toResponse(Employee employee);
 
     /**

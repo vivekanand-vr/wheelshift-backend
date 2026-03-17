@@ -23,6 +23,8 @@ public class MotorcycleModelResponse {
     private String make;
     private String model;
     private String variant;
+    private String modelImageId;
+    private String modelImageUrl;
     private Integer year;
     private Integer engineCapacity;
     private FuelType fuelType;

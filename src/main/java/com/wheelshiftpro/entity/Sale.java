@@ -16,8 +16,7 @@ import java.time.LocalDateTime;
  * Records sale transaction details, commission, and associated documents.
  */
 @Entity
-@Table(name = "sales",
-       uniqueConstraints = @UniqueConstraint(name = "uk_sale_car", columnNames = "car_id"))
+@Table(name = "sales", uniqueConstraints = @UniqueConstraint(name = "uk_sale_car", columnNames = "car_id"))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -77,8 +76,12 @@ public class Sale extends BaseEntity {
     @Column(name = "documents_url", length = 512)
     private String documentsUrl;
 
+    @Column(name = "sale_document_ids", columnDefinition = "TEXT")
+    private String saleDocumentIds;
+
     /**
-     * Calculates and sets the total commission based on sale price and commission rate.
+     * Calculates and sets the total commission based on sale price and commission
+     * rate.
      */
     public void calculateCommission() {
         if (salePrice != null && commissionRate != null) {

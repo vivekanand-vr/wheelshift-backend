@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 /**
  * DTO for creating or updating a car inspection.
@@ -28,6 +29,9 @@ public class CarInspectionRequest {
 
     @Size(max = 64, message = "Inspector name must not exceed 64 characters")
     private String inspectorName;
+
+    private List<String> inspectionImageIds;
+    private String inspectionReportFileId;
 
     private String exteriorCondition;
     private String interiorCondition;

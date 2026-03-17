@@ -22,6 +22,8 @@ public class EmployeeResponse {
     private String name;
     private String email;
     private String phone;
+    private String profileImageId;
+    private String profileImageUrl;
     private String position;
     private String department;
     private LocalDate joinDate;

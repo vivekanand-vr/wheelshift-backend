@@ -1,6 +1,7 @@
 package com.wheelshiftpro.dto.request;
 
 import com.wheelshiftpro.enums.ReservationStatus;
+import com.wheelshiftpro.validation.VehicleIdRequired;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -10,6 +11,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * DTO for creating or updating a reservation.
@@ -18,10 +20,12 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@VehicleIdRequired
 public class ReservationRequest {
 
-    @NotNull(message = "Car ID is required")
     private Long carId;
+
+    private Long motorcycleId;
 
     @NotNull(message = "Client ID is required")
     private Long clientId;
@@ -40,4 +44,6 @@ public class ReservationRequest {
     private Boolean depositPaid;
 
     private String notes;
+
+    private List<String> reservationDocumentIds;
 }

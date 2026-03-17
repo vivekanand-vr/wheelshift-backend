@@ -273,6 +273,29 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handle File Storage Related Exceptions
+     */
+    @ExceptionHandler(FileStorageException.class)
+    public ResponseEntity<ErrorResponse> handleFileStorageException(
+            FileStorageException ex, 
+            HttpServletRequest request) {
+        
+        log.error("File storage error: {}", ex.getMessage(), ex);
+        
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .type("about:blank")
+                .title("File Storage Error")
+                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .detail(ex.getMessage())
+                .instance(request.getRequestURI())
+                .code("FILE_STORAGE_ERROR")
+                .timestamp(LocalDateTime.now())
+                .build();
+        
+        return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    /**
      * Handle HTTP method not supported (e.g., GET instead of POST)
      */
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
@@ -455,26 +478,28 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Handle authorization denied (fallback for other auth issues)
+     * Handle authorization denied (Spring Security 6.x - thrown by @PreAuthorize)
+     * This only handles 403 Forbidden - user is authenticated but lacks required permissions
+     * 401 Unauthorized is handled by CustomAuthenticationEntryPoint in the filter chain
      */
     @ExceptionHandler(AuthorizationDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAuthorizationDeniedException(
             AuthorizationDeniedException ex, 
             HttpServletRequest request) {
         
-        log.warn("Authorization denied for {}: {}", request.getRequestURI(), ex.getMessage());
+        log.warn("Access denied for authenticated user at {}: {}", request.getRequestURI(), ex.getMessage());
         
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .type("about:blank")
-                .title("Authorization Failed")
-                .status(HttpStatus.UNAUTHORIZED.value())
-                .detail("Authorization failed. Please login and try again.")
+                .title("Access Denied")
+                .status(HttpStatus.FORBIDDEN.value())
+                .detail("You are not allowed to access this resource. Please contact your administrator if you believe this is an error.")
                 .instance(request.getRequestURI())
-                .code("AUTHORIZATION_FAILED")
+                .code("ACCESS_DENIED")
                 .timestamp(LocalDateTime.now())
                 .build();
         
-        return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
+        return new ResponseEntity<>(errorResponse, HttpStatus.FORBIDDEN);
     }
 
     /**

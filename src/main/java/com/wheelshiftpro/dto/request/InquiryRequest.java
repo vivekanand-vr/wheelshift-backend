@@ -1,12 +1,15 @@
 package com.wheelshiftpro.dto.request;
 
 import com.wheelshiftpro.enums.InquiryStatus;
+import com.wheelshiftpro.validation.VehicleIdRequired;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.util.List;
 
 /**
  * DTO for creating or updating an inquiry.
@@ -15,9 +18,11 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@VehicleIdRequired
 public class InquiryRequest {
 
     private Long carId;
+    private Long motorcycleId;
 
     @NotNull(message = "Client ID is required")
     private Long clientId;
@@ -32,4 +37,6 @@ public class InquiryRequest {
     private InquiryStatus status;
 
     private String response;
+
+    private List<String> attachmentFileIds;
 }

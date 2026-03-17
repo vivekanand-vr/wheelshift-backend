@@ -6,6 +6,7 @@ import com.wheelshiftpro.dto.response.MotorcycleResponse;
 import com.wheelshiftpro.dto.response.PageResponse;
 import com.wheelshiftpro.enums.MotorcycleStatus;
 import com.wheelshiftpro.service.MotorcycleService;
+import com.wheelshiftpro.validation.OnCreate;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -13,6 +14,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -29,7 +31,7 @@ public class MotorcycleController {
     @PostMapping
     @Operation(summary = "Create a new motorcycle", description = "Adds a new motorcycle to the inventory")
     public ResponseEntity<ApiResponse<MotorcycleResponse>> createMotorcycle(
-            @Valid @RequestBody MotorcycleRequest request) {
+            @Validated(OnCreate.class) @RequestBody MotorcycleRequest request) {
         MotorcycleResponse response = motorcycleService.createMotorcycle(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Motorcycle created successfully", response));

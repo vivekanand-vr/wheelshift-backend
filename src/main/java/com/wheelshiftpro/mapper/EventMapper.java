@@ -3,6 +3,7 @@ package com.wheelshiftpro.mapper;
 import com.wheelshiftpro.dto.request.EventRequest;
 import com.wheelshiftpro.dto.response.EventResponse;
 import com.wheelshiftpro.entity.Event;
+import com.wheelshiftpro.utils.FileUrlBuilder;
 import org.mapstruct.*;
 
 import java.util.List;
@@ -10,7 +11,7 @@ import java.util.List;
 /**
  * MapStruct mapper for Event entity and DTOs.
  */
-@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE, imports = { FileUrlBuilder.class })
 public interface EventMapper {
 
     /**
@@ -18,6 +19,10 @@ public interface EventMapper {
      */
     @Mapping(source = "car.id", target = "carId")
     @Mapping(source = "car.vinNumber", target = "carVin")
+    @Mapping(source = "motorcycle.id", target = "motorcycleId")
+    @Mapping(source = "motorcycle.vinNumber", target = "motorcycleVin")
+    @Mapping(target = "attachmentFileIds", expression = "java(FileUrlBuilder.splitToList(event.getAttachmentFileIds()))")
+    @Mapping(target = "attachmentFileUrls", expression = "java(FileUrlBuilder.buildFileUrls(event.getAttachmentFileIds()))")
     EventResponse toResponse(Event event);
 
     /**
@@ -25,6 +30,8 @@ public interface EventMapper {
      */
     @Mapping(target = "id", ignore = true)
     @Mapping(source = "carId", target = "car.id")
+    @Mapping(source = "motorcycleId", target = "motorcycle.id")
+    @Mapping(target = "attachmentFileIds", expression = "java(FileUrlBuilder.joinList(request.getAttachmentFileIds()))")
     Event toEntity(EventRequest request);
 
     /**
@@ -39,5 +46,7 @@ public interface EventMapper {
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     @Mapping(target = "id", ignore = true)
     @Mapping(source = "carId", target = "car.id")
+    @Mapping(source = "motorcycleId", target = "motorcycle.id")
+    @Mapping(target = "attachmentFileIds", expression = "java(FileUrlBuilder.joinList(request.getAttachmentFileIds()))")
     void updateEntityFromRequest(EventRequest request, @MappingTarget Event event);
 }

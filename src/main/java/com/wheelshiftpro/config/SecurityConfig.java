@@ -1,5 +1,7 @@
 package com.wheelshiftpro.config;
 
+import com.wheelshiftpro.security.CustomAccessDeniedHandler;
+import com.wheelshiftpro.security.CustomAuthenticationEntryPoint;
 import com.wheelshiftpro.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -30,6 +32,8 @@ public class SecurityConfig {
 
     private final CorsConfigurationSource corsConfigurationSource;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
+    private final CustomAccessDeniedHandler customAccessDeniedHandler;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -38,6 +42,10 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint(customAuthenticationEntryPoint)
+                        .accessDeniedHandler(customAccessDeniedHandler)
                 )
                 .authorizeHttpRequests(auth -> auth
                         // Public endpoints
@@ -53,8 +61,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/rbac/employees/*/scopes/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
                         .requestMatchers("/api/v1/rbac/acl/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
                         
-                        // For development: allow all other requests (remove in production)
-                        .anyRequest().permitAll()
+                        // All other requests require authentication
+                        .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

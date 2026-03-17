@@ -35,4 +35,6 @@ public class TaskRequest {
     private TaskPriority priority;
 
     private List<String> tags;
+
+    private List<String> attachmentFileIds;
 }

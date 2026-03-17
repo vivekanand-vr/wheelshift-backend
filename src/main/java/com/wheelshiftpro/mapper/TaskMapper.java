@@ -3,6 +3,7 @@ package com.wheelshiftpro.mapper;
 import com.wheelshiftpro.dto.request.TaskRequest;
 import com.wheelshiftpro.dto.response.TaskResponse;
 import com.wheelshiftpro.entity.Task;
+import com.wheelshiftpro.utils.FileUrlBuilder;
 import org.mapstruct.*;
 
 import java.util.List;
@@ -10,7 +11,7 @@ import java.util.List;
 /**
  * MapStruct mapper for Task entity and DTOs.
  */
-@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE, imports = { FileUrlBuilder.class })
 public interface TaskMapper {
 
     /**
@@ -18,6 +19,8 @@ public interface TaskMapper {
      */
     @Mapping(source = "assignee.id", target = "assigneeId")
     @Mapping(source = "assignee.name", target = "assigneeName")
+    @Mapping(target = "attachmentFileIds", expression = "java(FileUrlBuilder.splitToList(task.getAttachmentFileIds()))")
+    @Mapping(target = "attachmentFileUrls", expression = "java(FileUrlBuilder.buildFileUrls(task.getAttachmentFileIds()))")
     TaskResponse toResponse(Task task);
 
     /**
@@ -26,6 +29,7 @@ public interface TaskMapper {
      */
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "assignee", ignore = true)
+    @Mapping(target = "attachmentFileIds", expression = "java(FileUrlBuilder.joinList(request.getAttachmentFileIds()))")
     Task toEntity(TaskRequest request);
 
     /**
@@ -41,5 +45,6 @@ public interface TaskMapper {
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "assignee", ignore = true)
+    @Mapping(target = "attachmentFileIds", expression = "java(FileUrlBuilder.joinList(request.getAttachmentFileIds()))")
     void updateEntityFromRequest(TaskRequest request, @MappingTarget Task task);
 }

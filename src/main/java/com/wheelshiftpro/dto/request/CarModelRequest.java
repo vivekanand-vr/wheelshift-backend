@@ -30,6 +30,9 @@ public class CarModelRequest {
     @Size(max = 64, message = "Variant must not exceed 64 characters")
     private String variant;
 
+    @Size(max = 64, message = "Model image ID must not exceed 64 characters")
+    private String modelImageId;
+
     @Size(max = 32, message = "Emission norm must not exceed 32 characters")
     private String emissionNorm;
 

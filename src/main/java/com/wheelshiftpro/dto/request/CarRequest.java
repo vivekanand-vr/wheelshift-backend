@@ -1,6 +1,7 @@
 package com.wheelshiftpro.dto.request;
 
 import com.wheelshiftpro.enums.CarStatus;
+import com.wheelshiftpro.validation.OnCreate;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,6 +10,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -20,17 +22,17 @@ import java.util.Map;
 @Builder
 public class CarRequest {
 
-    @NotNull(message = "Car model ID is required")
+    @NotNull(groups = OnCreate.class, message = "Car model ID is required")
     private Long carModelId;
 
-    @NotBlank(message = "VIN number is required")
+    @NotBlank(groups = OnCreate.class, message = "VIN number is required")
     @Size(min = 17, max = 17, message = "VIN number must be exactly 17 characters")
     private String vinNumber;
 
     @Size(max = 32, message = "Registration number must not exceed 32 characters")
     private String registrationNumber;
 
-    @NotNull(message = "Year is required")
+    @NotNull(groups = OnCreate.class, message = "Year is required")
     @Min(value = 1980, message = "Year must be at least 1980")
     @Max(value = 2100, message = "Year must not exceed 2100")
     private Integer year;
@@ -62,6 +64,12 @@ public class CarRequest {
     private Integer cargoCapacityLiters;
     private BigDecimal acceleration0To100;
     private Integer topSpeedKmh;
+
+    // File IDs for images and documents
+    @Size(max = 64, message = "Primary image ID must not exceed 64 characters")
+    private String primaryImageId;
+    private List<String> galleryImageIds;
+    private List<String> documentFileIds;
 
     // Additional features as key-value pairs
     private Map<String, String> features;
