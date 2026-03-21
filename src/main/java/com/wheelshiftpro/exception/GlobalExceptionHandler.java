@@ -526,31 +526,59 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Handle IllegalArgumentException (business rule violations that shouldn't happen)
+     * Handle IllegalArgumentException — bad input or business rule violation.
+     * Returns 400 Bad Request (not 500 — this is a client-side error).
      */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgumentException(
             IllegalArgumentException ex, 
             HttpServletRequest request) {
         
-        log.error("Illegal argument error: {}", ex.getMessage(), ex);
+        log.warn("Illegal argument: {}", ex.getMessage());
         
-        // Provide a clear error message based on the exception
         String detail = ex.getMessage() != null && !ex.getMessage().isEmpty() 
                 ? ex.getMessage() 
-                : "The requested operation is not allowed due to business rules.";
+                : "The request contains invalid arguments or violates business rules.";
         
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .type("about:blank")
-                .title("Operation Not Allowed")
-                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .title("Invalid Argument")
+                .status(HttpStatus.BAD_REQUEST.value())
                 .detail(detail)
                 .instance(request.getRequestURI())
-                .code("OPERATION_NOT_ALLOWED")
+                .code("INVALID_ARGUMENT")
                 .timestamp(LocalDateTime.now())
                 .build();
         
-        return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+
+    /**
+     * Handle IllegalStateException — operation not valid in current state.
+     * Returns 409 Conflict (e.g., cannot reserve an already-sold vehicle).
+     */
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalStateException(
+            IllegalStateException ex,
+            HttpServletRequest request) {
+
+        log.warn("Illegal state: {}", ex.getMessage());
+
+        String detail = ex.getMessage() != null && !ex.getMessage().isEmpty()
+                ? ex.getMessage()
+                : "The requested operation is not valid for the current state of the resource.";
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .type("about:blank")
+                .title("Invalid State")
+                .status(HttpStatus.CONFLICT.value())
+                .detail(detail)
+                .instance(request.getRequestURI())
+                .code("INVALID_STATE")
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);
     }
 
     /**

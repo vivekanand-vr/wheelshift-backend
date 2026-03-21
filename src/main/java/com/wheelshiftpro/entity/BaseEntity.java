@@ -12,7 +12,14 @@ import java.time.LocalDateTime;
 
 /**
  * Base entity class providing common auditing fields for all entities.
- * Uses JPA auditing to automatically populate created and updated timestamps.
+ * Uses JPA auditing via {@link AuditingEntityListener} to automatically
+ * populate {@code createdAt} and {@code updatedAt} timestamps.
+ *
+ * <p>Do NOT add manual {@code @PrePersist} / {@code @PreUpdate} hooks here —
+ * the {@link AuditingEntityListener} already handles timestamp population.
+ * Duplicate hooks cause double-writes and can overwrite auditing values.
+ * Requires {@code @EnableJpaAuditing} on a {@code @Configuration} class
+ * (see {@code JpaAuditingConfig}).
  */
 @MappedSuperclass
 @EntityListeners(AuditingEntityListener.class)
@@ -27,15 +34,4 @@ public abstract class BaseEntity implements Serializable {
     @LastModifiedDate
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-
-    @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
-    }
 }

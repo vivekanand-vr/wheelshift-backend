@@ -6,8 +6,8 @@ import com.wheelshiftpro.dto.response.SessionValidationResponse;
 import com.wheelshiftpro.entity.Employee;
 import com.wheelshiftpro.enums.rbac.RoleType;
 import com.wheelshiftpro.exception.SessionExpiredException;
-import com.wheelshiftpro.repository.EmployeeRepository;
 import com.wheelshiftpro.security.JwtTokenProvider;
+import com.wheelshiftpro.service.EmployeeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -36,7 +36,7 @@ import java.util.stream.Collectors;
 public class AuthController {
 
     private final AuthenticationManager authenticationManager;
-    private final EmployeeRepository employeeRepository;
+    private final EmployeeService employeeService;
     private final JwtTokenProvider jwtTokenProvider;
 
     @PostMapping("/login")
@@ -46,7 +46,7 @@ public class AuthController {
             log.info("Login attempt for email: {}", request.getEmail());
 
             // First check if employee exists
-            Employee employee = employeeRepository.findByEmail(request.getEmail())
+            Employee employee = employeeService.findByEmail(request.getEmail())
                     .orElse(null);
             
             if (employee == null) {
@@ -114,7 +114,7 @@ public class AuthController {
         }
 
         String email = authentication.getName();
-        Employee employee = employeeRepository.findByEmail(email)
+        Employee employee = employeeService.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
 
         Set<RoleType> roles = employee.getRoles().stream()
@@ -154,7 +154,7 @@ public class AuthController {
         
         try {
             String email = authentication.getName();
-            Employee employee = employeeRepository.findByEmail(email)
+            Employee employee = employeeService.findByEmail(email)
                     .orElseThrow(() -> new SessionExpiredException("Employee not found for authenticated user"));
             
             log.debug("Token validation successful for employee: {}", employee.getId());

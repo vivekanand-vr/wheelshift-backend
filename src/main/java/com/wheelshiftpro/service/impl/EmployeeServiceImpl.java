@@ -26,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -214,5 +215,11 @@ public class EmployeeServiceImpl implements EmployeeService {
                 .last(page.isLast())
                 .first(page.isFirst())
                 .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<Employee> findByEmail(String email) {
+        return employeeRepository.findByEmail(email);
     }
 }

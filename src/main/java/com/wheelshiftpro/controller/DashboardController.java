@@ -2,10 +2,9 @@ package com.wheelshiftpro.controller;
 
 import com.wheelshiftpro.dto.response.ApiResponse;
 import com.wheelshiftpro.dto.response.dashboard.*;
-import com.wheelshiftpro.entity.Employee;
 import com.wheelshiftpro.exception.ResourceNotFoundException;
-import com.wheelshiftpro.repository.EmployeeRepository;
 import com.wheelshiftpro.service.DashboardService;
+import com.wheelshiftpro.service.EmployeeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -30,7 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class DashboardController {
     
     private final DashboardService dashboardService;
-    private final EmployeeRepository employeeRepository;
+    private final EmployeeService employeeService;
     
     /**
      * Get admin dashboard with system-wide metrics
@@ -189,9 +188,8 @@ public class DashboardController {
      */
     private Long getCurrentEmployeeId(Authentication authentication) {
         String email = authentication.getName();
-        Employee employee = employeeRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("Employee not found with email: " + email));
-        
-        return employee.getId();
+        return employeeService.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found with email: " + email))
+                .getId();
     }
 }

@@ -38,5 +38,30 @@
     "name": "file.storage.type",
     "type": "java.lang.String",
     "description": "Type of file storage to be used, can be either local or s3"
+  },
+  {
+    "name": "cors.allowed-origins",
+    "type": "java.lang.String",
+    "description": "Comma-separated list of allowed CORS origins (e.g. http://localhost:3000)"
+  },
+  {
+    "name": "cors.allowed-methods",
+    "type": "java.lang.String",
+    "description": "Comma-separated list of allowed HTTP methods for CORS"
+  },
+  {
+    "name": "cors.allowed-headers",
+    "type": "java.lang.String",
+    "description": "Comma-separated list of allowed request headers for CORS"
+  },
+  {
+    "name": "cors.max-age",
+    "type": "java.lang.Long",
+    "description": "CORS preflight response cache duration in seconds"
+  },
+  {
+    "name": "reservation.expiry.check-interval-ms",
+    "type": "java.lang.Long",
+    "description": "Interval in milliseconds between reservation expiry checks (default: 300000 = 5 minutes)"
   }
 ]}

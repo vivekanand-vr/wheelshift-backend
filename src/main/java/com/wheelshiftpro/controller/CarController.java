@@ -29,7 +29,7 @@ public class CarController {
     private final CarService carService;
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')") // Only admins and managers can create cars
+    @PreAuthorize("hasRole('ADMIN') or hasRole('STORE_MANAGER')") // Only admins and managers can create cars
     @Operation(summary = "Create a new car", description = "Adds a new car to the inventory")
     public ResponseEntity<ApiResponse<CarResponse>> createCar(
             @Validated(OnCreate.class) @RequestBody CarRequest request) {
