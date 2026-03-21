@@ -1,17 +1,6 @@
 -- V2__Seed_Data.sql
 -- Insert seed data for development and testing
 
--- Insert Car Models
-INSERT INTO car_models (make, model, variant, emission_norm, fuel_type, body_type, gears, transmission_type) VALUES
-('Toyota', 'Corolla', 'GLI', 'BS6', 'PETROL', 'Sedan', 6, 'MANUAL'),
-('Honda', 'Civic', 'VTi Oriel', 'BS6', 'PETROL', 'Sedan', 6, 'AUTOMATIC'),
-('Suzuki', 'Alto', 'VXR', 'BS6', 'PETROL', 'Hatchback', 5, 'MANUAL'),
-('Hyundai', 'Elantra', 'GLS', 'BS6', 'PETROL', 'Sedan', 6, 'AUTOMATIC'),
-('Tesla', 'Model 3', 'Standard Range', 'Zero Emission', 'ELECTRIC', 'Sedan', 1, 'AUTOMATIC'),
-('BMW', 'X5', 'xDrive40i', 'BS6', 'PETROL', 'SUV', 8, 'AUTOMATIC'),
-('Mercedes', 'C-Class', 'C200', 'BS6', 'DIESEL', 'Sedan', 9, 'AUTOMATIC'),
-('Audi', 'A4', '40 TFSI', 'BS6', 'PETROL', 'Sedan', 7, 'DCT');
-
 -- Insert Storage Locations
 INSERT INTO storage_locations (name, address, contact_person, contact_number, total_capacity, current_vehicle_count) VALUES
 ('Main Warehouse', '123 Industrial Road, Karachi', 'Ahmed Ali', '+92-321-1234567', 100, 0),

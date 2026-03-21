@@ -77,10 +77,6 @@ public class MotorcycleModel extends BaseEntity {
     @Builder.Default
     private MotorcycleVehicleType vehicleType = MotorcycleVehicleType.MOTORCYCLE;
 
-    @Column(name = "seating_capacity")
-    @Builder.Default
-    private Integer seatingCapacity = 2;
-
     @Column(name = "is_active")
     @Builder.Default
     private Boolean isActive = true;

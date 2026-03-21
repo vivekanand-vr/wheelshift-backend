@@ -196,18 +196,49 @@ Schema is managed by **Flyway** — migrations run automatically on startup.
 | V7 | Assign employee roles |
 | V8 | Fix roles + super admin |
 | V9 | Motorcycle tables |
-| V10 | Motorcycle seed data |
-| V11 | Motorcycle movements |
-| V12 | Employee custom permissions |
-| V13 | File storage tables |
-| V14 | File storage columns |
-| V15 | Merge car-related tables |
-| V16 | Merge motorcycle-related tables |
+| V10 | Motorcycle movements |
+| V11 | Employee custom permissions |
+| V12 | File storage tables |
+| V13 | File storage columns |
+| V14 | Merge car-related tables |
+| V15 | Merge motorcycle-related tables |
+| V16 | Seed car models from dataset |
+| V17 | Seed motorcycle models from dataset |
 
 Migration files: `src/main/resources/db/migration/`
 Rollback scripts (manual): `src/main/resources/db/rollbacks/`
 
 **Never modify a committed migration.** Create a new `V{n+1}__...sql` for any schema change.
+
+### Running Migrations Manually
+
+Migrations run automatically on every app startup. The Flyway Maven plugin is pre-configured in `pom.xml` and reads `DB_USERNAME` / `DB_PASSWORD` from your environment, so you can run any Flyway goal with a single command:
+
+```bash
+# Source your credentials first (once per shell session)
+export $(cat .env | grep -v '^#' | xargs)   # Linux/macOS
+# or load .env via your IDE's EnvFile plugin on Windows
+
+# Apply all pending migrations
+mvn flyway:migrate
+
+# Check current migration status
+mvn flyway:info
+
+# Validate applied migrations match the local scripts
+mvn flyway:validate
+
+# Repair the schema history table (use after fixing a failed migration)
+mvn flyway:repair
+```
+
+To target a different host or database, override only what you need:
+
+```bash
+mvn flyway:migrate -Dflyway.url=jdbc:mysql://other-host:3306/wheelshift_db
+```
+
+> Ensure the MySQL container is up (`docker-compose -f docker-compose-dev.yml up -d mysql`) before running any Flyway commands.
 
 ---
 
