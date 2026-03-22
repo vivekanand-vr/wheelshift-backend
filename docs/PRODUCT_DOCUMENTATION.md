@@ -473,6 +473,9 @@ Interactive API documentation: `http://localhost:8080/api/v1/swagger-ui.html`
 |---------|---------|
 | **Frontend Application** | React + Next.js web app covering all roles and dashboards |
 | **Test Coverage >80%** | Expanding the automated test suite |
+| **AI Service** | Separate Python/FastAPI microservice for intelligent features — pricing, lead scoring, inventory health |
+
+📖 See [AI Service Overview](AI_SERVICE_OVERVIEW.md) for architecture and implementation plan.
 
 ### Planned (Committed)
 
@@ -495,7 +498,6 @@ Interactive API documentation: `http://localhost:8080/api/v1/swagger-ui.html`
 | **Bulk Import / Export (CSV)** | Import inventory and client data from CSV; export records to CSV/Excel |
 | **Appointment Booking** | Let clients schedule test drives or service appointments online |
 | **Vehicle Price History** | Log and display every price change made to a vehicle over its lifetime |
-| **AI Pricing Recommendations** | Suggest optimal selling prices using market trends and vehicle condition |
 | **Mobile App** | Native iOS and Android app for field use by sales and inspection staff |
 | **Multi-Tenancy** | Run multiple dealership branches from a single installation with data isolation |
 | **WhatsApp Chatbot** | Automated chatbot for client inquiries, reservation status, and updates |
@@ -503,6 +505,12 @@ Interactive API documentation: `http://localhost:8080/api/v1/swagger-ui.html`
 | **CRM Integrations** | Sync leads and clients with Salesforce, HubSpot, or similar platforms |
 | **Accounting Integrations** | Push financial data to QuickBooks, Xero, or Tally |
 | **VIN Auto-Fill** | Fetch vehicle specs automatically from a VIN lookup service |
+| **AI Smart Pricing** | Suggest optimal selling prices based on historical sales, condition, and market trends (AI Service) |
+| **AI Lead Scoring** | Automatically score and prioritize inquiries by conversion likelihood (AI Service) |
+| **AI Inventory Health Score** | Flag slow-moving vehicles with suggested actions before they stall too long (AI Service) |
+| **AI Vehicle Description Generator** | Auto-generate ready-to-publish listing descriptions from vehicle specs (AI Service) |
+| **AI Demand Forecasting** | Predict which vehicle categories will sell well next quarter to guide purchasing (AI Service) |
+| **AI Transaction Anomaly Detection** | Flag unusual financial patterns like underpriced sales or suspicious discounts (AI Service) |
 
 ---
 

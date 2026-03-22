@@ -15,7 +15,7 @@
 git clone <repository-url>
 cd wheelshift-backend
 
-# Start MySQL, Redis, phpMyAdmin, Redis Commander
+# Start MySQL, Redis, Kafka, Kafka UI, phpMyAdmin, Redis Commander
 docker-compose -f docker-compose-dev.yml up -d
 
 # Follow application logs
@@ -37,6 +37,7 @@ docker-compose -f docker-compose-dev.yml down -v
 | Actuator / Health | http://localhost:8080/actuator/health |
 | phpMyAdmin | http://localhost:8081 |
 | Redis Commander | http://localhost:8082 |
+| Kafka UI | http://localhost:8083 |
 | Redis Insights | http://localhost:5540 |
 
 ---
@@ -47,7 +48,7 @@ docker-compose -f docker-compose-dev.yml down -v
 
 ```bash
 # 1. Start infrastructure only
-docker-compose -f docker-compose-dev.yml up -d mysql redis
+docker-compose -f docker-compose-dev.yml up -d mysql redis kafka
 
 # 2. Set environment variables
 #    IntelliJ: EnvFile plugin → add .env to Run Configuration
@@ -76,6 +77,10 @@ REDIS_HOST=localhost
 REDIS_PORT=6379
 REDIS_PASSWORD=
 
+# Kafka
+# localhost:9092 maps to the broker's EXTERNAL listener when running outside Docker
+KAFKA_BOOTSTRAP_SERVERS=localhost:9092
+
 # JWT  (generate with: openssl rand -hex 32)
 JWT_SECRET=change_this_in_production
 JWT_EXPIRATION_MS=86400000
@@ -100,8 +105,8 @@ Never hardcode secrets in `application.properties` or any committed file.
 | ORM / Schema | Spring Data JPA (Hibernate) + Flyway |
 | Mapping | MapStruct 1.5.5 + Lombok |
 | Security | Spring Security 6, JWT (JJWT 0.12) |
-| Caching | Redis 7 (Spring Cache) |
-| Scheduling | `@Scheduled` + ShedLock (Redis distributed lock) |
+| Caching | Redis 7 (Spring Cache) || Async Messaging | Apache Kafka 4.x, KRaft mode (spring-kafka) |
+| Real-time Push | Server-Sent Events (SSE) || Scheduling | `@Scheduled` + ShedLock (Redis distributed lock) |
 | Observability | Spring Actuator, Micrometer / Prometheus |
 | API Docs | SpringDoc OpenAPI 3 / Swagger UI |
 | Resilience | Resilience4j |
@@ -140,7 +145,11 @@ Five tailored dashboard views: Admin, Sales, Inspector, Finance, Store Manager.
 - Multi-channel: In-App, Email, SMS, WhatsApp, Push, Webhook
 - Template engine with variable substitution
 - Per-employee channel preferences
-- Event-driven delivery with status tracking
+- **Async event-driven delivery via Apache Kafka** — producer publishes `NotificationJobMessage` to `notification.jobs.inapp` / `notification.jobs.email` topics; consumer processes with manual acknowledgement
+- **Real-time push via SSE** — consumers forward processed jobs to Redis Pub/Sub; a `MessageListener` picks them up and pushes to all active `SseEmitter` connections for the recipient
+- Stream endpoint: `GET /api/v1/notifications/stream/{recipientType}/{recipientId}` (`text/event-stream`)
+- Typed event catalogue via `NotificationEventType` enum (e.g. `INQUIRY_ASSIGNED`, `TASK_DUE`, `SALE_COMPLETED`)
+- Status tracking per delivery attempt
 
 ---
 
@@ -204,6 +213,7 @@ Schema is managed by **Flyway** — migrations run automatically on startup.
 | V15 | Merge motorcycle-related tables |
 | V16 | Seed car models from dataset |
 | V17 | Seed motorcycle models from dataset |
+| V18 | Align notification event types to enum |
 
 Migration files: `src/main/resources/db/migration/`
 Rollback scripts (manual): `src/main/resources/db/rollbacks/`
@@ -273,6 +283,8 @@ A failing architecture test is a **build failure** — fix the architecture, nev
 | Core Business APIs | ✅ Complete |
 | RBAC System | ✅ Complete |
 | Notification System | ✅ Complete |
+| Kafka Async Delivery | ✅ Complete |
+| SSE Real-time Push | ✅ Complete |
 | Dashboard System | ✅ Complete |
 | Redis Caching | ✅ Complete |
 | Task Management | ✅ Complete |
@@ -281,7 +293,7 @@ A failing architecture test is a **build failure** — fix the architecture, nev
 | Error Handling | ✅ Complete |
 | Audit Logging | ✅ Complete |
 | File Storage (Local + S3) | ✅ Complete |
-| Database Migrations (V16) | ✅ Complete |
+| Database Migrations (V18) | ✅ Complete |
 | Docker Setup | ✅ Complete |
 | Observability (Actuator + Prometheus) | ✅ Complete |
 | Request Correlation (X-Request-Id) | ✅ Complete |
