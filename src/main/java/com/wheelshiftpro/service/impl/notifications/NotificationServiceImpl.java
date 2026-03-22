@@ -12,6 +12,7 @@ import com.wheelshiftpro.enums.RecipientType;
 import com.wheelshiftpro.enums.notifications.NotificationChannel;
 import com.wheelshiftpro.enums.notifications.NotificationStatus;
 import com.wheelshiftpro.exception.ResourceNotFoundException;
+import com.wheelshiftpro.messaging.NotificationKafkaProducer;
 import com.wheelshiftpro.repository.notifications.NotificationEventRepository;
 import com.wheelshiftpro.repository.notifications.NotificationJobRepository;
 import com.wheelshiftpro.repository.notifications.NotificationTemplateRepository;
@@ -27,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -37,6 +39,7 @@ public class NotificationServiceImpl implements NotificationService {
     private final NotificationJobRepository jobRepository;
     private final NotificationTemplateRepository templateRepository;
     private final NotificationTemplateService templateService;
+    private final NotificationKafkaProducer kafkaProducer;
     
     @Override
     @Transactional
@@ -57,12 +60,15 @@ public class NotificationServiceImpl implements NotificationService {
         event = eventRepository.save(event);
         
         // Auto-generate jobs for IN_APP channel based on event payload
-        generateNotificationJobs(event);
-        
+        List<NotificationJob> jobs = generateNotificationJobs(event);
+
+        // Publish each persisted job to Kafka (async, non-blocking for the caller)
+        jobs.forEach(kafkaProducer::publishJob);
+
         return mapToEventResponse(event);
     }
     
-    private void generateNotificationJobs(NotificationEvent event) {
+    private List<NotificationJob> generateNotificationJobs(NotificationEvent event) {
         // Extract recipient info from payload if available
         Object recipientIdObj = event.getPayload().get("recipientId");
         Object recipientTypeObj = event.getPayload().get("recipientType");
@@ -73,21 +79,23 @@ public class NotificationServiceImpl implements NotificationService {
                 RecipientType recipientType = RecipientType.valueOf(recipientTypeObj.toString());
                 
                 // Create IN_APP notification job
-                createJobForRecipient(event, recipientType, recipientId, NotificationChannel.IN_APP);
+                return createJobForRecipient(event, recipientType, recipientId, NotificationChannel.IN_APP)
+                        .map(List::of).orElse(List.of());
             } catch (Exception e) {
                 log.warn("Failed to parse recipient info from event payload: {}", e.getMessage());
             }
         }
+        return List.of();
     }
     
-    private void createJobForRecipient(NotificationEvent event, RecipientType recipientType, 
+    private Optional<NotificationJob> createJobForRecipient(NotificationEvent event, RecipientType recipientType,
                                       Long recipientId, NotificationChannel channel) {
         String dedupKey = generateDedupKey(event.getId(), recipientType, recipientId, channel);
         
         // Check if job already exists
         if (jobRepository.findByDedupKey(dedupKey).isPresent()) {
             log.debug("Notification job already exists with dedupKey: {}", dedupKey);
-            return;
+            return Optional.empty();
         }
         
         NotificationJob job = NotificationJob.builder()
@@ -104,6 +112,7 @@ public class NotificationServiceImpl implements NotificationService {
         
         jobRepository.save(job);
         log.debug("Created notification job: id={}, dedupKey={}", job.getId(), dedupKey);
+        return Optional.of(job);
     }
     
     private String generateDedupKey(Long eventId, RecipientType recipientType, 
@@ -291,7 +300,7 @@ public class NotificationServiceImpl implements NotificationService {
         
         try {
             NotificationTemplate template = templateRepository
-                    .findLatestByNameAndChannelAndLocale(event.getEventType(), job.getChannel(), "en")
+                    .findLatestByNameAndChannelAndLocale(event.getEventType().getTemplateName(), job.getChannel(), "en")
                     .orElse(null);
             
             if (template != null) {
@@ -299,12 +308,12 @@ public class NotificationServiceImpl implements NotificationService {
                 message = templateService.renderTemplate(template.getContent(), event.getPayload());
             } else {
                 // Fallback rendering
-                title = event.getEventType();
+                title = event.getEventType().name();
                 message = event.getPayload().toString();
             }
         } catch (Exception e) {
             log.warn("Failed to render template for job {}: {}", job.getId(), e.getMessage());
-            title = event.getEventType();
+            title = event.getEventType().name();
             message = "Notification available";
         }
         

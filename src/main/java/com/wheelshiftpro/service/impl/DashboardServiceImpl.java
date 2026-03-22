@@ -922,7 +922,7 @@ public class DashboardServiceImpl implements DashboardService {
                     .stream()
                     .map(jobResponse -> NotificationItem.builder()
                             .id(jobResponse.getId())
-                            .type(jobResponse.getEventType() != null ? jobResponse.getEventType() : "NOTIFICATION")
+                            .type(jobResponse.getEventType() != null ? jobResponse.getEventType().name() : "NOTIFICATION")
                             .subject(jobResponse.getTitle() != null ? jobResponse.getTitle() : "Notification")
                             .body(jobResponse.getMessage() != null ? jobResponse.getMessage() : "")
                             .entityType(jobResponse.getEntityType() != null ? jobResponse.getEntityType() : "")

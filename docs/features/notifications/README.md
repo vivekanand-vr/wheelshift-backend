@@ -20,13 +20,15 @@ Five entities make up the notification system. The diagram below shows how they 
 │   NotificationEvent  │              │     NotificationTemplate     │
 ├──────────────────────┤              ├──────────────────────────────┤
 │ id                   │              │ id                           │
-│ event_type ──────────┼── lookup ───►│ name  (matches event_type)  │
-│ entity_type          │  (at render) │ channel  (IN_APP | EMAIL)   │
-│ entity_id            │              │ subject                      │
-│ payload (JSON)       │              │ content  ({{var}} syntax)   │
-│ severity             │              │ variables (JSON array)       │
-│ occurred_at          │              │ locale / version             │
-│ created_at           │              └──────────────────────────────┘
+│ event_type ──────────┼── lookup ───►│ name  (enum.getTemplateName) │
+│  (NotificationEvent  │  (at render) │ channel  (IN_APP | EMAIL)   │
+│   Type enum)         │              │ subject                      │
+│ entity_type          │              │ content  ({{var}} syntax)   │
+│ entity_id            │              │ variables (JSON array)       │
+│ payload (JSON)       │              │ locale / version             │
+│ severity             │              └──────────────────────────────┘
+│ occurred_at          │
+│ created_at           │
 └──────────┬───────────┘
            │ 1 : N
            ▼
@@ -37,14 +39,14 @@ Five entities make up the notification system. The diagram below shows how they 
 │ event_id  (FK)       │              │ principal_type               │
 │ recipient_type       │              │ principal_id                 │
 │ recipient_id         │              │ event_type                   │
-│ channel              │              │ channel  (IN_APP | EMAIL)   │
-│ status               │              │ enabled                      │
-│ dedup_key  (unique)  │              │ frequency (IMMEDIATE|DIGEST) │
-│ retries              │              │ quiet_hours_start / end      │
-│ sent_at              │              │ severity_threshold           │
-│ scheduled_for        │              └──────────────────────────────┘
-│ created_at           │
-└──────────┬───────────┘
+│ channel              │              │  (NotificationEventType      │
+│ status               │              │   enum, or ALL)              │
+│ dedup_key  (unique)  │              │ channel  (IN_APP | EMAIL)   │
+│ retries              │              │ enabled                      │
+│ sent_at              │              │ frequency (IMMEDIATE|DIGEST) │
+│ scheduled_for        │              │ quiet_hours_start / end      │
+│ created_at           │              │ severity_threshold           │
+└──────────┬───────────┘              └──────────────────────────────┘
            │ 1 : N
            ▼
 ┌──────────────────────┐
@@ -75,7 +77,7 @@ How a notification travels from a business event to the recipient:
 ```
   Business Service  (e.g. InquiryServiceImpl, SaleServiceImpl)
           │
-          │  notificationHelper.notifyEmployee(employeeId, "inquiry.assigned", ...)
+          │  notificationHelper.notifyEmployee(employeeId, NotificationEventType.INQUIRY_ASSIGNED, ...)
           │       or  .notifyClient(...)  /  .sendCriticalNotification(...)
           ▼
    NotificationEventHelper
@@ -86,39 +88,194 @@ How a notification travels from a business event to the recipient:
   │   NotificationServiceImpl  —  createNotificationEvent()         │
   │                                                                 │
   │  1. Build and persist  NotificationEvent                        │
-  │     (event_type, entity_type, entity_id, payload, severity)     │
+  │     (event_type enum, entity_type, entity_id, payload, severity)│
   │                                                                 │
   │  2. generateNotificationJobs(event)                             │
   │     ├─ Extract recipientType + recipientId from payload         │
-  │     ├─ Always create an  IN_APP  job                            │
-  │     ├─ Create an  EMAIL  job if preference is enabled           │
+  │     ├─ Create an  IN_APP  job  (always)                         │
   │     └─ Dedup check: skip if identical job already exists        │
   │        (dedupKey = "{eventId}-{recipientType}-{recipientId}-    │
   │                     {channel}")                                 │
   │                                                                 │
   │  3. Persist NotificationJob(s)  [status = PENDING]              │
+  │                                                                 │
+  │  4. kafkaProducer.publishJob(job)  [@Async, non-blocking]       │
+  │     ├─ Render title + message from template                     │
+  │     │   (lookup by eventType.getTemplateName() + channel)       │
+  │     └─ Send NotificationJobMessage to Kafka topic               │
   └─────────────────────┬───────────────────────────────────────────┘
                         │
-           ┌────────────┴─────────────┐
-           │                          │
-           ▼                          ▼
-   ┌───────────────┐          ┌──────────────────┐
-   │  IN_APP Job   │          │   EMAIL Job      │
-   │               │          │                  │
-   │  Stored in DB │          │  Template looked │
-   │  with status  │          │  up by name +    │
-   │  SENT         │          │  channel + locale│
-   │               │          │  Variables from  │
-   │  Frontend     │          │  payload substi- │
-   │  retrieves    │          │  tuted into      │
-   │  via GET      │          │  content         │
-   │  /recipient/  │          │                  │
-   │  ...          │          │  Sent via SMTP   │
-   │               │          │                  │
-   │  Unread check │          │  NotificationDel-│
-   │  via sentAt   │          │  ivery record    │
-   │  IS NULL      │          │  created         │
-   └───────────────┘          └──────────────────┘
+                        ▼
+          ┌─────────────────────────┐
+          │   Apache Kafka          │
+          │                         │
+          │  notification.jobs.     │
+          │  inapp  (3 partitions)  │
+          │                         │
+          │  notification.jobs.     │
+          │  email  (3 partitions)  │
+          └────────────┬────────────┘
+                       │
+                       ▼
+          ┌─────────────────────────┐
+          │  NotificationKafka      │
+          │  Consumer               │
+          │  (manual-ack)           │
+          │                         │
+          │  Publishes JSON payload │
+          │  to Redis Pub/Sub:      │
+          │  notification:          │
+          │  {TYPE}:{recipientId}   │
+          └────────────┬────────────┘
+                       │  Redis Pub/Sub
+          ┌────────────┴────────────┐
+          │  (all app instances)    │
+          ▼                         ▼
+  ┌───────────────┐         ┌────────────────────┐
+  │  Notification │         │  NotificationSSE   │
+  │  Redis        │         │  EmitterManager    │
+  │  Message      │────────►│                    │
+  │  Listener     │         │  Pushes SSE event  │
+  └───────────────┘         │  to connected      │
+                            │  browser tabs      │
+                            └────────┬───────────┘
+                                     │  text/event-stream
+                                     ▼
+                            ┌────────────────────┐
+                            │  Browser           │
+                            │                    │
+                            │  EventSource       │
+                            │  /stream/          │
+                            │  EMPLOYEE/42       │
+                            │                    │
+                            │  User reads →      │
+                            │  PUT /{id}/read    │
+                            │  sentAt = now      │
+                            └────────────────────┘
+```
+
+---
+
+## Kafka & Redis Deep Dive
+
+How Apache Kafka and Redis work together to deliver notifications reliably across multiple app instances:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         PRODUCER SIDE  (App Instance A)                     │
+│                                                                             │
+│  NotificationKafkaProducer.publishJob()   [@Async / notificationExecutor]  │
+│                                                                             │
+│  ┌────────────────────────────────────────────────────────────────────┐    │
+│  │  NotificationJobMessage                                            │    │
+│  │  ─────────────────────────────────────────────────────────────    │    │
+│  │  jobId │ eventType │ recipientType │ recipientId │ channel        │    │
+│  │  title │ message   │ payload (Map) │ severity    │ occurredAt     │    │
+│  └──────────────────────────────┬─────────────────────────────────────┘    │
+│                                 │  key = recipientId (ensures ordering)     │
+└─────────────────────────────────┼───────────────────────────────────────────┘
+                                  │ idempotent producer  acks=all  retries=3
+                                  ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              APACHE KAFKA                                   │
+│                                                                             │
+│  Topic: notification.jobs.inapp          Topic: notification.jobs.email    │
+│  ┌──────────────────────────────────┐    ┌──────────────────────────────┐  │
+│  │  Partition 0  │ key hash % 3     │    │  Partition 0                 │  │
+│  │  ─────────────────────────────── │    │  ─────────────────────────── │  │
+│  │  [msg][msg][msg]                 │    │  (ready for email workers)   │  │
+│  │                                  │    └──────────────────────────────┘  │
+│  │  Partition 1                     │                                       │
+│  │  ─────────────────────────────── │    • 3 partitions per topic          │
+│  │  [msg][msg]                      │    • KRaft mode (no Zookeeper)       │
+│  │                                  │    • Auto-create topics enabled      │
+│  │  Partition 2                     │    • Messages retained 7 days        │
+│  │  ─────────────────────────────── │    • replication factor = 1 (dev)   │
+│  │  [msg]                           │                                       │
+│  └──────────────────────────────────┘                                       │
+└────────────────────────┬────────────────────────────────────────────────────┘
+                         │  consumer group: notification-inapp-consumer-group
+          ┌──────────────┴──────────────────┐
+          │  (any available app instance)   │
+          ▼                                 ▼
+┌──────────────────────┐         ┌──────────────────────┐
+│  App Instance A      │         │  App Instance B      │
+│                      │         │                      │
+│  NotificationKafka   │         │  NotificationKafka   │
+│  Consumer            │         │  Consumer            │
+│                      │         │                      │
+│  1. Deserialize      │         │  1. Deserialize      │
+│     message          │         │     message          │
+│  2. Publish to       │         │  2. Publish to       │
+│     Redis Pub/Sub    │         │     Redis Pub/Sub    │
+│  3. ack.acknowledge()│         │  3. ack.acknowledge()│
+│     (manual ACK)     │         │     (manual ACK)     │
+└──────────┬───────────┘         └──────────┬───────────┘
+           │                                │
+           └──────────────┬─────────────────┘
+                          │  PUBLISH  notification:EMPLOYEE:42
+                          ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            REDIS PUB/SUB                                    │
+│                                                                             │
+│  Channel pattern:  notification:{RECIPIENT_TYPE}:{recipientId}             │
+│                                                                             │
+│  notification:EMPLOYEE:42    notification:CLIENT:7    notification:*:*     │
+│       │                            │                        (subscribed)    │
+│       └────────────────────────────┘                                        │
+│                          │                                                  │
+│     Fanout to ALL app instances simultaneously                              │
+└──────────────────────────┬──────────────────────────────────────────────────┘
+          ┌─────────────────┴──────────────────┐
+          ▼                                    ▼
+┌──────────────────────┐            ┌──────────────────────┐
+│  App Instance A      │            │  App Instance B      │
+│                      │            │                      │
+│  Notification        │            │  Notification        │
+│  RedisMessage        │            │  RedisMessage        │
+│  Listener            │            │  Listener            │
+│       │              │            │       │              │
+│       ▼              │            │       ▼              │
+│  SseEmitter          │            │  SseEmitter          │
+│  Manager             │            │  Manager             │
+│                      │            │                      │
+│  Tab 1 ──► SSE push  │            │  Tab 3 ──► SSE push  │
+│  Tab 2 ──► SSE push  │            │  (same user,         │
+│                      │            │   different tab)     │
+└──────────────────────┘            └──────────────────────┘
+```
+
+### Why This Design?
+
+**Kafka handles durability and load distribution:**
+- Messages are persisted to disk — if all app instances restart, no notifications are lost
+- The consumer group (one group per topic) ensures each message is processed by exactly one instance, preventing duplicate deliveries
+- Partitioning by `recipientId` keeps messages for the same recipient ordered and routed to the same partition
+- Idempotent producer + `acks=all` guarantees the broker only acknowledges a write after it's fully persisted
+- Manual acknowledgement (`MANUAL_IMMEDIATE`) means a message is only acked after it has been successfully handed off to Redis — a crash before ack causes Kafka to redeliver
+
+**Redis Pub/Sub bridges the Kafka consumer to SSE connections:**
+- A Kafka consumer may run on Instance B, but the user's browser tab is connected to Instance A via SSE
+- Publishing to a Redis channel broadcasts to all subscribers on all instances simultaneously
+- The `NotificationRedisMessageListener` (subscribed to `notification:*:*`) picks it up on every instance and calls `SseEmitterManager.sendToRecipient()` — only the instance that has an active emitter for that recipient will actually push the event
+- Multiple browser tabs of the same user are all served because `SseEmitterManager` holds a list of emitters per recipient key
+
+**SSE suits the notification use-case better than WebSocket:**
+- Notifications are strictly server → client (unidirectional) — no need for bidirectional WebSocket
+- Native browser reconnect via `EventSource` — the client automatically re-establishes the connection after a restart or network blip
+- Works over plain HTTP/1.1 and HTTP/2; no protocol upgrade required
+- Stateless from the server perspective — each reconnect just registers a fresh emitter
+
+**Message flow guarantees:**
+```
+Producer                Kafka               Consumer            Redis           Browser
+   │                      │                    │                  │               │
+   │── publish(msg) ──────►│                    │                  │               │
+   │   (acks=all)          │── deliver(msg) ────►│                  │               │
+   │                       │                    │── publish ───────►│               │
+   │                       │                    │   (channel)       │── SSE push ───►│
+   │                       │                    │◄─ ack() ──────────│               │
+   │                       │◄─ commit offset ───│                  │               │
 ```
 
 ---
@@ -135,37 +292,44 @@ How a notification travels from a business event to the recipient:
 
 ## Event Types
 
-| Category | Event Type | Description |
-|----------|------------|-------------|
-| **Inquiries** | `inquiry.created` | New inquiry created |
-| | `inquiry.assigned` | Inquiry assigned to employee |
-| | `inquiry.updated` | Inquiry status changed |
-| **Reservations** | `reservation.created` | New reservation made |
-| | `reservation.expiring` | Reservation about to expire |
-| | `reservation.cancelled` | Reservation cancelled |
-| **Sales** | `sale.completed` | Sale transaction completed |
-| | `sale.pending` | Sale pending approval |
-| **Inspections** | `inspection.due` | Vehicle inspection due |
-| | `inspection.completed` | Inspection completed |
-| | `inspection.failed` | Inspection failed |
-| **Tasks** | `task.assigned` | Task assigned to employee |
-| | `task.due` | Task due soon |
-| | `task.completed` | Task completed |
-| **Payments** | `payment.received` | Payment received |
-| | `payment.overdue` | Payment overdue |
+All event types are defined in the `NotificationEventType` enum. The enum name is also used to derive the template lookup key via `getTemplateName()` (e.g. `INQUIRY_ASSIGNED` → `"inquiry_assigned"`).
+
+| Category | Enum Constant | Template Name | Description |
+|----------|---------------|---------------|-------------|
+| **Inquiries** | `INQUIRY_CREATED` | `inquiry_created` | New inquiry created |
+| | `INQUIRY_ASSIGNED` | `inquiry_assigned` | Inquiry assigned to employee |
+| | `INQUIRY_UPDATED` | `inquiry_updated` | Inquiry status changed |
+| **Reservations** | `RESERVATION_CREATED` | `reservation_created` | New reservation made |
+| | `RESERVATION_EXPIRING` | `reservation_expiring` | Reservation about to expire |
+| | `RESERVATION_CANCELLED` | `reservation_cancelled` | Reservation cancelled |
+| **Sales** | `SALE_COMPLETED` | `sale_completed` | Sale transaction completed |
+| | `SALE_PENDING` | `sale_pending` | Sale pending approval |
+| **Inspections** | `INSPECTION_DUE` | `inspection_due` | Vehicle inspection due |
+| | `INSPECTION_COMPLETED` | `inspection_completed` | Inspection completed |
+| | `INSPECTION_FAILED` | `inspection_failed` | Inspection failed |
+| **Tasks** | `TASK_ASSIGNED` | `task_assigned` | Task assigned to employee |
+| | `TASK_DUE` | `task_due` | Task due soon |
+| | `TASK_OVERDUE` | `task_overdue` | Task is overdue |
+| | `TASK_COMPLETED` | `task_completed` | Task completed |
+| **Payments** | `PAYMENT_RECEIVED` | `payment_received` | Payment received |
+| | `PAYMENT_OVERDUE` | `payment_overdue` | Payment overdue |
+| **Wildcard** | `ALL` | — | Matches any event type in preferences |
 
 ### Adding Custom Events
 
+Add the new constant to `NotificationEventType` and create a matching template:
+
 ```java
-// Define the event type constant
-public class NotificationEvents {
-    public static final String CUSTOM_EVENT = "custom.event";
+// 1. Add to NotificationEventType enum
+public enum NotificationEventType {
+    // ... existing values ...
+    CUSTOM_EVENT;
 }
 
-// Send the notification from any service
+// 2. Send the notification from any service
 notificationHelper.notifyEmployee(
     employeeId,
-    NotificationEvents.CUSTOM_EVENT,
+    NotificationEventType.CUSTOM_EVENT,
     "ENTITY_TYPE",
     entityId,
     Map.of("key", value)
@@ -185,7 +349,7 @@ private NotificationEventHelper notificationHelper;
 // Notify a single employee
 notificationHelper.notifyEmployee(
     employeeId,
-    "inquiry.assigned",
+    NotificationEventType.INQUIRY_ASSIGNED,
     "INQUIRY",
     inquiryId,
     Map.of(
@@ -198,7 +362,7 @@ notificationHelper.notifyEmployee(
 // Notify a client
 notificationHelper.notifyClient(
     clientId,
-    "reservation.created",
+    NotificationEventType.RESERVATION_CREATED,
     "RESERVATION",
     reservationId,
     Map.of("reservationId", reservationId, "vehicleModel", "Honda Activa")
@@ -206,7 +370,7 @@ notificationHelper.notifyClient(
 
 // Send a critical notification
 notificationHelper.sendCriticalNotification(
-    "inspection.failed",
+    NotificationEventType.INSPECTION_FAILED,
     "CAR",
     carId,
     RecipientType.EMPLOYEE,
@@ -222,7 +386,7 @@ notificationHelper.sendCriticalNotification(
 private NotificationService notificationService;
 
 CreateNotificationEventRequest request = CreateNotificationEventRequest.builder()
-    .eventType("sale.completed")
+    .eventType(NotificationEventType.SALE_COMPLETED)
     .entityType("SALE")
     .entityId(saleId)
     .payload(Map.of(
@@ -293,7 +457,7 @@ public class InquiryServiceImpl implements InquiryService {
 
         notificationHelper.notifyEmployee(
             employeeId,
-            "inquiry.assigned",
+            NotificationEventType.INQUIRY_ASSIGNED,
             "INQUIRY",
             inquiryId,
             Map.of(
@@ -328,7 +492,7 @@ public class SaleServiceImpl implements SaleService {
 
         notificationHelper.notifyEmployee(
             sale.getEmployee().getId(),
-            "sale.completed",
+            NotificationEventType.SALE_COMPLETED,
             "SALE",
             saleId,
             Map.of(
@@ -428,7 +592,7 @@ POST /api/v1/notifications/preferences
 {
   "principalType":    "EMPLOYEE",
   "principalId":      5,
-  "eventType":        "inquiry.assigned",
+  "eventType":        "INQUIRY_ASSIGNED",
   "channel":          "IN_APP",
   "enabled":          true,
   "frequency":        "IMMEDIATE",
@@ -455,6 +619,7 @@ POST /api/v1/notifications/preferences
 | `GET` | `/api/v1/notifications/recipient/{type}/{id}/stats` | Get stats |
 | `GET` | `/api/v1/notifications/recipient/{type}/{id}/unread-count` | Get unread count |
 | `GET` | `/api/v1/notifications/events` | List all events (paginated) |
+| `GET` | `/api/v1/notifications/stream/{type}/{id}` | SSE stream — real-time push (text/event-stream) |
 
 ### Templates
 
@@ -483,6 +648,20 @@ POST /api/v1/notifications/preferences
 ## Enums
 
 ```java
+// All supported event types (replaces dot-notation strings)
+enum NotificationEventType {
+    INQUIRY_CREATED, INQUIRY_ASSIGNED, INQUIRY_UPDATED,
+    RESERVATION_CREATED, RESERVATION_EXPIRING, RESERVATION_CANCELLED,
+    SALE_COMPLETED, SALE_PENDING,
+    INSPECTION_DUE, INSPECTION_COMPLETED, INSPECTION_FAILED,
+    TASK_ASSIGNED, TASK_DUE, TASK_OVERDUE, TASK_COMPLETED,
+    PAYMENT_RECEIVED, PAYMENT_OVERDUE,
+    ALL;  // wildcard for preferences
+
+    // Returns the template table lookup key: INQUIRY_ASSIGNED → "inquiry_assigned"
+    public String getTemplateName() { return this.name().toLowerCase(); }
+}
+
 // Supported delivery channels
 enum NotificationChannel  { IN_APP, EMAIL }
 
@@ -522,13 +701,20 @@ Unread detection for IN_APP jobs uses `sentAt IS NULL` — jobs are considered u
 ## Implementation Classes
 
 ### Services
-- `NotificationService` / `NotificationServiceImpl` — core notification logic
+- `NotificationService` / `NotificationServiceImpl` — core notification logic; persists events+jobs, triggers Kafka publish
 - `NotificationEventHelper` — convenience facade (`notifyEmployee`, `notifyClient`, `sendCriticalNotification`, `sendNotification`)
 - `NotificationTemplateService` / `NotificationTemplateServiceImpl` — template CRUD and rendering
 - `NotificationPreferenceService` / `NotificationPreferenceServiceImpl` — preference management
 
+### Messaging (Kafka + SSE)
+- `NotificationKafkaProducer` — `@Async` publisher; renders template and sends `NotificationJobMessage` to the appropriate Kafka topic
+- `NotificationKafkaConsumer` — manual-ack Kafka listener; re-publishes payload to Redis Pub/Sub channel
+- `NotificationJobMessage` — serializable Kafka message payload (includes pre-rendered title + message)
+- `NotificationRedisMessageListener` — Redis Pub/Sub listener; forwards payload to SSE emitters on this instance
+- `NotificationSseEmitterManager` — thread-safe registry of active SSE connections; fans out events to browser tabs
+
 ### Controllers
-- `NotificationController` — notification retrieval and read/unread management
+- `NotificationController` — notification retrieval, read/unread management, and SSE stream endpoint
 - `NotificationTemplateController` — template CRUD
 - `NotificationPreferenceController` — preference CRUD
 
@@ -544,11 +730,12 @@ Unread detection for IN_APP jobs uses `sentAt IS NULL` — jobs are considered u
 ## Best Practices
 
 1. **Always use the helper** — `NotificationEventHelper` handles recipient extraction and payload structure automatically
-2. **Consistent variable names** — use the same variable names across events and templates (see Variable Reference above)
-3. **Define event type constants** — keep event type strings in a constants class to avoid typos
-4. **Async delivery** — notification creation is synchronous; actual sending (especially EMAIL when implemented) should be `@Async`
-5. **Template versioning** — increment `version` when making significant content changes; old jobs reference the latest template at render time
-6. **Respect preferences** — the system checks `NotificationPreference` before creating jobs; do not bypass this by creating jobs directly
+2. **Use enum constants** — always reference `NotificationEventType.INQUIRY_ASSIGNED` etc.; never pass raw strings
+3. **Consistent variable names** — use the same variable names across events and templates (see Variable Reference above)
+4. **Kafka is non-blocking** — `NotificationKafkaProducer.publishJob()` runs on the `notificationExecutor` thread pool; the calling transaction is unaffected by Kafka failures
+5. **SSE reconnects automatically** — browsers using `EventSource` will reconnect on disconnect; the emitter is registered fresh on each reconnect
+6. **Template versioning** — increment `version` when making significant content changes; the producer always uses the latest template at publish time
+7. **Respect preferences** — the system checks `NotificationPreference` before creating jobs; do not bypass this by creating jobs directly
 
 ---
 

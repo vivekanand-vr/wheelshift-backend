@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import com.wheelshiftpro.enums.notifications.NotificationEventType;
 import com.wheelshiftpro.enums.notifications.NotificationSeverity;
 
 import java.time.LocalDateTime;
@@ -25,8 +26,9 @@ public class NotificationEvent {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
+    @Enumerated(EnumType.STRING)
     @Column(name = "event_type", nullable = false, length = 64)
-    private String eventType;
+    private NotificationEventType eventType;
     
     @Column(name = "entity_type", nullable = false, length = 32)
     private String entityType;

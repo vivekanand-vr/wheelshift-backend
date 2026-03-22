@@ -2,10 +2,10 @@ package com.wheelshiftpro.dto.request.notifications;
 
 import com.wheelshiftpro.enums.PrincipalType;
 import com.wheelshiftpro.enums.notifications.NotificationChannel;
+import com.wheelshiftpro.enums.notifications.NotificationEventType;
 import com.wheelshiftpro.enums.notifications.NotificationFrequency;
 import com.wheelshiftpro.enums.notifications.NotificationSeverity;
 
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -25,8 +25,8 @@ public class NotificationPreferenceRequest {
     
     private Long principalId;
     
-    @NotBlank(message = "Event type is required")
-    private String eventType;
+    @NotNull(message = "Event type is required")
+    private NotificationEventType eventType;
     
     @NotNull(message = "Channel is required")
     private NotificationChannel channel;

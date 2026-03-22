@@ -2,6 +2,7 @@ package com.wheelshiftpro.service.notifications;
 
 import com.wheelshiftpro.dto.request.notifications.CreateNotificationEventRequest;
 import com.wheelshiftpro.enums.RecipientType;
+import com.wheelshiftpro.enums.notifications.NotificationEventType;
 import com.wheelshiftpro.enums.notifications.NotificationSeverity;
 
 import org.springframework.stereotype.Component;
@@ -25,7 +26,7 @@ public class NotificationEventHelper {
     /**
      * Create and send a notification event
      */
-    public void sendNotification(String eventType, String entityType, Long entityId,
+    public void sendNotification(NotificationEventType eventType, String entityType, Long entityId,
                                  RecipientType recipientType, Long recipientId,
                                  Map<String, Object> additionalPayload) {
         Map<String, Object> payload = new HashMap<>(additionalPayload != null ? additionalPayload : new HashMap<>());
@@ -47,7 +48,7 @@ public class NotificationEventHelper {
     /**
      * Send notification to employee
      */
-    public void notifyEmployee(Long employeeId, String eventType, String entityType, 
+    public void notifyEmployee(Long employeeId, NotificationEventType eventType, String entityType,
                                Long entityId, Map<String, Object> data) {
         sendNotification(eventType, entityType, entityId, RecipientType.EMPLOYEE, employeeId, data);
     }
@@ -55,7 +56,7 @@ public class NotificationEventHelper {
     /**
      * Send notification to client
      */
-    public void notifyClient(Long clientId, String eventType, String entityType, 
+    public void notifyClient(Long clientId, NotificationEventType eventType, String entityType,
                             Long entityId, Map<String, Object> data) {
         sendNotification(eventType, entityType, entityId, RecipientType.CLIENT, clientId, data);
     }
@@ -63,7 +64,7 @@ public class NotificationEventHelper {
     /**
      * Send critical notification
      */
-    public void sendCriticalNotification(String eventType, String entityType, Long entityId,
+    public void sendCriticalNotification(NotificationEventType eventType, String entityType, Long entityId,
                                         RecipientType recipientType, Long recipientId,
                                         Map<String, Object> additionalPayload) {
         Map<String, Object> payload = new HashMap<>(additionalPayload != null ? additionalPayload : new HashMap<>());

@@ -2,6 +2,7 @@ package com.wheelshiftpro.dto.response.notifications;
 
 import com.wheelshiftpro.enums.PrincipalType;
 import com.wheelshiftpro.enums.notifications.NotificationChannel;
+import com.wheelshiftpro.enums.notifications.NotificationEventType;
 import com.wheelshiftpro.enums.notifications.NotificationFrequency;
 import com.wheelshiftpro.enums.notifications.NotificationSeverity;
 
@@ -22,7 +23,7 @@ public class NotificationPreferenceResponse {
     private Long id;
     private PrincipalType principalType;
     private Long principalId;
-    private String eventType;
+    private NotificationEventType eventType;
     private NotificationChannel channel;
     private Boolean enabled;
     private NotificationFrequency frequency;

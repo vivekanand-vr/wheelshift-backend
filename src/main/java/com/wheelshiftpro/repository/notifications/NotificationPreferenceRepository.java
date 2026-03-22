@@ -3,6 +3,7 @@ package com.wheelshiftpro.repository.notifications;
 import com.wheelshiftpro.entity.notifications.NotificationPreference;
 import com.wheelshiftpro.enums.PrincipalType;
 import com.wheelshiftpro.enums.notifications.NotificationChannel;
+import com.wheelshiftpro.enums.notifications.NotificationEventType;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -18,7 +19,7 @@ import java.util.Optional;
 public interface NotificationPreferenceRepository extends JpaRepository<NotificationPreference, Long> {
     
     Optional<NotificationPreference> findByPrincipalTypeAndPrincipalIdAndEventTypeAndChannel(
-            PrincipalType principalType, Long principalId, String eventType, NotificationChannel channel);
+            PrincipalType principalType, Long principalId, NotificationEventType eventType, NotificationChannel channel);
     
     List<NotificationPreference> findByPrincipalTypeAndPrincipalId(
             PrincipalType principalType, Long principalId);

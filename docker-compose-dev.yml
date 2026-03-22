@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # MySQL Database
   mysql:
@@ -81,6 +79,62 @@ services:
     networks:
       - wheelshift-network
 
+  # ── Apache Kafka (KRaft mode — no Zookeeper) ────────────────────────────
+  kafka:
+    image: apache/kafka:latest
+    container_name: wheelshift-kafka
+    restart: always
+    ports:
+      - "9092:9092"   # Docker-internal client access
+      - "9094:9094"   # host-accessible external listener
+      - "9093:9093"   # controller (internal)
+    environment:
+      # KRaft — node identity
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      # Listeners
+      KAFKA_LISTENERS: PLAINTEXT://:9092,EXTERNAL://:9094,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      # Topic defaults
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      # Stable cluster ID for KRaft (base64-encoded 16-byte UUID)
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - wheelshift-network
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list"]
+      interval: 15s
+      timeout: 10s
+      retries: 6
+      start_period: 30s
+
+  # Kafka UI — browser-based Kafka management
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: wheelshift-kafka-ui
+    restart: always
+    ports:
+      - "8083:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: wheelshift-local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - wheelshift-network
+
   # WheelShiftPro Spring Boot Application
   ws-pro:
     build:
@@ -101,6 +155,9 @@ services:
       # Redis Configuration
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
+
+      # Kafka Configuration
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       
       # Application Configuration
       SPRING_PROFILES_ACTIVE: dev
@@ -130,6 +187,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+      kafka:
+        condition: service_healthy
     networks:
       - wheelshift-network
     healthcheck:
@@ -145,6 +204,8 @@ volumes:
   redis_data:
     driver: local
   redis_insights_data:
+    driver: local
+  kafka_data:
     driver: local
   maven_repo:
     driver: local

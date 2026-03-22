@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import com.wheelshiftpro.entity.notifications.NotificationEvent;
+import com.wheelshiftpro.enums.notifications.NotificationEventType;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -13,7 +14,7 @@ import java.util.List;
 @Repository
 public interface NotificationEventRepository extends JpaRepository<NotificationEvent, Long> {
     
-    Page<NotificationEvent> findByEventTypeOrderByOccurredAtDesc(String eventType, Pageable pageable);
+    Page<NotificationEvent> findByEventTypeOrderByOccurredAtDesc(NotificationEventType eventType, Pageable pageable);
     
     Page<NotificationEvent> findByEntityTypeAndEntityIdOrderByOccurredAtDesc(
             String entityType, Long entityId, Pageable pageable);

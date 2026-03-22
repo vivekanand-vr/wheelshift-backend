@@ -7,6 +7,7 @@ import com.wheelshiftpro.dto.response.notifications.NotificationJobResponse;
 import com.wheelshiftpro.dto.response.notifications.NotificationStatsResponse;
 import com.wheelshiftpro.enums.RecipientType;
 import com.wheelshiftpro.enums.notifications.NotificationChannel;
+import com.wheelshiftpro.notification.NotificationSseEmitterManager;
 import com.wheelshiftpro.service.notifications.NotificationService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -17,9 +18,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @RestController
 @RequestMapping("/api/v1/notifications")
@@ -28,6 +31,7 @@ import org.springframework.web.bind.annotation.*;
 public class NotificationController {
     
     private final NotificationService notificationService;
+    private final NotificationSseEmitterManager sseEmitterManager;
     
     @PostMapping("/events")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'EMPLOYEE')")
@@ -115,5 +119,26 @@ public class NotificationController {
             @PageableDefault(size = 20) Pageable pageable) {
         Page<NotificationEventResponse> events = notificationService.getAllEvents(pageable);
         return ResponseEntity.ok(events);
+    }
+
+    /**
+     * SSE stream — subscribe to real-time notifications for a recipient.
+     * The connection stays open; the server pushes a {@code notification} event
+     * each time a new notification arrives via the Kafka → Redis → SSE pipeline.
+     *
+     * <p>Usage (JavaScript):
+     * <pre>
+     * const es = new EventSource('/api/v1/notifications/stream/EMPLOYEE/42');
+     * es.addEventListener('notification', e => console.log(JSON.parse(e.data)));
+     * </pre>
+     */
+    @GetMapping(value = "/stream/{recipientType}/{recipientId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'EMPLOYEE')")
+    @Operation(summary = "Subscribe to real-time notifications",
+               description = "Opens a Server-Sent Events stream that pushes new notifications as they arrive")
+    public SseEmitter streamNotifications(
+            @PathVariable RecipientType recipientType,
+            @PathVariable Long recipientId) {
+        return sseEmitterManager.addEmitter(recipientType, recipientId);
     }
 }
