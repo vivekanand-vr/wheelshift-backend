@@ -1,7 +1,7 @@
-# WheelShift Pro - Product Documentation
+﻿# WheelShift Pro — Product Documentation
 
-**Version:** 1.0.0  
-**Last Updated:** January 2026  
+**Version:** 1.1.0
+**Last Updated:** March 22, 2026
 **Status:** Production Ready
 
 ---
@@ -9,1787 +9,519 @@
 ## Table of Contents
 
 1. [Introduction](#1-introduction)
-2. [Business Goals](#2-business-goals)
-3. [System Architecture](#3-system-architecture)
+2. [Target Users](#2-target-users)
+3. [Feature Overview](#3-feature-overview)
 4. [Core Features](#4-core-features)
-5. [Advanced Features](#5-advanced-features)
-6. [Technology Stack](#6-technology-stack)
-7. [Database Design](#7-database-design)
-8. [API Architecture](#8-api-architecture)
-9. [Security Model](#9-security-model)
-10. [Deployment](#10-deployment)
-11. [Future Roadmap](#11-future-roadmap)
+5. [Platform Features](#5-platform-features)
+6. [Security & Authentication](#6-security--authentication)
+7. [Technology Stack](#7-technology-stack)
+8. [Database Overview](#8-database-overview)
+9. [API Overview](#9-api-overview)
+10. [Planned Features](#10-planned-features)
 
 ---
 
 ## 1. Introduction
 
-### 1.1 Purpose
+WheelShift Pro is a comprehensive business management platform built for used vehicle dealerships. It covers the complete lifecycle of both cars and motorcycles — from purchase and inspection through inventory management, customer engagement, and final sale — all in one system.
 
-WheelShift Pro is a comprehensive enterprise management system designed to streamline operations for used car trading businesses. The system enables efficient management of the entire car trading lifecycle - from acquisition and inventory management to sales completion - while providing powerful role-based access control, multi-channel notifications, and real-time dashboards.
-
-### 1.2 Scope
-
-The system covers:
-- **Complete Vehicle Lifecycle Management** - Purchase, inspection, inventory, reservation, and sales for both cars and motorcycles
-- **Dual Vehicle Inventory** - Separate management for 4-wheeler (cars) and 2-wheeler (motorcycles/scooters) inventory
-- **Customer Relationship Management** - Client profiles, inquiry tracking, and purchase history
-- **Employee & Sales Management** - Staff management, performance tracking, and commission calculations
-- **Financial Operations** - Transaction tracking, reporting, and audit trails
-- **Task & Event Coordination** - Kanban boards and calendar-based workflow management
-- **Security & Compliance** - Role-based access control with fine-grained permissions
-- **Communication** - Multi-channel notification system with template management
-
-### 1.3 Target Users
-
-| Role | Primary Functions |
-|------|-------------------|
-| **Super Admin** | Full system access, user management, system configuration |
-| **Admin** | Business operations, reporting, employee management |
-| **Sales** | Lead management, client interactions, sales processing |
-| **Inspector** | Vehicle inspections, condition reports, quality control |
-| **Finance** | Financial transactions, pricing, commission management |
-| **Store Manager** | Inventory management, storage allocation, facility operations |
+The platform is designed for **multi-user dealership teams**, providing each role with a focused view of the tools and data relevant to their work, while giving management full visibility through powerful dashboards and reports.
 
 ---
 
-## 2. Business Goals
+## 2. Target Users
 
-### 2.1 Primary Objectives
-
-1. **Centralized Inventory Management**
-   - Single source of truth for all vehicle assets
-   - Real-time status tracking across multiple storage locations
-   - Automated capacity management and alerts
-   - Comprehensive vehicle specifications and history
-
-2. **Complete Vehicle Lifecycle Tracking**
-   - 360-degree visibility from purchase to sale
-   - Inspection history and condition reports
-   - Financial transaction trail
-   - Multi-stage workflow management
-
-3. **Enhanced Client Engagement & Conversion**
-   - Structured inquiry management and follow-up tracking
-   - Client interaction history and preferences
-   - Automated notifications for important events
-   - Lead-to-sale conversion analytics
-
-4. **Sales Optimization & Performance Monitoring**
-   - Real-time sales pipeline visibility
-   - Commission calculation and tracking
-   - Employee performance metrics
-   - Revenue and profit analysis
-
-5. **Robust Financial Oversight**
-   - Complete transaction audit trail
-   - Multi-category expense tracking
-   - Profitability analysis per vehicle
-   - Financial reporting and compliance
-
-6. **Operational Transparency & Accountability**
-   - Role-based access control with audit logging
-   - Employee activity tracking
-   - Resource-level permissions
-   - Change history for all entities
-
-7. **Workflow Automation & Coordination**
-   - Integrated task management (Kanban)
-   - Calendar-based event scheduling
-   - Automated notifications and reminders
-   - Priority and deadline tracking
-
-8. **Data-Driven Decision Making**
-   - Role-specific dashboards with KPIs
-   - Cross-functional analytics
-   - Trend analysis and forecasting
-   - Custom reporting capabilities
+| Role | What They Do |
+|------|--------------|
+| **Super Admin** | Full system access — user management, role configuration, system settings |
+| **Admin** | Day-to-day business operations, employee oversight, reporting |
+| **Sales** | Client interactions, inquiry management, reservations and sales |
+| **Inspector** | Vehicle inspection records and condition assessments |
+| **Finance** | Financial transactions, pricing, commissions |
+| **Store Manager** | Inventory management, storage allocation, vehicle movements |
 
 ---
 
-## 3. System Architecture
+## 3. Feature Overview
 
-### 3.1 Architecture Overview
+### Currently Available
 
-WheelShift Pro follows a modern **3-tier architecture**:
+| # | Feature | Category |
+|---|---------|----------|
+| 1 | Car Inventory Management | Core |
+| 2 | Motorcycle Inventory Management | Core |
+| 3 | Vehicle Inspections (Cars & Motorcycles) | Core |
+| 4 | Vehicle Movement Tracking | Core |
+| 5 | Storage Location Management | Core |
+| 6 | Client (Customer) Management | Core |
+| 7 | Employee Management | Core |
+| 8 | Lead Management (Inquiries) | Core |
+| 9 | Reservation System | Core |
+| 10 | Sales Processing | Core |
+| 11 | Financial Transaction Management | Core |
+| 12 | Task Management (Kanban) | Core |
+| 13 | Event Calendar | Core |
+| 14 | File Storage & Management | Platform |
+| 15 | Role-Based Access Control (RBAC) | Platform |
+| 16 | In-App Notification System | Platform |
+| 17 | Role-Specific Dashboards | Platform |
+| 18 | Performance Caching (Redis) | Platform |
+| 19 | JWT Authentication | Security |
+| 20 | Data Scoping | Security |
+| 21 | Resource-Level ACLs | Security |
+| 22 | Audit Logging | Security |
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                    Presentation Layer                    │
-│          (React/Next.js Frontend - Planned)              │
-└────────────────────┬────────────────────────────────────┘
-                     │ REST API (JSON)
-┌────────────────────┴────────────────────────────────────┐
-│                   Application Layer                      │
-│    ┌──────────────────────────────────────────────┐    │
-│    │           Spring Boot Application            │    │
-│    ├──────────────────────────────────────────────┤    │
-│    │  Controllers  │  Services  │  Repositories   │    │
-│    │     DTOs      │  Mappers   │   Validators    │    │
-│    │   Security    │ Exception  │   Scheduling    │    │
-│    └──────────────────────────────────────────────┘    │
-└────────────────────┬────────────────────────────────────┘
-                     │ JPA/Hibernate
-┌────────────────────┴────────────────────────────────────┐
-│                    Persistence Layer                     │
-│    ┌─────────────────┐        ┌──────────────────┐     │
-│    │  MySQL Database │        │  Redis Cache     │     │
-│    │  (Primary Data) │        │  (Sessions/OTP)  │     │
-│    └─────────────────┘        └──────────────────┘     │
-└─────────────────────────────────────────────────────────┘
-```
+### Planned
 
-### 3.2 Design Patterns
-
-| Pattern | Usage |
-|---------|-------|
-| **MVC** | Controller-Service-Repository separation |
-| **DTO Pattern** | Data transfer between layers |
-| **Repository Pattern** | Data access abstraction |
-| **Dependency Injection** | Spring IoC container |
-| **Factory Pattern** | Entity creation and mapping |
-| **Strategy Pattern** | Notification channel selection |
-| **Template Method** | Base service classes |
-| **Observer Pattern** | Event-driven notifications |
-
-### 3.3 Key Components
-
-- **Controllers** - REST API endpoints, request validation
-- **Services** - Business logic, transaction management
-- **Repositories** - Database operations via Spring Data JPA
-- **Mappers** - Entity-DTO conversion using MapStruct
-- **Security** - Session-based authentication, RBAC authorization
-- **Exception Handlers** - Centralized error handling
-- **Validators** - Bean validation and custom validators
-- **Schedulers** - Background tasks (reservation expiry, notifications)
+| # | Feature | Category | Status |
+|---|---------|----------|--------|
+| 23 | Frontend Web Application (React/Next.js) | Product | 🚧 In Progress |
+| 24 | Email Notifications (SMTP) | Platform | 📋 Planned |
+| 25 | Real-Time Updates (WebSocket) | Platform | 📋 Planned |
+| 26 | Export Reports (PDF / Excel) | Platform | 📋 Planned |
+| 27 | Two-Factor Authentication (2FA) | Security | 📋 Planned |
+| 28 | OAuth2 / Social Login | Security | 📋 Planned |
+| 29 | QR Code Generation for Vehicles | Core | 💡 Suggested |
+| 30 | Customer Self-Service Portal | Core | 💡 Suggested |
+| 31 | Bulk Import / Export (CSV) | Core | 💡 Suggested |
+| 32 | AI-Powered Pricing Recommendations | Advanced | 💡 Suggested |
+| 33 | Vehicle Price History Tracking | Core | 💡 Suggested |
+| 34 | Appointment Booking System | Core | 💡 Suggested |
+| 35 | Mobile App (iOS / Android) | Product | 💡 Suggested |
+| 36 | Multi-Tenancy (Multiple Dealerships) | Platform | 💡 Suggested |
+| 37 | WhatsApp Chatbot Integration | Platform | 💡 Suggested |
 
 ---
 
 ## 4. Core Features
 
-### 4.1 Vehicle Inventory Management
+### 4.1 Car Inventory Management
 
-**Purpose:** Comprehensive tracking of all vehicles from acquisition to sale.
+Track every car from purchase to sale.
 
-**Key Capabilities:**
-- Complete vehicle specifications (VIN, registration, model, year, mileage, etc.)
-- Status tracking (Available, Reserved, Sold, Maintenance, etc.)
-- Purchase and selling price management
-- Storage location assignment with capacity validation
-- Advanced filtering and search
-- Vehicle history and transaction trail
-- Bulk operations support
-
-**Data Model:**
-- `Car` - Primary vehicle entity
-- `CarModel` - Make/model/variant catalog
-- `CarDetailedSpecs` - Extended specifications and features
-- `StorageLocation` - Physical storage facilities
-
-**Business Rules:**
-- Unique VIN number per vehicle
-- Prevent double reservation/sale
-- Auto-update storage location capacity
-- Block deletion of sold/reserved vehicles
-- Automatic status transitions
+- Add cars with full details — VIN, registration, model, year, color, mileage, engine specs
+- Manage status: Available, Reserved, Sold, Under Inspection, In Transit
+- Assign cars to storage locations with live capacity validation
+- Track purchase price, selling price, and margin
+- Store extended specifications: doors, seats, cargo capacity, acceleration, top speed
+- Add features as a flexible list (e.g., sunroof, ABS, parking sensors)
+- Attach photos (primary + gallery) and documents (RC, insurance)
+- Advanced search and filtering by make, model, price range, status, location
+- Full history trail — inspection records, movement logs, financial transactions
 
 ### 4.2 Motorcycle Inventory Management
 
-**Purpose:** Comprehensive tracking of all 2-wheeler vehicles (motorcycles, scooters, bikes) from acquisition to sale.
+Full inventory management for 2-wheelers with motorcycle-specific attributes.
 
-**Key Capabilities:**
-- Complete motorcycle specifications (VIN, registration, model, year, mileage, engine capacity, etc.)
-- Support for multiple vehicle types (Motorcycle, Scooter, Sport Bike, Cruiser, Off-Road, etc.)
-- Status tracking (Available, Reserved, Sold, Maintenance, Inspection Pending, etc.)
-- Purchase and selling price management
-- Storage location assignment with capacity validation
-- Advanced filtering and search (by make, model, engine capacity, price range)
-- Motorcycle-specific attributes (engine number, chassis number, pollution certificate)
-- Vehicle history and transaction trail
-- Bulk operations support
-- Electric vehicle support (electric scooters and motorcycles)
+- All the same lifecycle tracking as cars, tailored for motorcycles
+- Motorcycle-specific fields: engine number, chassis number, pollution certificate expiry, insurance expiry
+- Accident history and finance status tracking, previous owners count
+- Vehicle categories: Motorcycle, Scooter, Sport Bike, Cruiser, Off-Road, Touring, Naked, Cafe Racer
+- Fuel types: Petrol, Electric, Hybrid
+- Engine specs: type, power (BHP), torque (Nm), cooling system, fuel tank capacity
+- Dimensions: length, width, height, wheelbase, ground clearance, kerb weight
+- Braking: front/rear brake type, ABS availability
+- Suspension: front and rear suspension type
+- Features: electric start, kick start, digital console, USB charging, LED lights
+- 80+ pre-loaded models across 10+ brands:
+  - Honda, Hero, Yamaha, Royal Enfield, TVS, Bajaj, Suzuki, KTM, Ather, Ola Electric
 
-**Data Model:**
-- `Motorcycle` - Primary 2-wheeler entity
-- `MotorcycleModel` - Make/model/variant catalog (80+ models across 8+ brands)
-- `MotorcycleDetailedSpecs` - Extended specifications (engine, dimensions, features, braking, suspension)
-- `MotorcycleInspection` - Inspection records and condition assessments
-- `StorageLocation` - Shared storage facilities (supports both cars and motorcycles)
+### 4.3 Vehicle Inspections
 
-**Motorcycle-Specific Features:**
-- **Engine Specifications**: Type, power (BHP), torque (Nm), cooling system, fuel tank capacity
-- **Dimensions**: Length, width, height, wheelbase, ground clearance, kerb weight
-- **Braking System**: Front/rear brake types, ABS availability
-- **Suspension**: Front and rear suspension specifications
-- **Features**: Electric/kick start, digital console, USB charging, LED lights
-- **Performance Metrics**: Power-to-weight ratio calculation
-- **Fuel Types**: Petrol, Electric, Hybrid support
-- **Transmission Types**: Manual, CVT, Automatic, Semi-Automatic
-- **Vehicle Categories**: Motorcycle, Scooter, Sport Bike, Cruiser, Off-Road, Touring, Naked, Cafe Racer
+Structured condition assessment records for both cars and motorcycles.
 
-**Supported Brands:**
-- Honda (Activa, CB Shine, CB Hornet, Dio, Unicorn, SP 125)
-- Hero (Splendor, HF Deluxe, Passion Pro, Glamour, Xtreme 160R, Maestro Edge)
-- Yamaha (R15, MT-15, FZ-S, FZ-X, Fascino, Ray ZR)
-- Royal Enfield (Classic 350, Meteor 350, Himalayan, Hunter 350, Bullet 350)
-- TVS (Apache RTR, Raider, Jupiter, NTORQ, iQube Electric)
-- Bajaj (Pulsar, Dominar, Avenger, CT 110X, Platina, Chetak Electric)
-- Suzuki (Gixxer, Access 125, Burgman Street, V-Strom SX)
-- KTM (Duke series, RC series, Adventure series)
-- Ather (450X, 450S Electric)
-- Ola Electric (S1 Pro, S1 Air)
+- Log condition across multiple categories (exterior, interior, mechanical, electrical, engine, brakes, tyres, suspension, body, etc.)
+- Record accident history and required repairs with cost estimates
+- Pass/fail status per inspection
+- Attach inspection photos and upload report PDF
+- Full inspection history per vehicle with timestamps
 
-**Business Rules:**
-- Unique VIN number per motorcycle (17 characters)
-- Unique registration number per motorcycle
-- Prevent double reservation/sale
-- Auto-update storage location capacity (shared with cars)
-- Block deletion of sold/reserved motorcycles
-- Automatic status transitions (Available → Reserved → Sold)
-- Insurance and pollution certificate expiry tracking
-- Accident history recording
-- Finance status tracking
-- Previous owners count tracking
+### 4.4 Vehicle Movement Tracking
 
-**Integration Points:**
-- **Inquiries**: Customers can inquire about specific motorcycles
-- **Reservations**: Motorcycles can be reserved with deposit tracking
-- **Sales**: Complete sale process with commission tracking
-- **Financial Transactions**: All expenses (purchase, repair, maintenance) tracked per motorcycle
-- **Events**: Calendar events can be linked to motorcycles (inspection dates, servicing, etc.)
-- **Storage Locations**: Motorcycles share storage facilities with cars
-- **Inspections**: Comprehensive inspection system with condition reports
+Know where every vehicle is and how it got there.
 
-**Statistics & Analytics:**
-- Total motorcycle inventory count by status
-- Average selling price by make/model
-- Total inventory value
-- Motorcycles needing attention (maintenance, inspection pending)
-- Recently added motorcycles
-- Price range distribution
-- Mileage range analysis
-- Age distribution
-- Brand-wise inventory
+- Log each time a vehicle moves between storage locations
+- Record the employee who performed the move and the date/time
+- Optional movement notes
+- Full movement history per vehicle
 
-### 4.3 Customer (Client) Management
+### 4.5 Storage Location Management
 
-**Purpose:** Maintain comprehensive client profiles and interaction history.
+Manage multiple physical locations where vehicles are stored.
 
-**Key Capabilities:**
-- Client profile management (name, email, phone, location)
-- Status tracking (Active, Inactive)
-- Purchase history and statistics
-- Inquiry history per client
-- Last purchase date tracking
-- Top buyer analytics
-- Client segmentation by location/status
+- Add facilities with address and contact information
+- Set total capacity and track real-time occupancy
+- Capacity automatically adjusts as vehicles are assigned or moved
+- Vehicles cannot be assigned to locations at full capacity
+- Attach a photo of the facility
+- View all vehicles currently at any location
 
-**Data Model:**
-- `Client` - Customer entity with contact information
-- Relationships: One-to-many with Inquiries, Sales, Reservations
+### 4.6 Client (Customer) Management
 
-**Business Rules:**
-- Unique email per client
-- Auto-update purchase count on sale
-- Auto-update last purchase date
-- Soft delete for inactive clients
+Centralized customer database with complete interaction history.
 
-### 4.4 Employee Management
+- Store client details: name, email, phone, location
+- Automatic tracking of purchase count and last purchase date
+- View all inquiries, reservations, and sales linked to a client
+- Client status management — Active / Inactive
+- Store profile photo and documents (ID proof, address proof)
+- Advanced filtering by name, status, and location
+- Identify top buyers and segment customers
 
-**Purpose:** Staff management with performance tracking and role assignments.
+### 4.7 Employee Management
 
-**Key Capabilities:**
-- Employee profile management
-- Department and position tracking
-- Role-based access control integration
-- Performance metrics and reviews
-- Last login tracking
-- Sales handled tracking
-- Inquiry assignment management
-- Employee status management (Active, Inactive, Suspended)
+Manage your dealership team and their system access.
 
-**Data Model:**
-- `Employee` - Staff entity with credentials and profile
-- `EmployeeRole` - Role assignments for RBAC
-- Relationships: One-to-many with Sales, Inquiries
+- Employee profiles with department, position, and join date
+- Status management — Active, Inactive, Suspended
+- Assign roles for access control
+- Track last login activity
+- Profile photo storage
+- Prevent accidental deletion of employees with active work assignments
 
-**Business Rules:**
-- Unique email per employee
-- Password encryption (BCrypt)
-- Role-based permissions enforcement
-- Auto-update last login on authentication
-- Prevent deletion of employees with active assignments
+### 4.8 Lead Management (Inquiries)
 
-### 4.5 Lead Management (Inquiries)
+Capture and track every customer inquiry from first contact to sale.
 
-**Purpose:** Track and manage customer inquiries from initial contact to conversion.
+- Record inquiries for cars or motorcycles
+- Categorize by inquiry type and assign to a sales employee
+- Status workflow: Open → In Progress → Responded → Closed
+- Log responses with timestamps
+- Reassign inquiries between employees
+- Filter by status, employee, vehicle, or client
+- Attach files (brochures, quotes, etc.)
 
-**Key Capabilities:**
-- Inquiry recording and categorization
-- Status workflow (Open → In Progress → Responded → Closed)
-- Employee assignment for follow-up
-- Response tracking with timestamps
-- Vehicle-specific inquiry tracking (cars and motorcycles)
-- Advanced filtering and search
-- Unassigned inquiry queue
-- Conversion tracking
+### 4.9 Reservation System
 
-**Data Model:**
-- `Inquiry` - Customer inquiry entity
-- Relationships: Many-to-one with Car OR Motorcycle, Client, Employee
-- Vehicle type discriminator for polymorphic vehicle reference
+Hold vehicles for interested customers with deposit management.
 
-**Business Rules:**
-- Auto-set response date when response added
-- Notify assigned employee on assignment
-- Track inquiry-to-sale conversion
-- Allow reassignment of inquiries
+- Create reservations with expiry dates
+- Record deposit amount and payment status
+- Status workflow: Pending → Confirmed → Expired → Cancelled
+- Background scheduler automatically detects and expires overdue reservations
+- One active reservation per vehicle enforced at all times
+- Vehicle status automatically updates on reservation changes
+- Convert a confirmed reservation directly to a sale
+- Attach reservation documents (deposit receipts, agreements)
 
-### 4.6 Reservation System
+### 4.10 Sales Processing
 
-**Purpose:** Manage vehicle holds with deposit tracking and expiration management.
+Record and manage every completed vehicle sale.
 
-**Key Capabilities:**
-- Reservation creation with expiry dates
-- Deposit amount and payment tracking
-- Status workflow (Pending → Confirmed → Expired → Cancelled)
-- Automatic expiry detection
-- Conversion to sale
-- Client reservation history
-- Active and expired reservation views
+- Record sale price, payment method, and handling employee
+- Automatic commission calculation based on a configurable rate
+- Vehicle status automatically moves to SOLD
+- Client purchase count automatically updated on sale
+- Attach sale documents (invoice, receipt, agreement)
+- Date-range filtering and sales analytics
+- Commission summaries per employee
 
-**Data Model:**
-- `Reservation` - Vehicle hold entity
-- Relationships: One-to-one with Car OR Motorcycle, Many-to-one with Client
-- Vehicle type discriminator for polymorphic vehicle reference
+### 4.11 Financial Transaction Management
 
-**Business Rules:**
-- One reservation per vehicle (car or motorcycle) at a time
-- Auto-revert car status on expiry/cancellation
-- Block new reservations for reserved vehicles
-- Auto-update car status on confirmation
-- Deposit payment validation
+Track all income and expenses linked to vehicles.
 
-### 4.7 Sales Processing
+- Log transactions by category: Purchase, Sale, Repair, Insurance, Maintenance, and more
+- Link every transaction to a specific car or motorcycle
+- Attach vendor details and receipt/invoice files
+- Filter by type, date range, or vehicle
+- Per-vehicle profitability view
+- Expense summaries and financial reporting
 
-**Purpose:** Record and manage completed vehicle sales transactions.
+### 4.12 Task Management
 
-**Key Capabilities:**
-- Sale recording with pricing and commission
-- Employee sales tracking
-- Payment method recording
-- Sales document management (upload/download)
-- Client purchase history
-- Commission calculation and tracking
-- Sales analytics and reporting
-- Date range filtering
+Assign and track internal work with a Kanban-style workflow.
 
-**Data Model:**
-- `Sale` - Sales transaction entity
-- Relationships: One-to-one with Car OR Motorcycle, Many-to-one with Client, Employee
-- Vehicle type discriminator for polymorphic vehicle reference
+- Create tasks with title, description, priority (Low / Medium / High / Critical), and due date
+- Assign tasks to any employee
+- Status workflow: To Do → In Progress → Review → Done
+- Tags for grouping and filtering
+- Overdue task detection and alerts
+- Attachment support
+- Employee workload overview
 
-**Business Rules:**
-- One sale per vehicle (car or motorcycle) unique constraint
-- Auto-update car/motorcycle status to SOLD
-- Auto-update client purchase count
-- Calculate total commission based on rate
-- Prevent duplicate sales
-- Auto-record sale date
+### 4.13 Event Calendar
 
-### 4.8 Financial Management
+Schedule and manage business events and appointments.
 
-**Purpose:** Track all financial transactions related to vehicles.
-
-**Key Capabilities:**
-- Multi-category transaction tracking (Purchase, Sale, Repair, Insurance, etc.)
-- Transaction recording with vendor and receipt details
-- Vehicle-specific financial history (cars and motorcycles)
-- Transaction type filtering
-- Date range reports
-- Receipt document management
-- Financial summary and statistics
-- Vendor-wise expense tracking
-
-**Data Model:**
-- `FinancialTransaction` - Transaction entity
-- Relationships: Many-to-one with Car OR Motorcycle
-- Vehicle type discriminator for polymorphic vehicle reference
-
-**Business Rules:**
-- All transactions must be linked to a vehicle (car or motorcycle)
-- Support multiple transaction types
-- Receipt URL validation
-- Auto-record transaction date
-- Prevent modification of old transactions (optional)
-
-### 4.9 Storage Locations
-
-**Purpose:** Manage multiple storage facilities with capacity tracking.
-
-**Key Capabilities:**
-- Location management with contact details
-- Total capacity and current occupancy tracking
-- Car-to-location assignment
-- Capacity validation before assignment
-- Available capacity filtering
-- Location-wise vehicle listing
-- Utilization statistics
-
-**Data Model:**
-- `StorageLocation` - Facility entity
-- Relationships: One-to-many with Cars
-
-**Business Rules:**
-- Auto-update vehicle count on assignment/removal
-- Prevent over-capacity assignments
-- Block deletion of locations with vehicles
-- Alert on near-capacity conditions
-
-### 4.10 Car Inspections
-
-**Purpose:** Record and track vehicle inspection reports and condition assessments.
-
-**Key Capabilities:**
-- Inspection recording with date and inspector
-- Overall condition assessment
-- Accident history documentation
-- Estimated repair cost tracking
-- Inspection report PDF upload
-- Pass/fail status tracking
-- Inspector-wise inspection history
-- Car-specific inspection timeline
-- Latest inspection retrieval
-
-**Data Model:**
-- `CarInspection` - Inspection entity
-- Relationships: Many-to-one with Car
-
-**Business Rules:**
-- Multiple inspections per vehicle
-- PDF report storage and retrieval
-- Auto-record inspection date
-- Block sale of failed inspections (optional)
-
-### 4.11 Task Management
-
-**Purpose:** Internal task assignment and tracking with Kanban board visualization.
-
-**Key Capabilities:**
-- Task creation with title, description, and details
-- Status-based workflow (To Do → In Progress → Review → Done)
-- Employee assignment
-- Priority levels (Low, Medium, High, Critical)
-- Due date tracking
-- Tag/label support
-- Drag-and-drop status updates
-- Overdue task alerts
-- Employee workload view
-
-**Data Model:**
-- `Task` - Task entity with status and assignments
-- `TaskStatus` - Custom status/column definitions
-
-**Business Rules:**
-- Tasks can be reassigned
-- Auto-update status on drag-drop
-- Notify assignee on task creation
-- Alert on approaching due dates
-- Track status change history
-
-📖 **Detailed Documentation:** [Task Management Guide](features/tasks/README.md)
-
-### 4.12 Event Calendar
-
-**Purpose:** Schedule and manage business events, appointments, and important dates.
-
-**Key Capabilities:**
-- Event creation with type, date, and time
-- Car-related event linking
-- Event type categorization (Inspection, Sale, Reservation, Meeting, etc.)
-- Calendar views (Monthly, Weekly, Daily)
-- Reminder and notification integration
-- Recurring event support (optional)
-- Conflict detection
-
-**Data Model:**
-- `Event` - Calendar event entity
-- Relationships: Many-to-one with Car (optional)
-
-**Business Rules:**
-- Events can be car-specific or general
-- Auto-send reminders before event time
-- Prevent scheduling conflicts
-- Support all-day events
+- Create events with type, title, date, and start/end time
+- Optionally link an event to a specific car or motorcycle
+- Event types: Inspection, Test Drive, Sale, Reservation, Meeting, Servicing, and more
+- Attach files and documents to events
+- Notification integration for event reminders
 
 ---
 
-## 5. Advanced Features
+## 5. Platform Features
 
-### 5.1 Role-Based Access Control (RBAC)
+### 5.1 File Storage & Management
 
-**Purpose:** Comprehensive security system with hierarchical permissions and data scoping.
+Centralized file management for everything in the system.
 
-**Key Capabilities:**
-- **6 Built-in Roles:**
-  - Super Admin - Full system access
-  - Admin - Business operations and management
-  - Sales - Client interactions and sales
-  - Inspector - Vehicle inspections
-  - Finance - Financial operations
-  - Store Manager - Inventory and storage
+- Upload images, PDFs, Word documents, Excel files, and CSVs
+- Each file gets a unique UUID for safe referencing independent of storage location
+- File status: Active, Archived, Deleted
+- Track who uploaded a file, when, and from where
+- File access logs — every view, download, or delete is recorded
+- Storage architecture supports seamless migration to cloud (AWS S3) without changing business logic
+- Every entity in the system supports file attachments where relevant
 
-- **40+ Fine-grained Permissions:**
-  - Format: `resource:action` (e.g., `cars:read`, `sales:write`)
-  - Hierarchical role-permission mapping
-  - Dynamic permission checking
+### 5.2 Role-Based Access Control (RBAC)
 
-- **Data Scopes:**
-  - Location-based filtering (by storage location)
-  - Department-based filtering
-  - Assignment-based filtering (own records only)
+Layered access control that ensures each person sees and does only what they should.
 
-- **Resource-level ACLs:**
-  - Individual resource access control
-  - Override role-based permissions for specific records
+**6 Built-in Roles:**
 
-**Architecture:**
-- Session-based authentication with Spring Security
-- HttpSession management
-- Custom authorization filters
-- Permission annotation support (`@PreAuthorize`)
-- Stateful session tracking
+| Role | Access Level |
+|------|-------------|
+| SUPER_ADMIN | All permissions, unrestricted |
+| ADMIN | Employee management, reporting, location management |
+| SALES | Inquiries, reservations, sales, client interactions |
+| INSPECTOR | Vehicle inspections, movements |
+| FINANCE | Financial transactions, sales reporting, commissions |
+| STORE_MANAGER | Vehicle inventory, storage, movements, tasks |
 
-**Database Schema:**
-- `Role` - Role definitions
-- `Permission` - Permission definitions
-- `RolePermission` - Role-permission mapping
-- `EmployeeRole` - Employee-role assignments
-- `DataScope` - Data scope rules
-- `ResourceACL` - Resource-level access rules
+**Permission System:**
+- 40+ individual permissions in `resource:action` format
+- Roles can be assigned multiple permissions
+- Employees can have multiple roles
+- Custom per-employee permissions for exceptional cases (independent of roles)
 
-**Security Features:**
-- Password encryption (BCrypt)
-- HTTP session management
-- Session timeout and invalidation
-- Audit logging for security events
-- Failed login attempt tracking
-- CSRF protection for session-based auth
+**Data Scopes** — Control what data each employee can see:
+- **Location Scope** — Restrict visibility to specific storage locations
+- **Department Scope** — Filter to department-relevant records
+- **Assignment Scope** — Show only records personally assigned to the employee
 
-📖 **Detailed Documentation:** [RBAC Guide](features/rbac/README.md)
+**Resource-Level ACLs** — Per-record access control for sensitive data:
+- Override role permissions for an individual car, client, inquiry, or sale
+- Grant READ, WRITE, or ADMIN access per record per employee or role
 
-### 5.2 Notification System
+📖 See [RBAC Guide](rbac/RBAC_USAGE_GUIDE.md) for full details.
 
-**Purpose:** Multi-channel notification system with template management and delivery tracking.
+### 5.3 Notification System
 
-**Key Capabilities:**
+Automated, event-driven notifications to keep the team informed.
 
-- **6 Notification Channels:**
-  - In-App Notifications (with badge counts)
-  - Email (SMTP integration)
-  - SMS (Twilio/AWS SNS)
-  - WhatsApp (Business API)
-  - Push Notifications (Firebase/OneSignal)
-  - Webhooks (REST callbacks)
+**Currently Available:**
+- In-app notifications with badge counts and read/unread state
+- Per-employee preferences — opt in or out per event type
+- Quiet hours support — no notifications outside configured working hours
+- Digest mode — batch notifications into periodic summaries
 
-- **Template Management:**
-  - Reusable message templates
-  - Variable substitution (e.g., `{{clientName}}`, `{{carModel}}`)
-  - Multi-language support (planned)
-  - Version control for templates
+**Planned Channels:** Email (SMTP)
 
-- **User Preferences:**
-  - Per-channel notification settings
-  - Opt-in/opt-out by event type
-  - Quiet hours support
-  - Digest mode (batch notifications)
-
-- **Event-Driven Architecture:**
-  - Automatic notifications on business events
-  - Configurable trigger conditions
-  - Retry mechanism for failed deliveries
-  - Delivery status tracking
-
-**Built-in Event Types:**
-- Inquiry assigned/responded
-- Reservation created/expiring
+**Automatic Notification Triggers:**
+- Inquiry assigned to an employee
+- Reservation created or about to expire
 - Sale completed
-- Car inspection due/failed
-- Task assigned/overdue
-- Payment received/due
-- Low inventory alerts
+- Task assigned or overdue
+- Vehicle inspection due
+- Storage location nearing full capacity
 
-**Database Schema:**
-- `Notification` - Notification records
-- `NotificationTemplate` - Message templates
-- `NotificationPreference` - User preferences
-- `NotificationDelivery` - Delivery tracking
-- `NotificationChannel` - Channel configurations
-- `NotificationEvent` - Event definitions
-- `NotificationSchedule` - Scheduled notifications
+**Template System:**
+- Reusable message templates with variable placeholders (e.g., `{{clientName}}`, `{{vehicleModel}}`)
+- Templates are channel-specific and versioned
+- Full delivery tracking with retry on failure
 
-**Technical Integration:**
-- Asynchronous processing (Spring @Async)
-- Message queue support (RabbitMQ/Kafka - planned)
-- Third-party API integrations
-- Webhook retry logic
+📖 See [Notifications Guide](features/notifications/README.md) for full details.
 
-📖 **Detailed Documentation:** [Notifications Guide](features/notifications/README.md)
+### 5.4 Role-Specific Dashboards
 
-### 5.3 Dashboard System
+Every role gets a dashboard showing the metrics most relevant to their work.
 
-**Purpose:** Role-specific dashboards with real-time metrics and KPIs.
+| Role | Key Metrics |
+|------|-------------|
+| **Admin** | Total vehicles, revenue, employee performance, low-stock alerts, recent activity |
+| **Sales** | Personal sales, active inquiries, assigned reservations, commission tracking, conversion rates |
+| **Inspector** | Pending inspections, failed inspection alerts, repair cost analysis |
+| **Finance** | Revenue and profit summary, expense breakdown, commission summaries |
+| **Store Manager** | Inventory by location, storage utilization, vehicle movements |
 
-**Key Capabilities:**
+All dashboards support date-range filtering and are cached for fast load times.
 
-- **Role-Based Views:**
-  - Each role sees relevant metrics and data
-  - Data scoping based on permissions
-  - Customizable widget layouts
+📖 See [Dashboard Guide](features/dashboard/README.md) for full details.
 
-- **Admin Dashboard:**
-  - Total vehicles, sales, revenue
-  - Employee performance summary
-  - Top-selling vehicles
-  - Revenue trends (monthly/yearly)
-  - Low stock alerts
-  - Recent activities
+### 5.5 Performance Caching
 
-- **Sales Dashboard:**
-  - Personal sales statistics
-  - Assigned inquiries
-  - Active reservations
-  - Commission tracking
-  - Lead conversion rates
-  - Follow-up reminders
+A caching layer powered by Redis keeps the platform fast as data grows.
 
-- **Inspector Dashboard:**
-  - Pending inspections
-  - Inspection schedule
-  - Failed inspection alerts
-  - Inspection statistics
-  - Repair cost analysis
+- Dashboards, inventory lists, and reference data are cached with per-region TTLs
+- Cache is automatically invalidated when related data changes
+- Significantly faster page loads for read-heavy views
+- Supports Redis Cluster for high-availability deployments
 
-- **Finance Dashboard:**
-  - Revenue and profit metrics
-  - Expense breakdowns
-  - Pending payments
-  - Commission summaries
-  - Financial trends
-
-- **Store Manager Dashboard:**
-  - Inventory levels by location
-  - Storage capacity utilization
-  - Vehicle movement tracking
-  - Incoming/outgoing vehicles
-  - Location-wise statistics
-
-**Technical Implementation:**
-- Cached data for performance
-- Real-time updates via WebSocket (planned)
-- Exportable reports (PDF/Excel)
-- Date range filtering
-- Drill-down capabilities
-
-📖 **Detailed Documentation:** [Dashboard Guide](features/dashboard/README.md)
-
-### 5.4 Redis Caching System
-
-**Purpose:** High-performance caching layer to reduce database load and improve response times.
-
-**Key Capabilities:**
-
-- **Intelligent Cache Management:**
-  - 25+ cache regions with customized TTLs
-  - Automatic JSON serialization/deserialization
-  - Null value handling
-  - Cache key generation strategies
-
-- **Cache Regions by Category:**
-  
-  | Category | TTL | Examples |
-  |----------|-----|----------|
-  | **Dashboards** | 5 min | All role-based dashboards |
-  | **Inventory** | 15 min | Cars, car details |
-  | **Reference Data** | 1-2 hours | Car models, RBAC settings |
-  | **Financial** | 5-10 min | Sales, transactions, revenue |
-  | **Real-time Data** | 5 min | Location capacity, notifications |
-
-- **Automatic Cache Invalidation:**
-  - `@CacheEvict` annotations on update operations
-  - CacheInvalidationService for manual control
-  - Cascade invalidation (e.g., updating car invalidates dashboards)
-  - Async invalidation support for background tasks
-
-- **Performance Benefits:**
-  - Dashboard load time: ~2000ms → ~50ms (97.5% faster)
-  - Reduced database queries by 80%+
-  - Improved concurrent user capacity
-  - Sub-millisecond cache response times
-
-**Architecture:**
-```
-Application Layer
-       ↓
-Spring Cache Abstraction (@Cacheable, @CacheEvict)
-       ↓
-Redis Cache Manager
-       ↓
-Redis Server (Docker)
-       ↓
-Persistent Storage (RDB + AOF)
-```
-
-**Technical Implementation:**
-- Spring Cache annotations for declarative caching
-- RedisTemplate for manual operations
-- Jackson JSON serialization with Java 8 time support
-- Lettuce connection pooling
-- Cache warming on startup (optional)
-
-**Cache Invalidation Patterns:**
-```java
-// Automatic via annotations
-@CacheEvict(value = "carDetails", key = "#carId")
-public CarDTO updateCar(Long carId, CarUpdateDTO dto) { ... }
-
-// Manual via service
-cacheInvalidationService.invalidateCarCaches();
-cacheInvalidationService.invalidateDashboards();
-
-// Scheduled refresh
-@Scheduled(cron = "0 */30 * * * *")
-@CacheEvict(value = "carStatistics", allEntries = true)
-public void refreshCache() { ... }
-```
-
-**Monitoring:**
-- Redis CLI for real-time inspection
-- Cache hit/miss metrics
-- Memory usage monitoring
-- TTL tracking per key
-- Cache statistics endpoint
-
-📖 **Detailed Documentation:** 
-- [Redis Caching Guide](../REDIS_CACHING_GUIDE.md)
-- [Cache Invalidation Reference](../CACHE_INVALIDATION_REFERENCE.md)
-
-### 5.5 Audit Logging
-
-**Purpose:** Automatic tracking of all data changes for compliance and accountability.
-
-**Key Capabilities:**
-- Automatic capture of create/update/delete operations
-- User attribution (who made the change)
-- Timestamp tracking (when)
-- Before/after value comparison
-- Entity-level tracking
-- Change reason documentation (optional)
-- Audit trail reporting
-
-**Tracked Entities:**
-- All core business entities (Cars, Sales, Clients, etc.)
-- Security-related changes (roles, permissions)
-- Critical configuration changes
-
-**Technical Implementation:**
-- JPA entity listeners
-- Spring Data Envers (planned)
-- Separate audit database (optional)
-- Read-only audit records
-- Retention policy configuration
-
-**Use Cases:**
-- Compliance and regulatory requirements
-- Dispute resolution
-- Security investigation
-- Data recovery
-- Change analysis
-
-### 5.5 File Logging
-
-**Purpose:** Comprehensive application logging with rotation and retention management.
-
-**Key Features:**
-- Structured logging with Logback
-- Log levels (DEBUG, INFO, WARN, ERROR)
-- Automatic file rotation (daily/size-based)
-- Archived log retention (30 days)
-- Separate log files by module
-- Exception stack traces
-- Performance metrics logging
-
-**Log Categories:**
-- Application logs
-- Security events
-- API access logs
-- Database query logs (optional)
-- Integration logs (notifications, external APIs)
-
-**Configuration:**
-```xml
-<!-- logback-spring.xml -->
-- Rolling file appender
-- Pattern layout with timestamp
-- Separate files for errors
-- Asynchronous logging
-```
+📖 See [Redis Caching Guide](caching/REDIS_CACHING_GUIDE.md) for full details.
 
 ---
 
-## 6. Technology Stack
+## 6. Security & Authentication
 
-### 6.1 Backend Technologies
+### JWT Authentication
 
-| Category | Technology | Version | Purpose |
-|----------|-----------|---------|---------|
-| **Framework** | Spring Boot | 4.0.1 | Application framework |
-| **Language** | Java | 17 | Programming language |
-| **Build Tool** | Maven | 3.9+ | Dependency management |
-| **Database** | MySQL | 8.0+ | Primary data store |
-| **Cache** | Redis | 7.x | Session management, caching |
-| **ORM** | Hibernate (JPA) | 6.x | Object-relational mapping |
-| **Migration** | Flyway | 9.x | Database version control |
-| **Mapping** | MapStruct | 1.5.5 | Entity-DTO conversion |
-| **Security** | Spring Security | 6.x | Authentication & authorization |
-| **API Docs** | SpringDoc OpenAPI | 2.7.0 | API documentation |
-| **Validation** | Jakarta Validation | 3.x | Bean validation |
-| **Logging** | Logback | 1.4.x | Application logging |
-| **Testing** | JUnit 5 | 5.10.x | Unit testing |
-| **Testing** | Mockito | 5.x | Mocking framework |
+WheelShift Pro uses **JSON Web Token (JWT)** based authentication.
 
-### 6.2 Frontend Technologies (Planned)
+1. Employee submits email and password to `/api/v1/auth/login`
+2. Credentials are verified and a signed JWT is returned
+3. The client includes the token via `Authorization: Bearer <token>` on every request
+4. The token carries the employee's identity and roles — no server-side session required
+5. Token expiry is configurable (default: 8 hours)
+6. On logout, the client discards the token
 
-| Category | Technology | Purpose |
-|----------|-----------|---------|
-| **Framework** | React | UI components |
-| **Framework** | Next.js | SSR and routing |
-| **State** | Redux Toolkit | State management |
-| **Data** | TanStack Query | Server state |
-| **Styling** | Tailwind CSS | Utility-first CSS |
-| **Components** | ShadCN UI | Component library |
-| **Animation** | Framer Motion | Animations |
-| **HTTP** | Axios | API client |
-| **Testing** | Jest | Unit testing |
+### Password Security
 
-### 6.3 DevOps & Tools
+- Passwords are stored as BCrypt hashes — never in plain text
+- Password strength requirements enforced at registration
 
-| Category | Technology | Purpose |
-|----------|-----------|---------|
-| **Containerization** | Docker | Application packaging |
-| **Orchestration** | Docker Compose | Multi-container setup |
-| **Monitoring** | Grafana | Metrics visualization |
-| **Git Hooks** | Husky | Pre-commit checks |
-| **API Testing** | Swagger UI | Interactive API testing |
-| **Version Control** | Git | Source control |
+### Authorization Layers
 
-### 6.4 Key Dependencies
+Access is evaluated in order, and denied if no rule grants it:
 
-```xml
-<!-- pom.xml highlights -->
-<dependencies>
-    <!-- Spring Boot Starters -->
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-web</artifactId>
-    </dependency>
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-data-jpa</artifactId>
-    </dependency>
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-security</artifactId>
-    </dependency>
-    
-    <!-- JWT -->
-    <dependency>
-        <groupId>io.jsonwebtoken</groupId>
-        <artifactId>jjwt-api</artifactId>
-    </dependency>
-    
-    <!-- MapStruct -->
-    <dependency>
-        <groupId>org.mapstruct</groupId>
-        <artifactId>mapstruct</artifactId>
-    </dependency>
-    
-    <!-- Lombok -->
-    <dependency>
-        <groupId>org.projectlombok</groupId>
-        <artifactId>lombok</artifactId>
-    </dependency>
-    
-    <!-- OpenAPI -->
-    <dependency>
-        <groupId>org.springdoc</groupId>
-        <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-    </dependency>
-</dependencies>
-```
+1. **Super Admin override** — always granted full access
+2. **Resource ACL** — explicit per-record access rules
+3. **Data scope** — location / department / assignment filters
+4. **Role permissions** — role-based permission evaluation
+5. **Default deny** — access denied if no rule matches
+
+### What's Protected
+
+- Parameterized queries throughout (no SQL injection risk)
+- All inputs validated at the API boundary
+- HTTPS enforced in production
+- All secrets (DB password, JWT key) via environment variables — never hardcoded
+- System roles are immutable and cannot be deleted or downgraded
+- Super admin account is protected from modification by other admins
+
+### Planned Security Enhancements
+
+- Two-Factor Authentication (2FA) via TOTP
+- OAuth2 / Social login (Google, Microsoft)
+- Per-endpoint API rate limiting
+- IP-based access restrictions for admin endpoints
 
 ---
 
-## 7. Database Design
+## 7. Technology Stack
 
-### 7.1 Schema Overview
-
-The database consists of **35+ tables** organized into logical groups with support for both 4-wheeler (cars) and 2-wheeler (motorcycles) inventory:
-
-**Core Business Tables - Cars (7):**
-- `car_models` - Car model catalog
-- `cars` - Car inventory
-- `car_detailed_specs` - Extended car specifications
-- `car_inspections` - Car inspection records
-- `car_movements` - Car movement history
-- `car_features` - Car features catalog
-
-**Core Business Tables - Motorcycles (4):**
-- `motorcycle_models` - Motorcycle model catalog (80+ models)
-- `motorcycles` - Motorcycle inventory
-- `motorcycle_detailed_specs` - Extended motorcycle specifications
-- `motorcycle_inspections` - Motorcycle inspection records
-
-**Shared Business Tables (9):**
-- `storage_locations` - Storage facilities (shared by cars and motorcycles)
-- `clients` - Customer profiles
-- `employees` - Staff management
-- `inquiries` - Customer inquiries (polymorphic: cars OR motorcycles)
-- `reservations` - Vehicle holds (polymorphic: cars OR motorcycles)
-- `sales` - Sales transactions (polymorphic: cars OR motorcycles)
-- `financial_transactions` - Financial records (polymorphic: cars OR motorcycles)
-- `tasks` - Task management
-- `events` - Calendar events (optional vehicle linking)
-
-**RBAC Tables (6):**
-- `roles` - Role definitions
-- `permissions` - Permission definitions
-- `role_permissions` - Role-permission mapping
-- `employee_roles` - User-role assignments
-- `data_scopes` - Data scoping rules
-- `resource_acls` - Resource-level ACLs
-
-**Notification Tables (7):**
-- `notifications` - Notification records
-- `notification_templates` - Message templates
-- `notification_preferences` - User preferences
-- `notification_deliveries` - Delivery tracking
-- `notification_channels` - Channel configs
-- `notification_events` - Event definitions
-- `notification_schedules` - Scheduled notifications
-
-📊 **Detailed Database Design**: See [DATABASE_DESIGN.md](DATABASE_DESIGN.md) for complete Entity-Relationship Diagram with Mermaid visualization
-
-### 7.2 Polymorphic Vehicle Relationships
-
-The system uses a **polymorphic relationship pattern** for transactions that support both cars and motorcycles:
-
-**Implementation:**
-- Each transaction table (inquiries, reservations, sales, financial_transactions) has:
-  - `car_id` - Foreign key to cars table (nullable)
-  - `motorcycle_id` - Foreign key to motorcycles table (nullable)
-  - `vehicle_type` - Enum discriminator (CAR or MOTORCYCLE)
-- Database check constraints ensure only ONE vehicle reference is set
-- Application layer enforces vehicle type consistency
-
-**Benefits:**
-- Clean separation of car and motorcycle data
-- Shared business logic for transactions
-- Type-safe vehicle access
-- Easy querying and reporting across vehicle types
-
-### 7.3 Core Entity Relationships
-
-```
-┌─────────────┐      ┌─────────────┐      ┌─────────────┐
-│  CarModel   │──┬──<│     Car     │>──┬──│ StorageLocation│
-└─────────────┘  │   └─────────────┘   │  └─────────────┘
-                 │          │           │
-                 │          │           │
-                 │   ┌──────┴──────┐    │
-                 │   │             │    │
-              ┌──▼───▼──┐    ┌─────▼────▼─────┐
-              │CarDetailed│    │CarInspection   │
-              │  Specs    │    └────────────────┘
-              └───────────┘
-                                
-┌─────────────┐      ┌─────────────┐      ┌─────────────┐
-│   Client    │<──┬──│   Inquiry   │──┐   │  Employee   │
-└─────────────┘   │  └─────────────┘  │   └─────────────┘
-      │           │         │          │          │
-      │           │         ▼          └──────────┘
-      │           │    ┌─────────┐
-      │           │    │   Car   │
-      │           │    └─────────┘
-      │           │         ▲
-      │           │         │
-      │        ┌──▼─────────┴───┐      ┌─────────────┐
-      ├───────>│  Reservation   │      │    Sale     │<───┐
-      │        └────────────────┘      └─────────────┘    │
-      │                                       │            │
-      └───────────────────────────────────────┴────────────┘
-
-┌─────────────┐
-│  Employee   │──┬──<│    Task     │
-└─────────────┘  │   └─────────────┘
-                 │   ┌─────────────┐
-                 └──<│    Event    │
-                     └─────────────┘
-```
-
-### 7.3 Key Constraints
-
-**Unique Constraints:**
-- `car.vin_number` - Unique 17-character VIN
-- `car.registration_number` - Unique registration
-- `client.email` - Unique email per client
-- `employee.email` - Unique email per employee
-- `car.sale_id` - One-to-one (each car sold once)
-- `car.reservation_id` - One-to-one (one reservation per car)
-
-**Foreign Key Relationships:**
-- `car.car_model_id` → `car_model.id`
-- `car.storage_location_id` → `storage_location.id`
-- `car_detailed_specs.car_id` → `car.id`
-- `car_inspection.car_id` → `car.id`
-- `inquiry.car_id` → `car.id`
-- `inquiry.client_id` → `client.id`
-- `inquiry.assigned_employee_id` → `employee.id`
-- `reservation.car_id` → `car.id`
-- `reservation.client_id` → `client.id`
-- `sale.car_id` → `car.id`
-- `sale.client_id` → `client.id`
-- `sale.handled_by_employee_id` → `employee.id`
-- `financial_transaction.car_id` → `car.id`
-
-**Check Constraints:**
-- `storage_location.current_vehicle_count <= total_capacity`
-- `car.year >= 1900 AND year <= CURRENT_YEAR`
-- `sale.sale_price > 0`
-- `reservation.expiry_date > reservation_date`
-
-### 7.4 Indexes
-
-**Performance Indexes:**
-```sql
--- Car indexes
-CREATE INDEX idx_car_vin ON car(vin_number);
-CREATE INDEX idx_car_status ON car(current_status);
-CREATE INDEX idx_car_model ON car(car_model_id);
-CREATE INDEX idx_car_location ON car(storage_location_id);
-
--- Inquiry indexes
-CREATE INDEX idx_inquiry_status ON inquiry(status);
-CREATE INDEX idx_inquiry_employee ON inquiry(assigned_employee_id);
-CREATE INDEX idx_inquiry_car ON inquiry(car_id);
-
--- Sale indexes
-CREATE INDEX idx_sale_date ON sale(sale_date);
-CREATE INDEX idx_sale_employee ON sale(handled_by_employee_id);
-
--- Notification indexes
-CREATE INDEX idx_notification_recipient ON notification(recipient_id);
-CREATE INDEX idx_notification_status ON notification(status);
-CREATE INDEX idx_notification_created ON notification(created_at);
-
--- RBAC indexes
-CREATE INDEX idx_employee_role_employee ON employee_role(employee_id);
-CREATE INDEX idx_employee_role_role ON employee_role(role_id);
-```
-
-### 7.5 Database Migrations
-
-**Flyway Migration Files:**
-
-```
-src/main/resources/db/migration/
-├── V1__Initial_Schema.sql           # Core business tables
-├── V2__Seed_Data.sql                # Initial data (car models, etc.)
-├── V3__Fix_Column_Types.sql         # Column type corrections
-├── V4__Add_RBAC_Tables.sql          # RBAC schema
-├── V5__Seed_RBAC_Data.sql           # Roles and permissions
-├── V6__Add_Notifications_Tables.sql # Notification system schema
-├── V7__Assign_Employee_Roles.sql    # Initial role assignments
-└── V8__Fix_Employee_Roles_And_Add_SuperAdmin.sql
-```
-
-**Migration Strategy:**
-- Version-controlled schema changes
-- Repeatable migrations for views/procedures
-- Rollback scripts for critical migrations
-- Test migrations in staging first
-- Backup before production migrations
+| Layer | Technology | Version |
+|-------|-----------|---------|
+| **Language** | Java | 17 |
+| **Framework** | Spring Boot | 4.0.1 |
+| **Database** | MySQL | 8.0+ |
+| **Cache** | Redis | 7.x |
+| **Authentication** | JWT (jjwt) | 0.12.x |
+| **ORM** | Hibernate / JPA | 6.x |
+| **Schema Migrations** | Flyway | 9.x |
+| **Build tool** | Maven | 3.9+ |
+| **Containerization** | Docker + Docker Compose | — |
+| **API Documentation** | SpringDoc OpenAPI (Swagger UI) | 2.7.0 |
+| **Frontend** *(Planned)* | React + Next.js | — |
 
 ---
 
-## 8. API Architecture
+## 8. Database Overview
 
-### 8.1 API Design Principles
+The database has **30+ tables** managed through Flyway versioned migrations (V1–V16).
 
-- **RESTful** - Standard HTTP methods (GET, POST, PUT, DELETE, PATCH)
-- **Resource-oriented** - URLs represent resources
-- **Stateful** - Session-based authentication with HttpSession
-- **Versioned** - `/api/v1/` prefix for future compatibility
-- **JSON** - Request and response format
-- **HATEOAS** - Hypermedia links (planned)
-- **Pagination** - Page-based and cursor-based pagination
-- **Filtering** - Query parameters for filtering
-- **Sorting** - Multi-column sorting support
+| Group | Tables |
+|-------|--------|
+| **Cars** | `car_models`, `cars`, `car_inspections`, `car_movements` |
+| **Motorcycles** | `motorcycle_models`, `motorcycles`, `motorcycle_inspections`, `motorcycle_movements` |
+| **Operations** | `storage_locations`, `clients`, `employees`, `inquiries`, `reservations`, `sales`, `financial_transactions`, `tasks`, `events` |
+| **RBAC** | `roles`, `permissions`, `role_permissions`, `employee_roles`, `employee_permissions`, `employee_data_scopes`, `resource_acl` |
+| **Notifications** | `notification_events`, `notification_jobs`, `notification_deliveries`, `notification_templates`, `notification_preferences`, `notification_providers`, `notification_digests` |
+| **Files** | `file_metadata`, `file_access_logs` |
 
-### 8.2 API Response Format
-
-**Success Response:**
-```json
-{
-  "success": true,
-  "data": { ... },
-  "message": "Operation successful",
-  "timestamp": "2026-01-10T10:30:00Z"
-}
-```
-
-**Error Response:**
-```json
-{
-  "success": false,
-  "error": {
-    "code": "CAR_NOT_FOUND",
-    "message": "Car with ID 123 not found",
-    "details": []
-  },
-  "timestamp": "2026-01-10T10:30:00Z"
-}
-```
-
-**Validation Error:**
-```json
-{
-  "success": false,
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "Validation failed",
-    "details": [
-      {
-        "field": "vinNumber",
-        "message": "VIN must be exactly 17 characters"
-      }
-    ]
-  },
-  "timestamp": "2026-01-10T10:30:00Z"
-}
-```
-
-**Paginated Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "content": [ ... ],
-    "page": 0,
-    "size": 20,
-    "totalElements": 150,
-    "totalPages": 8,
-    "first": true,
-    "last": false
-  }
-}
-```
-
-### 8.3 API Categories
-
-| Category | Base Path | Endpoints | Description |
-|----------|-----------|-----------|-------------|
-| **Authentication** | `/api/v1/auth` | 3 | Login, logout, current user |
-| **Car Models** | `/api/v1/car-models` | 17 | Model catalog management |
-| **Cars** | `/api/v1/cars` | 24 | Vehicle inventory |
-| **Storage** | `/api/v1/storage-locations` | 12 | Facility management |
-| **Inspections** | `/api/v1/car-inspections` | 12 | Inspection records |
-| **Clients** | `/api/v1/clients` | 21 | Customer management |
-| **Employees** | `/api/v1/employees` | 11 | Staff management |
-| **Inquiries** | `/api/v1/inquiries` | 12 | Lead tracking |
-| **Reservations** | `/api/v1/reservations` | 13 | Vehicle holds |
-| **Sales** | `/api/v1/sales` | 12 | Sales transactions |
-| **Transactions** | `/api/v1/financial-transactions` | 12 | Financial records |
-| **Tasks** | `/api/v1/tasks` | 13 | Task management |
-| **Events** | `/api/v1/events` | 11 | Calendar events |
-| **RBAC** | `/api/v1/rbac/*` | 25+ | Roles, permissions, ACLs |
-| **Notifications** | `/api/v1/notifications/*` | 20+ | Notification system |
-| **Dashboard** | `/api/v1/dashboard/*` | 6 | Dashboard data |
-
-### 8.4 Common Query Parameters
-
-| Parameter | Type | Description | Example |
-|-----------|------|-------------|---------|
-| `page` | integer | Page number (0-indexed) | `page=0` |
-| `size` | integer | Page size | `size=20` |
-| `sort` | string | Sort field and direction | `sort=createdAt,desc` |
-| `search` | string | Search term | `search=Toyota` |
-| `status` | string | Filter by status | `status=AVAILABLE` |
-| `startDate` | date | Date range start | `startDate=2026-01-01` |
-| `endDate` | date | Date range end | `endDate=2026-01-31` |
-
-### 8.5 HTTP Status Codes
-
-| Code | Meaning | Usage |
-|------|---------|-------|
-| `200` | OK | Successful GET, PUT, PATCH |
-| `201` | Created | Successful POST |
-| `204` | No Content | Successful DELETE |
-| `400` | Bad Request | Validation error |
-| `401` | Unauthorized | Missing/invalid session or credentials |
-| `403` | Forbidden | Insufficient permissions |
-| `404` | Not Found | Resource not found |
-| `409` | Conflict | Duplicate resource |
-| `422` | Unprocessable Entity | Business rule violation |
-| `500` | Internal Server Error | Server error |
-
-### 8.6 Authentication Flow
-
-```
-Client                      Server
-  │                           │
-  │   POST /api/v1/auth/login │
-  │   {email, password}       │
-  ├──────────────────────────>│
-  │                           │ Verify credentials
-  │                           │ Create HttpSession
-  │                           │ Store SecurityContext
-  │   200 OK                  │
-  │   Set-Cookie: JSESSIONID  │
-  │   {employee, roles, ...}  │
-  │<──────────────────────────┤
-  │                           │
-  │   GET /api/v1/cars        │
-  │   Cookie: JSESSIONID=xxx  │
-  ├──────────────────────────>│
-  │                           │ Validate session
-  │                           │ Check permissions
-  │   200 OK                  │
-  │   {cars data}             │
-  │<──────────────────────────┤
-```
+📊 Full Entity-Relationship diagram: [DATABASE_DESIGN.md](DATABASE_DESIGN.md)
 
 ---
 
-## 9. Security Model
+## 9. API Overview
 
-### 9.1 Authentication
+All endpoints are under `/api/v1/` and require a `Authorization: Bearer <token>` header (except `/auth/login`).
 
-**Session-Based Authentication:**
+| Category | Base Path | Description |
+|----------|-----------|-------------|
+| **Authentication** | `/api/v1/auth` | Login, logout, current user |
+| **Car Models** | `/api/v1/car-models` | Car model catalog |
+| **Cars** | `/api/v1/cars` | Car inventory |
+| **Motorcycle Models** | `/api/v1/motorcycle-models` | Motorcycle model catalog |
+| **Motorcycles** | `/api/v1/motorcycles` | Motorcycle inventory |
+| **Car Inspections** | `/api/v1/car-inspections` | Car inspection records |
+| **Motorcycle Inspections** | `/api/v1/motorcycle-inspections` | Motorcycle inspection records |
+| **Storage Locations** | `/api/v1/storage-locations` | Facility management |
+| **Clients** | `/api/v1/clients` | Customer profiles |
+| **Employees** | `/api/v1/employees` | Staff management |
+| **Inquiries** | `/api/v1/inquiries` | Lead tracking |
+| **Reservations** | `/api/v1/reservations` | Vehicle holds |
+| **Sales** | `/api/v1/sales` | Sale transactions |
+| **Financial Transactions** | `/api/v1/financial-transactions` | Expense and income records |
+| **Tasks** | `/api/v1/tasks` | Task management |
+| **Events** | `/api/v1/events` | Calendar events |
+| **Files** | `/api/v1/files` | File upload and retrieval |
+| **RBAC** | `/api/v1/rbac/*` | Roles, permissions, scopes, ACLs |
+| **Notifications** | `/api/v1/notifications/*` | Notification management and preferences |
+| **Dashboard** | `/api/v1/dashboard/*` | Role-specific dashboard data |
 
-WheelShift Pro uses Spring Security's session-based authentication mechanism.
-
-**Authentication Flow:**
-1. User submits credentials via `/api/v1/auth/login`
-2. Spring Security validates credentials against database
-3. Upon success, creates `Authentication` object
-4. Stores `Authentication` in `SecurityContext`
-5. Saves `SecurityContext` in `HttpSession`
-6. Returns session cookie (`JSESSIONID`) to client
-7. Subsequent requests include session cookie for authentication
-
-**Session Structure:**
-```json
-{
-  "sessionId": "JSESSIONID=xyz123",
-  "principal": {
-    "employeeId": 123,
-    "email": "employee@example.com",
-    "name": "John Doe",
-    "roles": ["ADMIN", "SALES"],
-    "permissions": ["cars:read", "cars:write", "clients:read", ...]
-  },
-  "authenticated": true,
-  "createdAt": 1704902400,
-  "lastAccessedAt": 1704906000
-}
-```
-
-**Session Management:**
-- Session timeout: 8 hours (configurable)
-- Session stored in server memory (or Redis for distributed deployments)
-- Automatic session renewal on activity
-- Session invalidation on logout
-- CSRF protection enabled
-- Secure cookie flags (HttpOnly, Secure in production)
-- Roles and permissions loaded on login for fast authorization
-
-### 9.2 Role-Based Access Control (RBAC)
-
-WheelShift Pro implements a comprehensive multi-layer RBAC system.
-
-**Authorization Hierarchy:**
-```
-┌─────────────────────────────────┐
-│      SUPER_ADMIN Override       │  ← Always Granted
-├─────────────────────────────────┤
-│      Resource ACL Check         │  ← Explicit per-resource access
-├─────────────────────────────────┤
-│      Data Scope Match           │  ← Location/Department/Assignment
-├─────────────────────────────────┤
-│      Role Permission Check      │  ← Role-based permissions
-├─────────────────────────────────┤
-│           DENY                  │  ← Default deny
-└─────────────────────────────────┘
-```
-
-**Built-in Roles:**
-
-| Role | Access Level | Permissions |
-|------|--------------|-------------|
-| **SUPER_ADMIN** | Full system access | `*:*` (all permissions) |
-| **ADMIN** | Administrative | `employees:*`, `roles:*`, `permissions:*`, `locations:*`, `reports:read` |
-| **SALES** | Sales operations | `inquiries:*`, `reservations:*`, `sales:*`, `clients:read`, `cars:read` |
-| **INSPECTOR** | Vehicle inspections | `inspections:*`, `cars:read`, `movements:write` |
-| **FINANCE** | Financial operations | `transactions:*`, `sales:read`, `reports:*` |
-| **STORE_MANAGER** | Location management | `cars:*`, `movements:*`, `locations:read`, `tasks:*` |
-
-**Permission Format:** `resource:action`
-
-Examples:
-- `cars:read` - View car records
-- `cars:write` - Create/update cars
-- `cars:delete` - Delete cars
-- `cars:*` - All car operations
-- `*:*` - All operations (SUPER_ADMIN only)
-
-**Available Resources:**
-```
-cars, car-models, clients, employees, inquiries, reservations,
-sales, transactions, inspections, locations, tasks, events,
-roles, permissions, acl, notifications
-```
-
-### 9.3 Data Scopes
-
-Data scopes restrict employee access to specific organizational boundaries.
-
-**Scope Types:**
-
-1. **Location Scope** - Limit to specific storage locations
-   ```json
-   {
-     "employeeId": 5,
-     "scopeType": "LOCATION",
-     "scopeValue": "LOC-001",
-     "effect": "INCLUDE"
-   }
-   ```
-   *Result: Employee sees only resources in LOC-001*
-
-2. **Department Scope** - Limit to department resources
-   ```json
-   {
-     "employeeId": 8,
-     "scopeType": "DEPARTMENT",
-     "scopeValue": "FINANCE",
-     "effect": "INCLUDE"
-   }
-   ```
-   *Result: Employee sees only finance-related resources*
-
-3. **Assignment Scope** - Limit to assigned resources
-   ```json
-   {
-     "employeeId": 10,
-     "scopeType": "ASSIGNMENT",
-     "scopeValue": "SELF",
-     "effect": "INCLUDE"
-   }
-   ```
-   *Result: Employee sees only their assigned inquiries/reservations*
-
-**Scope Effects:**
-- **INCLUDE** - Grant access to specified scope
-- **EXCLUDE** - Deny access to specified scope
-
-### 9.4 Resource ACLs
-
-Resource Access Control Lists provide fine-grained, per-record access control.
-
-**ACL Structure:**
-```json
-{
-  "resourceType": "CAR",
-  "resourceId": 123,
-  "subjectType": "EMPLOYEE",
-  "subjectId": 456,
-  "accessLevel": "WRITE",
-  "reason": "Assigned to manage this vehicle",
-  "grantedBy": 1,
-  "createdAt": "2026-01-01T00:00:00Z"
-}
-```
-
-**Access Levels:**
-- **READ** - View only
-- **WRITE** - View and modify
-- **ADMIN** - Full control (including ACL management)
-
-**Subject Types:**
-- **EMPLOYEE** - Individual employee
-- **ROLE** - All employees with a role
-- **DEPARTMENT** - All employees in a department
-
-**Use Cases:**
-- Grant specific employee access to a high-value car
-- Temporary inspector access to review specific vehicle
-- Allow client to view their purchase history
-- Restrict sale deletion to specific finance staff
-
-### 9.5 API Endpoints
-
-**RBAC Management:**
-```
-POST   /api/v1/rbac/roles                    Create role
-GET    /api/v1/rbac/roles                    List all roles
-POST   /api/v1/rbac/roles/{id}/permissions   Assign permission to role
-DELETE /api/v1/rbac/roles/{id}/permissions   Remove permission from role
-
-POST   /api/v1/rbac/permissions              Create permission
-GET    /api/v1/rbac/permissions              List all permissions
-
-POST   /api/v1/rbac/data-scopes              Create data scope
-GET    /api/v1/rbac/data-scopes/employee/{id} Get employee scopes
-DELETE /api/v1/rbac/data-scopes/{id}         Remove data scope
-
-POST   /api/v1/rbac/acl/{type}/{id}          Grant ACL
-GET    /api/v1/rbac/acl/{type}/{id}          Get resource ACL
-DELETE /api/v1/rbac/acl/{id}                 Remove ACL entry
-```
-
-**For detailed RBAC usage, see:**
-- `docs/RBAC_USAGE_GUIDE.md` - Complete usage guide
-- `docs/RBAC_IMPLEMENTATION_SUMMARY.md` - Technical implementation details
-
-### 9.6 Security Best Practices
-
-**Implemented:**
-- ✅ Password hashing (BCrypt with salt)
-- ✅ Session-based authentication with Spring Security
-- ✅ Multi-layer role-based access control
-- ✅ Fine-grained permission system
-- ✅ Data scoping for multi-location operations
-- ✅ Resource-level ACLs
-- ✅ SQL injection prevention (Prepared statements)
-- ✅ XSS protection (Input validation)
-- ✅ CSRF protection (for cookie-based auth)
-- ✅ HTTPS enforcement (production)
-- ✅ Audit logging with authorization tracking
-- ✅ Secure password requirements
-- ✅ Super admin protection
-- ✅ System role immutability
-
-**Planned:**
-- 🔜 JWT token-based authentication for stateless API access
-- 🔜 Two-factor authentication (2FA)
-- 🔜 IP whitelisting for admin access
-- 🔜 OAuth2 integration
-- 🔜 API key authentication for external integrations
-- 🔜 Encryption at rest for sensitive data
-- 🔜 Rate limiting per endpoint
-- 🔜 Distributed session management (Redis session store)
+Interactive API documentation: `http://localhost:8080/api/v1/swagger-ui.html`
 
 ---
 
-## 10. Deployment
+## 10. Planned Features
 
-### 10.1 System Requirements
+### In Progress
 
-**Minimum:**
-- CPU: 2 cores
-- RAM: 4 GB
-- Storage: 20 GB SSD
-- OS: Ubuntu 20.04+ / Windows Server 2019+ / macOS 11+
-- Java: 17 or higher
-- MySQL: 8.0 or higher
-- Redis: 7.0 or higher
+| Feature | Details |
+|---------|---------|
+| **Frontend Application** | React + Next.js web app covering all roles and dashboards |
+| **Test Coverage >80%** | Expanding the automated test suite |
 
-**Recommended (Production):**
-- CPU: 4+ cores
-- RAM: 8+ GB
-- Storage: 100+ GB SSD
-- Load Balancer: Nginx / Apache
-- Database: MySQL 8.0+ (with replication)
-- Cache: Redis Cluster
+### Planned (Committed)
 
-### 10.2 Deployment Architecture
+| Feature | Details |
+|---------|---------|
+| **Email Notifications** | SMTP-based email delivery for all notification events |
+| **Real-Time Updates** | WebSocket-based live updates for dashboards and notifications |
+| **Export Reports** | Download dashboards and reports as PDF or Excel |
+| **Two-Factor Authentication** | TOTP-based 2FA for all employee accounts |
+| **OAuth2 / Social Login** | Login with Google or Microsoft work accounts |
+| **API Rate Limiting** | Per-endpoint throttling to prevent abuse |
+| **Integration Tests** | Full end-to-end API test suite |
 
-```
-                    ┌─────────────┐
-                    │ Load Balancer│
-                    │   (Nginx)    │
-                    └──────┬───────┘
-                           │
-            ┌──────────────┼──────────────┐
-            │              │              │
-      ┌─────▼─────┐  ┌─────▼─────┐  ┌─────▼─────┐
-      │  App      │  │  App      │  │  App      │
-      │ Instance 1│  │ Instance 2│  │ Instance 3│
-      └─────┬─────┘  └─────┬─────┘  └─────┬─────┘
-            │              │              │
-            └──────────────┼──────────────┘
-                           │
-            ┌──────────────┼──────────────┐
-            │              │              │
-      ┌─────▼─────┐  ┌─────▼─────┐  ┌─────▼─────┐
-      │  MySQL    │  │   Redis   │  │   File    │
-      │  Primary  │  │   Cache   │  │  Storage  │
-      │           │  │           │  │   (S3)    │
-      └─────┬─────┘  └───────────┘  └───────────┘
-            │
-      ┌─────▼─────┐
-      │  MySQL    │
-      │  Replica  │
-      └───────────┘
-```
+### Suggested (Under Consideration)
 
-### 10.3 Docker Deployment
-
-**docker-compose.yml:**
-```yaml
-version: '3.8'
-services:
-  app:
-    build: .
-    ports:
-      - "8080:8080"
-    environment:
-      - SPRING_PROFILES_ACTIVE=prod
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/wheelshiftpro
-      - REDIS_HOST=redis
-    depends_on:
-      - mysql
-      - redis
-    networks:
-      - wheelshift-network
-
-  mysql:
-    image: mysql:8.0
-    environment:
-      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
-      - MYSQL_DATABASE=wheelshiftpro
-    volumes:
-      - mysql-data:/var/lib/mysql
-    networks:
-      - wheelshift-network
-
-  redis:
-    image: redis:7-alpine
-    networks:
-      - wheelshift-network
-
-networks:
-  wheelshift-network:
-
-volumes:
-  mysql-data:
-```
-
-**Deployment Commands:**
-```bash
-# Build and start services
-docker-compose up -d
-
-# View logs
-docker-compose logs -f app
-
-# Stop services
-docker-compose down
-
-# Update application
-docker-compose pull app
-docker-compose up -d --no-deps app
-```
-
-### 10.4 Environment Configuration
-
-**application-prod.properties:**
-```properties
-# Server
-server.port=8080
-server.servlet.context-path=/
-
-# Database
-spring.datasource.url=jdbc:mysql://db-host:3306/wheelshiftpro
-spring.datasource.username=${DB_USERNAME}
-spring.datasource.password=${DB_PASSWORD}
-spring.datasource.hikari.maximum-pool-size=20
-
-# JPA
-spring.jpa.hibernate.ddl-auto=validate
-spring.jpa.show-sql=false
-spring.jpa.properties.hibernate.format_sql=false
-
-# Flyway
-spring.flyway.enabled=true
-spring.flyway.baseline-on-migrate=true
-
-# Redis
-spring.redis.host=${REDIS_HOST}
-spring.redis.port=6379
-
-# JWT
-jwt.secret=${JWT_SECRET}
-jwt.expiration=28800000  # 8 hours
-
-# Logging
-logging.level.root=INFO
-logging.level.com.wheelshiftpro=INFO
-logging.file.name=/var/log/wheelshiftpro/application.log
-
-# CORS
-app.cors.allowed-origins=${ALLOWED_ORIGINS}
-```
-
-### 10.5 Monitoring & Maintenance
-
-**Health Checks:**
-```bash
-# Application health
-curl http://localhost:8080/actuator/health
-
-# Database connectivity
-curl http://localhost:8080/actuator/health/db
-
-# Disk space
-curl http://localhost:8080/actuator/health/diskSpace
-```
-
-**Backup Strategy:**
-```bash
-# Daily database backup
-mysqldump -u root -p wheelshiftpro > backup_$(date +%Y%m%d).sql
-
-# Retain backups for 30 days
-find /backup -name "*.sql" -mtime +30 -delete
-```
-
-**Log Rotation:**
-```xml
-<!-- logback-spring.xml -->
-<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-    <fileNamePattern>logs/archived/application-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
-    <maxHistory>30</maxHistory>
-    <totalSizeCap>10GB</totalSizeCap>
-</rollingPolicy>
-```
+| Feature | Details |
+|---------|---------|
+| **QR Code for Vehicles** | Generate scannable QR codes linking directly to a vehicle profile |
+| **Customer Portal** | Allow clients to view their inquiries, reservations, and purchase history |
+| **Bulk Import / Export (CSV)** | Import inventory and client data from CSV; export records to CSV/Excel |
+| **Appointment Booking** | Let clients schedule test drives or service appointments online |
+| **Vehicle Price History** | Log and display every price change made to a vehicle over its lifetime |
+| **AI Pricing Recommendations** | Suggest optimal selling prices using market trends and vehicle condition |
+| **Mobile App** | Native iOS and Android app for field use by sales and inspection staff |
+| **Multi-Tenancy** | Run multiple dealership branches from a single installation with data isolation |
+| **WhatsApp Chatbot** | Automated chatbot for client inquiries, reservation status, and updates |
+| **Predictive Maintenance Alerts** | Alert staff when a vehicle is likely due for servicing based on mileage/age |
+| **CRM Integrations** | Sync leads and clients with Salesforce, HubSpot, or similar platforms |
+| **Accounting Integrations** | Push financial data to QuickBooks, Xero, or Tally |
+| **VIN Auto-Fill** | Fetch vehicle specs automatically from a VIN lookup service |
 
 ---
 
-## 11. Future Roadmap
-
-### 11.1 Planned Features
-
-**Q1 2026:**
-- ✅ Core business features (Completed)
-- ✅ RBAC system (Completed)
-- ✅ Notification system (Completed)
-- ✅ Dashboard system (Completed)
-- 🚧 Frontend application (In Progress)
-- 🚧 Unit test coverage >80% (In Progress)
-
-**Q2 2026:**
-- Integration tests
-- End-to-end tests
-- Performance optimization
-- API rate limiting
-- WebSocket real-time updates
-- Advanced reporting module
-
-**Q3 2026:**
-- Two-factor authentication (2FA)
-- OAuth2 integration
-- Mobile app (iOS/Android)
-- Advanced analytics and BI
-- Multi-language support
-- Export/import functionality
-
-**Q4 2026:**
-- AI-powered pricing recommendations
-- Predictive maintenance alerts
-- Customer behavior analytics
-- Marketing automation
-- Third-party integrations (CRMs, ERPs)
-- Multi-tenancy support
-
-### 11.2 Technical Improvements
-
-**Performance:**
-- Query optimization and caching strategy
-- Database sharding for scalability
-- CDN integration for static assets
-- Response compression
-
-**Security:**
-- Security audit and penetration testing
-- Compliance certifications (SOC2, ISO 27001)
-- Data encryption at rest
-- Advanced threat detection
-
-**Infrastructure:**
-- Kubernetes orchestration
-- Auto-scaling based on load
-- Multi-region deployment
-- Disaster recovery plan
-
-**Developer Experience:**
-- GraphQL API endpoint
-- API versioning strategy
-- Improved documentation
-- Developer sandbox environment
-
-### 11.3 Integration Roadmap
-
-**Planned Integrations:**
-- Payment gateways (Stripe, PayPal)
-- SMS providers (Twilio, AWS SNS)
-- Email services (SendGrid, AWS SES)
-- Cloud storage (AWS S3, Azure Blob)
-- Analytics platforms (Google Analytics, Mixpanel)
-- CRM systems (Salesforce, HubSpot)
-- Accounting software (QuickBooks, Xero)
-- Vehicle data providers (Carfax, AutoCheck)
-
----
-
-## Appendix A: Glossary
+## Appendix: Glossary
 
 | Term | Definition |
 |------|------------|
-| **VIN** | Vehicle Identification Number - Unique 17-character code |
-| **ACL** | Access Control List - Resource-level permissions |
-| **RBAC** | Role-Based Access Control - Permission system based on roles |
-| **JWT** | JSON Web Token - Stateless authentication token |
-| **DTO** | Data Transfer Object - Object for API requests/responses |
-| **ORM** | Object-Relational Mapping - Database abstraction layer |
-| **CRUD** | Create, Read, Update, Delete operations |
-| **API** | Application Programming Interface |
-| **REST** | Representational State Transfer - API architecture |
-| **KPI** | Key Performance Indicator - Measurable value |
-| **SSR** | Server-Side Rendering - Initial page render on server |
+| **VIN** | Vehicle Identification Number — unique 17-character code identifying a vehicle |
+| **JWT** | JSON Web Token — a signed, self-contained token used for stateless authentication |
+| **RBAC** | Role-Based Access Control — permissions assigned and enforced through roles |
+| **ACL** | Access Control List — per-record access rules that can override role permissions |
+| **Data Scope** | Restriction on which records an employee can see (by location, department, or assignment) |
+| **API** | Application Programming Interface — the backend endpoints clients communicate with |
+| **KPI** | Key Performance Indicator — a measurable business metric displayed on dashboards |
+| **TTL** | Time To Live — how long a cached value is kept before it is refreshed |
+| **Flyway** | Database migration tool that applies and tracks versioned SQL schema changes |
 
 ---
 
-## Appendix B: Contact & Support
-
-**Development Team:**
-- Project Lead: [Name]
-- Backend Lead: [Name]
-- Frontend Lead: [Name]
-- DevOps Lead: [Name]
-
-**Documentation:**
-- API Docs: http://localhost:8080/api/v1/swagger-ui.html
-- GitHub: [Repository URL]
-- Wiki: [Wiki URL]
-
-**Support:**
-- Email: support@wheelshiftpro.com
-- Slack: #wheelshiftpro-support
-
----
-
-**Document Version:** 1.0.0  
-**Last Updated:** January 10, 2026  
-**Next Review:** April 2026
+**Document Version:** 1.1.0
+**Last Updated:** March 22, 2026
+**Next Review:** June 2026
