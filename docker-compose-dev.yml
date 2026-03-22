@@ -85,17 +85,18 @@ services:
     container_name: wheelshift-kafka
     restart: always
     ports:
-      - "9092:9092"   # Docker-internal client access
-      - "9094:9094"   # host-accessible external listener
-      - "9093:9093"   # controller (internal)
+      - "9092:9095"   # host port 9092 → container EXTERNAL listener (9095)
     environment:
       # KRaft — node identity
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
       # Listeners
-      KAFKA_LISTENERS: PLAINTEXT://:9092,EXTERNAL://:9094,CONTROLLER://:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      #   PLAINTEXT  :9092 — Docker-internal, advertised as kafka:9092
+      #   EXTERNAL   :9095 — host-accessible via host port 9092, advertised as localhost:9092
+      #   CONTROLLER :9093 — KRaft controller, internal only
+      KAFKA_LISTENERS: PLAINTEXT://:9092,EXTERNAL://:9095,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
@@ -141,11 +142,10 @@ services:
       context: .
       dockerfile: Dockerfile
       target: development
-    container_name: wheelshift-backend
+    container_name: ws-pro-dev
     restart: always
     ports:
       - "8080:8080"  # Application port
-      - "5005:5005"  # Debug port
     environment:
       # Database Configuration
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/wheelshift_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true

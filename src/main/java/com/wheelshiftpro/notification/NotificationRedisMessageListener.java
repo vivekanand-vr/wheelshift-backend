@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.connection.MessageListener;
-import org.springframework.lang.NonNull;
+import jakarta.annotation.Nonnull;
 import org.springframework.stereotype.Component;
 
 /**
@@ -29,7 +29,7 @@ public class NotificationRedisMessageListener implements MessageListener {
      * @param pattern  subscribed pattern bytes (not used)
      */
     @Override
-    public void onMessage(@NonNull Message message, byte[] pattern) {
+    public void onMessage(@Nonnull Message message, byte[] pattern) {
         String channel = new String(message.getChannel());
         String payload = new String(message.getBody());
 

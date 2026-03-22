@@ -15,8 +15,6 @@ import org.springframework.kafka.config.TopicBuilder;
 import org.springframework.kafka.core.*;
 import org.springframework.kafka.listener.ContainerProperties;
 import org.springframework.kafka.support.serializer.ErrorHandlingDeserializer;
-import org.springframework.kafka.support.serializer.JsonDeserializer;
-import org.springframework.kafka.support.serializer.JsonSerializer;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -67,7 +65,8 @@ public class KafkaConfig {
         Map<String, Object> config = new HashMap<>();
         config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-        config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+        config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+                "org.springframework.kafka.support.serializer.JsonSerializer");
         // Idempotent producer — prevents duplicate deliveries on retries
         config.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
         config.put(ProducerConfig.ACKS_CONFIG, "all");
@@ -90,11 +89,12 @@ public class KafkaConfig {
         config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, ErrorHandlingDeserializer.class);
         config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ErrorHandlingDeserializer.class);
         config.put(ErrorHandlingDeserializer.KEY_DESERIALIZER_CLASS, StringDeserializer.class);
-        config.put(ErrorHandlingDeserializer.VALUE_DESERIALIZER_CLASS, JsonDeserializer.class);
-        config.put(JsonDeserializer.VALUE_DEFAULT_TYPE,
+        config.put(ErrorHandlingDeserializer.VALUE_DESERIALIZER_CLASS,
+                "org.springframework.kafka.support.serializer.JsonDeserializer");
+        config.put("spring.json.value.default.type",
                 "com.wheelshiftpro.messaging.NotificationJobMessage");
-        config.put(JsonDeserializer.TRUSTED_PACKAGES, "com.wheelshiftpro.*");
-        config.put(JsonDeserializer.USE_TYPE_INFO_HEADERS, false);
+        config.put("spring.json.trusted.packages", "com.wheelshiftpro.*");
+        config.put("spring.json.use.type.headers", false);
         return new DefaultKafkaConsumerFactory<>(config);
     }
 
