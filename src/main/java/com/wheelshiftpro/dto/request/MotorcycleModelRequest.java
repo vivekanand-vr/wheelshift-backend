@@ -50,5 +50,7 @@ public class MotorcycleModelRequest {
     @NotNull(message = "Vehicle type is required")
     private MotorcycleVehicleType vehicleType;
 
+    private java.math.BigDecimal exShowroomPrice;
+
     private Boolean isActive;
 }

@@ -29,6 +29,7 @@ public class CarModelResponse {
     private String bodyType;
     private Integer gears;
     private TransmissionType transmissionType;
+    private java.math.BigDecimal exShowroomPrice;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

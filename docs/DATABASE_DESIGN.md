@@ -15,6 +15,7 @@ erDiagram
         VARCHAR fuel_type
         VARCHAR transmission_type
         INT gears
+        DECIMAL ex_showroom_price "Ex-showroom price in INR"
         VARCHAR model_image_id "File ID for model image"
         TIMESTAMP created_at
         TIMESTAMP updated_at
@@ -58,7 +59,7 @@ erDiagram
         VARCHAR fuel_type
         VARCHAR transmission_type
         VARCHAR vehicle_type
-        INT seating_capacity
+        DECIMAL ex_showroom_price "Ex-showroom price in INR"
         VARCHAR model_image_id "File ID for model image"
         BOOLEAN is_active
         TIMESTAMP created_at
@@ -703,11 +704,12 @@ erDiagram
 ## Database Statistics (After Seeding)
 
 ### Vehicles
-- **Car Models**: ~50 models across major manufacturers
-- **Motorcycle Models**: ~80 models across 8 brands
+- **Car Models**: ~1,201 models seeded from `car-models.csv` (V16) across 40+ manufacturers
+- **Motorcycle Models**: ~361 models seeded from `motorcycle-models.csv` (V17) across 25+ brands
 - **Sample Cars**: 20+ cars with complete details
 - **Sample Motorcycles**: 15 motorcycles with complete details
-- **Vehicle Types**: Sedan, SUV, Hatchback, Motorcycle, Scooter, Sport Bike, Cruiser, Off-Road
+- **Vehicle Types**: Sedan, SUV, Hatchback, Motorcycle, Scooter, Sport Bike, Cruiser, Off-Road, Dirt Bike, Touring, Naked, Café Racer
+- **Price Coverage**: Ex-showroom prices included for all seeded car and motorcycle models
 - **Manufacturers**: Honda, Hero, Yamaha, Royal Enfield, TVS, Bajaj, Suzuki, KTM, Ather, Ola Electric, Toyota, Maruti, Hyundai, Tata, Mahindra, etc.
 
 ### File Storage
@@ -751,7 +753,29 @@ Entity → File ID (VARCHAR) → File Metadata Table → S3 Storage Path
 - Application code remains unchanged
 - URLs updated automatically via file_metadata table
 
-## Recent Schema Changes (V15 & V16)
+## Recent Schema Changes (V15–V17)
+
+### V17: Add Ex-Showroom Prices + Drop seating_capacity
+**Date:** March 25, 2026
+
+**Changes:**
+1. **Added `ex_showroom_price DECIMAL(12,2)` to `car_models` table** (V1 schema)
+   - Prices sourced from `car-models.csv` (`Ex-Showroom_Price` column)
+   - Format parsed from Indian locale: "Rs. 2,92,667" → 292667
+   - Populated via V16 seeder (1,201 rows)
+
+2. **Added `ex_showroom_price DECIMAL(12,2)` to `motorcycle_models` table** (V9 schema)
+   - Prices sourced from `motorcycle-models.csv` (`price` column — plain integer)
+   - Populated via V17 seeder (361 rows)
+
+3. **Removed `seating_capacity` from `motorcycle_models` table**
+   - Column not tracked or relevant for dealership use-case
+   - V17 migration runs `ALTER TABLE motorcycle_models DROP COLUMN seating_capacity`
+
+**Benefits:**
+- Enables price-based filtering and sorting of model catalogs
+- Provides reference pricing for sales comparisons
+- Cleaner motorcycle model schema
 
 ### V15: Car Table Structure Simplification
 **Date:** March 15, 2026
@@ -790,5 +814,5 @@ Entity → File ID (VARCHAR) → File Metadata Table → S3 Storage Path
 
 ---
 
-**Last Updated:** March 21, 2026
-**Version:** 2.2 (Schema Audit — aligned with V1–V16 migrations)
+**Last Updated:** March 25, 2026
+**Version:** 2.3 (Added ex_showroom_price to car_models and motorcycle_models; removed seating_capacity)

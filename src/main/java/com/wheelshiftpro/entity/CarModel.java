@@ -7,6 +7,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 
+import java.math.BigDecimal;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -67,6 +69,9 @@ public class CarModel extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "transmission_type", length = 20)
     private TransmissionType transmissionType;
+
+    @Column(name = "ex_showroom_price", precision = 12, scale = 2)
+    private BigDecimal exShowroomPrice;
 
     @OneToMany(mappedBy = "carModel", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @Builder.Default

@@ -17,6 +17,7 @@ CREATE TABLE motorcycle_models (
     vehicle_type VARCHAR(50) NOT NULL DEFAULT 'MOTORCYCLE' COMMENT 'MOTORCYCLE, SCOOTER, SPORT_BIKE, CRUISER, OFF_ROAD',
     seating_capacity INT DEFAULT 2 COMMENT 'Number of seats',
     is_active BOOLEAN DEFAULT TRUE COMMENT 'Whether this model is still in production',
+    ex_showroom_price DECIMAL(12,2) COMMENT 'Ex-showroom price in INR',
     
     -- Audit fields
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

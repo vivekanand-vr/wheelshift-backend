@@ -30,6 +30,7 @@ public class MotorcycleModelResponse {
     private FuelType fuelType;
     private TransmissionType transmissionType;
     private MotorcycleVehicleType vehicleType;
+    private java.math.BigDecimal exShowroomPrice;
     private Boolean isActive;
     private String fullName;
     private LocalDateTime createdAt;

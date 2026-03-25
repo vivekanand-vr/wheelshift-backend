@@ -13,6 +13,7 @@ CREATE TABLE car_models (
     body_type VARCHAR(32),
     gears TINYINT,
     transmission_type VARCHAR(20),
+    ex_showroom_price DECIMAL(12,2),
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uk_make_model_variant (make, model, variant),
