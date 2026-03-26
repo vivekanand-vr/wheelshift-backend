@@ -44,6 +44,7 @@ erDiagram
         DECIMAL acceleration_0_100 "Merged from car_detailed_specs"
         INT top_speed_kmh "Merged from car_detailed_specs"
         JSON features "Merged from car_features as JSON"
+        VARCHAR description "Optional vehicle description (max 600 chars)"
         TIMESTAMP created_at
         TIMESTAMP updated_at
     }
@@ -117,6 +118,7 @@ erDiagram
         BOOLEAN has_usb_charging "Merged from motorcycle_detailed_specs"
         BOOLEAN has_led_lights "Merged from motorcycle_detailed_specs"
         TEXT additional_features "Merged from motorcycle_detailed_specs"
+        VARCHAR description "Optional vehicle description (max 600 chars)"
         TIMESTAMP created_at
         TIMESTAMP updated_at
     }
@@ -193,7 +195,8 @@ erDiagram
         VARCHAR contact_person
         VARCHAR contact_number
         INT total_capacity
-        INT current_vehicle_count
+        INT current_car_count "Active (non-SOLD) cars at this location"
+        INT current_motorcycle_count "Active (non-SOLD) motorcycles at this location"
         VARCHAR location_image_id "Location photo"
         TIMESTAMP created_at
         TIMESTAMP updated_at
@@ -753,7 +756,7 @@ Entity → File ID (VARCHAR) → File Metadata Table → S3 Storage Path
 - Application code remains unchanged
 - URLs updated automatically via file_metadata table
 
-## Recent Schema Changes (V15–V17)
+## Recent Schema Changes (V15–V21)
 
 ### V17: Add Ex-Showroom Prices + Drop seating_capacity
 **Date:** March 25, 2026
@@ -814,5 +817,36 @@ Entity → File ID (VARCHAR) → File Metadata Table → S3 Storage Path
 
 ---
 
-**Last Updated:** March 25, 2026
-**Version:** 2.3 (Added ex_showroom_price to car_models and motorcycle_models; removed seating_capacity)
+### V20: Split Vehicle Count By Type
+**Date:** March 26, 2026
+
+**Changes:**
+1. **Replaced `current_vehicle_count` with `current_car_count` and `current_motorcycle_count`** in `storage_locations`
+   - Enables separate tracking of cars and motorcycles per location
+   - Counts back-filled from live vehicle data on migration
+   - Old CHECK constraints (`chk_capacity`, `chk_vehicle_count_positive`) dropped and replaced with type-specific ones
+
+2. **Removed all database triggers** (V19 triggers dropped, none recreated)
+   - `trg_cars_after_insert/update/delete` — removed
+   - `trg_motorcycles_after_insert/update/delete` — removed
+   - Counts are now maintained entirely at the **application/service layer** on vehicle add, delete, status change, and storage location transfer
+
+**Benefits:**
+- Eliminates MySQL error 1442 (trigger conflict with `storage_locations` subqueries in seed scripts)
+- Finer-grained capacity reporting per vehicle type
+- Simpler, more predictable count management in application code
+
+---
+
+### V21: Add Vehicle Description
+**Date:** March 26, 2026
+
+**Changes:**
+1. **Added `description VARCHAR(600)` to `cars` table**
+2. **Resized `description` on `motorcycles` from `TEXT` to `VARCHAR(600)`**
+   - 600-character limit enforced via `@Size` validation at the application layer
+
+---
+
+**Last Updated:** March 26, 2026
+**Version:** 2.5 (Added description to cars; capped motorcycles description to VARCHAR(600))

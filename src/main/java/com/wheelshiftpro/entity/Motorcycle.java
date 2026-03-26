@@ -125,7 +125,8 @@ public class Motorcycle extends BaseEntity {
     @Builder.Default
     private Boolean isAccidental = false;
 
-    @Column(columnDefinition = "TEXT")
+    @Size(max = 600, message = "Description must not exceed 600 characters")
+    @Column(name = "description", length = 600)
     private String description;
 
     // Detailed Specs (merged from MotorcycleDetailedSpecs)
