@@ -11,6 +11,7 @@ services:
       MYSQL_PASSWORD: wheelshift_pass_2025
     ports:
       - "3307:3306"  # Host:Container - Use 3307 to avoid conflicts with local MySQL
+    command: --log_bin_trust_function_creators=1
     volumes:
       - mysql_data:/var/lib/mysql
       - ./docker-init:/docker-entrypoint-initdb.d
