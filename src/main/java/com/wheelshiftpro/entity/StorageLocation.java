@@ -53,11 +53,19 @@ public class StorageLocation extends BaseEntity {
     @Column(name = "total_capacity", nullable = false)
     private Integer totalCapacity;
 
-    @NotNull(message = "Current vehicle count is required")
-    @Min(value = 0, message = "Current vehicle count cannot be negative")
-    @Column(name = "current_vehicle_count", nullable = false)
+    @Min(value = 0, message = "Current car count cannot be negative")
+    @Column(name = "current_car_count", nullable = false)
     @Builder.Default
-    private Integer currentVehicleCount = 0;
+    private Integer currentCarCount = 0;
+
+    @Min(value = 0, message = "Current motorcycle count cannot be negative")
+    @Column(name = "current_motorcycle_count", nullable = false)
+    @Builder.Default
+    private Integer currentMotorcycleCount = 0;
+
+    public Integer getCurrentVehicleCount() {
+        return currentCarCount + currentMotorcycleCount;
+    }
 
     @OneToMany(mappedBy = "storageLocation", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @Builder.Default
@@ -73,15 +81,15 @@ public class StorageLocation extends BaseEntity {
      * @return true if there is space available, false otherwise
      */
     public boolean hasCapacity() {
-        return currentVehicleCount < totalCapacity;
+        return getCurrentVehicleCount() < totalCapacity;
     }
 
     /**
      * Gets the available capacity.
-     * 
+     *
      * @return number of available slots
      */
     public Integer getAvailableCapacity() {
-        return totalCapacity - currentVehicleCount;
+        return totalCapacity - getCurrentVehicleCount();
     }
 }

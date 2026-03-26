@@ -24,6 +24,8 @@ public class StorageLocationResponse {
     private String contactPerson;
     private String contactNumber;
     private Integer totalCapacity;
+    private Integer currentCarCount;
+    private Integer currentMotorcycleCount;
     private Integer currentVehicleCount;
     private Integer availableCapacity;
     private LocalDateTime createdAt;

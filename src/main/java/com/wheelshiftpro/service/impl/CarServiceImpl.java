@@ -91,7 +91,7 @@ public class CarServiceImpl implements CarService {
         Car saved = carRepository.save(car);
 
         if (saved.getStorageLocation() != null) {
-            location.setCurrentVehicleCount(location.getCurrentVehicleCount() + 1);
+            location.setCurrentCarCount(location.getCurrentCarCount() + 1);
             storageLocationRepository.save(location);
         }
 
@@ -163,7 +163,7 @@ public class CarServiceImpl implements CarService {
 
         if (car.getStorageLocation() != null) {
             StorageLocation location = car.getStorageLocation();
-            location.setCurrentVehicleCount(location.getCurrentVehicleCount() - 1);
+            location.setCurrentCarCount(location.getCurrentCarCount() - 1);
             storageLocationRepository.save(location);
         }
 
@@ -226,12 +226,12 @@ public class CarServiceImpl implements CarService {
 
         // Update old location
         if (oldLocation != null) {
-            oldLocation.setCurrentVehicleCount(oldLocation.getCurrentVehicleCount() - 1);
+            oldLocation.setCurrentCarCount(oldLocation.getCurrentCarCount() - 1);
             storageLocationRepository.save(oldLocation);
         }
 
         // Update new location
-        newLocation.setCurrentVehicleCount(newLocation.getCurrentVehicleCount() + 1);
+        newLocation.setCurrentCarCount(newLocation.getCurrentCarCount() + 1);
         storageLocationRepository.save(newLocation);
 
         // Create movement record

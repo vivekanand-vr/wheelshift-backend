@@ -15,6 +15,7 @@ import java.util.List;
 public interface StorageLocationMapper {
 
     @Mapping(target = "availableCapacity", expression = "java(entity.getAvailableCapacity())")
+    @Mapping(target = "currentVehicleCount", expression = "java(entity.getCurrentVehicleCount())")
     @Mapping(target = "locationImageUrl", expression = "java(FileUrlBuilder.buildFileUrl(entity.getLocationImageId()))")
     StorageLocationResponse toResponse(StorageLocation entity);
 
@@ -22,12 +23,14 @@ public interface StorageLocationMapper {
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "cars", ignore = true)
-    @Mapping(target = "currentVehicleCount", constant = "0")
+    @Mapping(target = "currentCarCount", constant = "0")
+    @Mapping(target = "currentMotorcycleCount", constant = "0")
     StorageLocation toEntity(StorageLocationRequest request);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "cars", ignore = true)
-    @Mapping(target = "currentVehicleCount", ignore = true)
+    @Mapping(target = "currentCarCount", ignore = true)
+    @Mapping(target = "currentMotorcycleCount", ignore = true)
     void updateEntityFromRequest(StorageLocationRequest request, @MappingTarget StorageLocation entity);
 }

@@ -77,7 +77,7 @@ public class MotorcycleServiceImpl implements MotorcycleService {
         // Update storage location count
         if (saved.getStorageLocation() != null) {
             StorageLocation location = saved.getStorageLocation();
-            location.setCurrentVehicleCount(location.getCurrentVehicleCount() + 1);
+            location.setCurrentMotorcycleCount(location.getCurrentMotorcycleCount() + 1);
             storageLocationRepository.save(location);
         }
 
@@ -271,12 +271,12 @@ public class MotorcycleServiceImpl implements MotorcycleService {
 
         // Update old location count
         if (oldLocation != null) {
-            oldLocation.setCurrentVehicleCount(oldLocation.getCurrentVehicleCount() - 1);
+            oldLocation.setCurrentMotorcycleCount(oldLocation.getCurrentMotorcycleCount() - 1);
             storageLocationRepository.save(oldLocation);
         }
 
         // Update new location count
-        newLocation.setCurrentVehicleCount(newLocation.getCurrentVehicleCount() + 1);
+        newLocation.setCurrentMotorcycleCount(newLocation.getCurrentMotorcycleCount() + 1);
         storageLocationRepository.save(newLocation);
 
         // Create movement record
@@ -313,7 +313,7 @@ public class MotorcycleServiceImpl implements MotorcycleService {
         // Update storage location count
         if (motorcycle.getStorageLocation() != null) {
             StorageLocation location = motorcycle.getStorageLocation();
-            location.setCurrentVehicleCount(location.getCurrentVehicleCount() - 1);
+            location.setCurrentMotorcycleCount(location.getCurrentMotorcycleCount() - 1);
             storageLocationRepository.save(location);
         }
 
