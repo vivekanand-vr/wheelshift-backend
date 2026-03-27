@@ -20,6 +20,9 @@ import com.wheelshiftpro.repository.EmployeeRepository;
 import com.wheelshiftpro.repository.FinancialTransactionRepository;
 import com.wheelshiftpro.repository.StorageLocationRepository;
 import com.wheelshiftpro.security.EmployeeUserDetails;
+import com.wheelshiftpro.enums.AuditCategory;
+import com.wheelshiftpro.enums.AuditLevel;
+import com.wheelshiftpro.service.AuditService;
 import com.wheelshiftpro.service.CarService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -50,6 +53,7 @@ public class CarServiceImpl implements CarService {
     private final FinancialTransactionRepository financialTransactionRepository;
     private final EmployeeRepository employeeRepository;
     private final CarMapper carMapper;
+    private final AuditService auditService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -91,6 +95,8 @@ public class CarServiceImpl implements CarService {
         }
 
         log.info("Created car with ID: {} and VIN: {}", saved.getId(), saved.getVinNumber());
+        auditService.log(AuditCategory.CAR, saved.getId(), "CREATE", AuditLevel.REGULAR,
+                resolveCurrentEmployee(), "VIN: " + saved.getVinNumber());
         return carMapper.toResponse(saved);
     }
 
@@ -136,6 +142,8 @@ public class CarServiceImpl implements CarService {
         Car updated = carRepository.save(car);
 
         log.info("Updated car ID: {}", id);
+        auditService.log(AuditCategory.CAR, updated.getId(), "UPDATE", AuditLevel.REGULAR,
+                resolveCurrentEmployee(), null);
         return carMapper.toResponse(updated);
     }
 
@@ -184,7 +192,10 @@ public class CarServiceImpl implements CarService {
             storageLocationRepository.save(location);
         }
 
+        String vinNumber = car.getVinNumber();
         carRepository.delete(car);
+        auditService.log(AuditCategory.CAR, id, "DELETE", AuditLevel.HIGH,
+                resolveCurrentEmployee(), "VIN: " + vinNumber);
         log.info("Deleted car ID: {}", id);
     }
 
@@ -272,6 +283,9 @@ public class CarServiceImpl implements CarService {
                 .movedBy(movedBy)
                 .build();
         carMovementRepository.save(movement);
+        auditService.log(AuditCategory.CAR, car.getId(), "MOVE", AuditLevel.REGULAR, movedBy,
+                "From location " + (oldLocation != null ? oldLocation.getId() : "none")
+                        + " to " + newLocation.getId());
 
         car.setStorageLocation(newLocation);
     }
@@ -284,13 +298,18 @@ public class CarServiceImpl implements CarService {
         Car car = carRepository.findById(carId)
                 .orElseThrow(() -> new ResourceNotFoundException("Car", "id", carId));
 
+        // Capture old status before mutation for audit detail
+        CarStatus previousStatus = car.getStatus();
+
         // Validate status transitions
-        validateStatusTransition(car.getStatus(), newStatus);
+        validateStatusTransition(previousStatus, newStatus);
 
         car.setStatus(newStatus);
         Car updated = carRepository.save(car);
 
         log.info("Updated car ID: {} status to: {}", carId, newStatus);
+        auditService.log(AuditCategory.CAR, carId, "STATUS_CHANGE", AuditLevel.HIGH,
+                resolveCurrentEmployee(), "From " + previousStatus + " to " + newStatus);
         return carMapper.toResponse(updated);
     }
 

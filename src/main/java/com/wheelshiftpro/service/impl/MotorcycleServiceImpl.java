@@ -20,6 +20,9 @@ import com.wheelshiftpro.repository.MotorcycleMovementRepository;
 import com.wheelshiftpro.repository.MotorcycleRepository;
 import com.wheelshiftpro.repository.StorageLocationRepository;
 import com.wheelshiftpro.security.EmployeeUserDetails;
+import com.wheelshiftpro.enums.AuditCategory;
+import com.wheelshiftpro.enums.AuditLevel;
+import com.wheelshiftpro.service.AuditService;
 import com.wheelshiftpro.service.MotorcycleService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -49,6 +52,7 @@ public class MotorcycleServiceImpl implements MotorcycleService {
     private final FinancialTransactionRepository financialTransactionRepository;
     private final EmployeeRepository employeeRepository;
     private final MotorcycleMapper motorcycleMapper;
+    private final AuditService auditService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -90,6 +94,8 @@ public class MotorcycleServiceImpl implements MotorcycleService {
         }
 
         log.info("Created motorcycle with ID: {} and VIN: {}", saved.getId(), saved.getVinNumber());
+        auditService.log(AuditCategory.MOTORCYCLE, saved.getId(), "CREATE", AuditLevel.REGULAR,
+                resolveCurrentEmployee(), "VIN: " + saved.getVinNumber());
         return motorcycleMapper.toResponse(saved);
     }
 
@@ -259,6 +265,8 @@ public class MotorcycleServiceImpl implements MotorcycleService {
         Motorcycle updated = motorcycleRepository.save(motorcycle);
 
         log.info("Updated motorcycle ID: {}", id);
+        auditService.log(AuditCategory.MOTORCYCLE, updated.getId(), "UPDATE", AuditLevel.REGULAR,
+                resolveCurrentEmployee(), null);
         return motorcycleMapper.toResponse(updated);
     }
 
@@ -270,13 +278,17 @@ public class MotorcycleServiceImpl implements MotorcycleService {
         Motorcycle motorcycle = motorcycleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Motorcycle", "id", id));
 
+        MotorcycleStatus previousStatus = motorcycle.getStatus();
+
         // Validate status transitions
-        validateStatusTransition(motorcycle.getStatus(), status);
+        validateStatusTransition(previousStatus, status);
 
         motorcycle.setStatus(status);
         Motorcycle updated = motorcycleRepository.save(motorcycle);
 
         log.info("Updated motorcycle ID: {} status to: {}", id, status);
+        auditService.log(AuditCategory.MOTORCYCLE, id, "STATUS_CHANGE", AuditLevel.HIGH,
+                resolveCurrentEmployee(), "From " + previousStatus + " to " + status);
         return motorcycleMapper.toResponse(updated);
     }
 
@@ -327,6 +339,9 @@ public class MotorcycleServiceImpl implements MotorcycleService {
                 .movedBy(movedBy)
                 .build();
         motorcycleMovementRepository.save(movement);
+        auditService.log(AuditCategory.MOTORCYCLE, motorcycle.getId(), "MOVE", AuditLevel.REGULAR, movedBy,
+                "From location " + (oldLocation != null ? oldLocation.getId() : "none")
+                        + " to " + newLocation.getId());
 
         motorcycle.setStorageLocation(newLocation);
     }
@@ -357,7 +372,10 @@ public class MotorcycleServiceImpl implements MotorcycleService {
             storageLocationRepository.save(location);
         }
 
+        String vinNumber = motorcycle.getVinNumber();
         motorcycleRepository.delete(motorcycle);
+        auditService.log(AuditCategory.MOTORCYCLE, id, "DELETE", AuditLevel.HIGH,
+                resolveCurrentEmployee(), "VIN: " + vinNumber);
         log.info("Deleted motorcycle ID: {}", id);
     }
 
