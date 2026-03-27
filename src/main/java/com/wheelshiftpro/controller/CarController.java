@@ -29,7 +29,7 @@ public class CarController {
     private final CarService carService;
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN') or hasRole('STORE_MANAGER')") // Only admins and managers can create cars
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','STORE_MANAGER')")
     @Operation(summary = "Create a new car", description = "Adds a new car to the inventory")
     public ResponseEntity<ApiResponse<CarResponse>> createCar(
             @Validated(OnCreate.class) @RequestBody CarRequest request) {
@@ -39,6 +39,7 @@ public class CarController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','STORE_MANAGER')")
     @Operation(summary = "Update a car", description = "Updates an existing car by ID")
     public ResponseEntity<ApiResponse<CarResponse>> updateCar(
             @Parameter(description = "Car ID") @PathVariable Long id,
@@ -48,6 +49,7 @@ public class CarController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get car by ID", description = "Retrieves a specific car by its ID")
     public ResponseEntity<ApiResponse<CarResponse>> getCarById(
             @Parameter(description = "Car ID") @PathVariable Long id) {
@@ -56,6 +58,7 @@ public class CarController {
     }
 
     @GetMapping
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get all cars", description = "Retrieves all cars with pagination")
     public ResponseEntity<ApiResponse<PageResponse<CarResponse>>> getAllCars(
             @Parameter(description = "Page number (0-indexed)") @RequestParam(defaultValue = "0") int page,
@@ -65,6 +68,7 @@ public class CarController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
     @Operation(summary = "Delete a car", description = "Deletes a car by ID")
     public ResponseEntity<ApiResponse<Void>> deleteCar(
             @Parameter(description = "Car ID") @PathVariable Long id) {
@@ -73,6 +77,7 @@ public class CarController {
     }
 
     @GetMapping("/search")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Search cars", description = "Search cars with multiple filter criteria")
     public ResponseEntity<ApiResponse<PageResponse<CarResponse>>> searchCars(
             @Parameter(description = "VIN filter") @RequestParam(required = false) String vin,
@@ -92,6 +97,7 @@ public class CarController {
     }
 
     @GetMapping("/status/{status}")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get cars by status", description = "Retrieves all cars with a specific status")
     public ResponseEntity<ApiResponse<PageResponse<CarResponse>>> getCarsByStatus(
             @Parameter(description = "Car status") @PathVariable CarStatus status,
@@ -102,6 +108,7 @@ public class CarController {
     }
 
     @GetMapping("/location/{locationId}")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get cars by location", description = "Retrieves all cars at a specific storage location")
     public ResponseEntity<ApiResponse<PageResponse<CarResponse>>> getCarsByLocation(
             @Parameter(description = "Storage Location ID") @PathVariable Long locationId,
@@ -112,6 +119,7 @@ public class CarController {
     }
 
     @PostMapping("/{id}/move")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','STORE_MANAGER')")
     @Operation(summary = "Move car to location", description = "Moves a car to a different storage location")
     public ResponseEntity<ApiResponse<Void>> moveCarToLocation(
             @Parameter(description = "Car ID") @PathVariable Long id,
@@ -121,6 +129,7 @@ public class CarController {
     }
 
     @PutMapping("/{id}/status")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','STORE_MANAGER')")
     @Operation(summary = "Update car status", description = "Updates the status of a car")
     public ResponseEntity<ApiResponse<Void>> updateCarStatus(
             @Parameter(description = "Car ID") @PathVariable Long id,
@@ -130,6 +139,7 @@ public class CarController {
     }
 
     @GetMapping("/statistics")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','STORE_MANAGER')")
     @Operation(summary = "Get inventory statistics", description = "Retrieves inventory statistics by status")
     public ResponseEntity<ApiResponse<Object>> getInventoryStatistics() {
         Object statistics = carService.getInventoryStatistics();
@@ -137,6 +147,7 @@ public class CarController {
     }
 
     @GetMapping("/inventory-value")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
     @Operation(summary = "Calculate inventory value", description = "Calculates total value of inventory")
     public ResponseEntity<ApiResponse<BigDecimal>> calculateInventoryValue() {
         BigDecimal value = carService.calculateInventoryValue();

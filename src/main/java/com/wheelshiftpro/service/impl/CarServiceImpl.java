@@ -6,6 +6,7 @@ import com.wheelshiftpro.dto.response.PageResponse;
 import com.wheelshiftpro.entity.Car;
 import com.wheelshiftpro.entity.CarModel;
 import com.wheelshiftpro.entity.CarMovement;
+import com.wheelshiftpro.entity.Employee;
 import com.wheelshiftpro.entity.StorageLocation;
 import com.wheelshiftpro.enums.CarStatus;
 import com.wheelshiftpro.exception.BusinessException;
@@ -15,7 +16,10 @@ import com.wheelshiftpro.mapper.CarMapper;
 import com.wheelshiftpro.repository.CarModelRepository;
 import com.wheelshiftpro.repository.CarMovementRepository;
 import com.wheelshiftpro.repository.CarRepository;
+import com.wheelshiftpro.repository.EmployeeRepository;
+import com.wheelshiftpro.repository.FinancialTransactionRepository;
 import com.wheelshiftpro.repository.StorageLocationRepository;
+import com.wheelshiftpro.security.EmployeeUserDetails;
 import com.wheelshiftpro.service.CarService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +27,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,9 +47,12 @@ public class CarServiceImpl implements CarService {
     private final CarModelRepository carModelRepository;
     private final StorageLocationRepository storageLocationRepository;
     private final CarMovementRepository carMovementRepository;
+    private final FinancialTransactionRepository financialTransactionRepository;
+    private final EmployeeRepository employeeRepository;
     private final CarMapper carMapper;
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public CarResponse createCar(CarRequest request) {
         log.debug("Creating car with VIN: {}", request.getVinNumber());
 
@@ -51,28 +60,14 @@ public class CarServiceImpl implements CarService {
             throw new DuplicateResourceException("Car", "VIN", request.getVinNumber());
         }
 
-        // if (!carModelRepository.existsById(request.getCarModelId())) {
-        // throw new ResourceNotFoundException("CarModel", "id",
-        // request.getCarModelId());
-        // }
+        if (request.getRegistrationNumber() != null &&
+                carRepository.existsByRegistrationNumber(request.getRegistrationNumber())) {
+            throw new DuplicateResourceException("Car", "Registration Number", request.getRegistrationNumber());
+        }
 
-        // if (request.getStorageLocationId() != null) {
-        // StorageLocation location =
-        // storageLocationRepository.findById(request.getStorageLocationId())
-        // .orElseThrow(() -> new ResourceNotFoundException("StorageLocation", "id",
-        // request.getStorageLocationId()));
-
-        // if (!location.hasCapacity()) {
-        // throw new BusinessException("Storage location has reached maximum capacity",
-        // "LOCATION_FULL");
-        // }
-        // }
-
-        // Fetch CarModel and set it on the entity after mapping
         CarModel carModel = carModelRepository.findById(request.getCarModelId())
                 .orElseThrow(() -> new ResourceNotFoundException("CarModel", "id", request.getCarModelId()));
 
-        // Fetch StorageLocation and set it on the entity after mapping
         StorageLocation location = null;
         if (request.getStorageLocationId() != null) {
             location = storageLocationRepository.findById(request.getStorageLocationId())
@@ -85,8 +80,8 @@ public class CarServiceImpl implements CarService {
         }
 
         Car car = carMapper.toEntity(request);
-        car.setCarModel(carModel); // ✅ Set CarModel on entity
-        car.setStorageLocation(location); // ✅ Set StorageLocation on entity
+        car.setCarModel(carModel);
+        car.setStorageLocation(location);
 
         Car saved = carRepository.save(car);
 
@@ -100,25 +95,41 @@ public class CarServiceImpl implements CarService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public CarResponse updateCar(Long id, CarRequest request) {
         log.debug("Updating car ID: {}", id);
 
         Car car = carRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Car", "id", id));
 
-        // Update carModel only if a new one is provided in the request
+        // Guard VIN uniqueness when it is being changed
+        if (request.getVinNumber() != null && !request.getVinNumber().equals(car.getVinNumber())) {
+            if (carRepository.existsByVinNumberAndIdNot(request.getVinNumber(), id)) {
+                throw new DuplicateResourceException("Car", "VIN", request.getVinNumber());
+            }
+        }
+
+        // Guard registration-number uniqueness when it is being changed
+        if (request.getRegistrationNumber() != null &&
+                !request.getRegistrationNumber().equals(car.getRegistrationNumber())) {
+            if (carRepository.existsByRegistrationNumberAndIdNot(request.getRegistrationNumber(), id)) {
+                throw new DuplicateResourceException("Car", "Registration Number", request.getRegistrationNumber());
+            }
+        }
+
+        // Update car model if provided
         if (request.getCarModelId() != null) {
             CarModel carModel = carModelRepository.findById(request.getCarModelId())
                     .orElseThrow(() -> new ResourceNotFoundException("CarModel", "id", request.getCarModelId()));
             car.setCarModel(carModel);
         }
 
-        // Update storageLocation only if provided
+        // If the storage location is changing, use full move logic (count updates + movement record)
         if (request.getStorageLocationId() != null) {
-            StorageLocation location = storageLocationRepository.findById(request.getStorageLocationId())
-                    .orElseThrow(() -> new ResourceNotFoundException("StorageLocation", "id",
-                            request.getStorageLocationId()));
-            car.setStorageLocation(location);
+            Long currentLocationId = car.getStorageLocation() != null ? car.getStorageLocation().getId() : null;
+            if (!request.getStorageLocationId().equals(currentLocationId)) {
+                applyCarMove(car, request.getStorageLocationId());
+            }
         }
 
         carMapper.updateEntityFromRequest(request, car);
@@ -151,6 +162,7 @@ public class CarServiceImpl implements CarService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void deleteCar(Long id) {
         log.debug("Deleting car ID: {}", id);
 
@@ -159,6 +171,11 @@ public class CarServiceImpl implements CarService {
 
         if (car.getStatus() == CarStatus.RESERVED || car.getStatus() == CarStatus.SOLD) {
             throw new BusinessException("Cannot delete car with status: " + car.getStatus(), "INVALID_CAR_STATUS");
+        }
+
+        if (financialTransactionRepository.existsByCarId(id)) {
+            throw new BusinessException(
+                    "Cannot delete car with existing financial transactions", "CAR_HAS_TRANSACTIONS");
         }
 
         if (car.getStorageLocation() != null) {
@@ -209,14 +226,27 @@ public class CarServiceImpl implements CarService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public CarResponse moveCarToLocation(Long carId, Long locationId) {
         log.debug("Moving car ID: {} to location ID: {}", carId, locationId);
 
         Car car = carRepository.findById(carId)
                 .orElseThrow(() -> new ResourceNotFoundException("Car", "id", carId));
 
-        StorageLocation newLocation = storageLocationRepository.findById(locationId)
-                .orElseThrow(() -> new ResourceNotFoundException("StorageLocation", "id", locationId));
+        applyCarMove(car, locationId);
+
+        Car updated = carRepository.save(car);
+        log.info("Moved car ID: {} to location ID: {}", carId, locationId);
+        return carMapper.toResponse(updated);
+    }
+
+    /**
+     * Internal helper: move a car to a new location, update counts and create an audit movement record.
+     * The car entity is NOT saved here — caller must save() after.
+     */
+    private void applyCarMove(Car car, Long newLocationId) {
+        StorageLocation newLocation = storageLocationRepository.findById(newLocationId)
+                .orElseThrow(() -> new ResourceNotFoundException("StorageLocation", "id", newLocationId));
 
         if (!newLocation.hasCapacity()) {
             throw new BusinessException("Storage location has reached maximum capacity", "LOCATION_FULL");
@@ -224,34 +254,30 @@ public class CarServiceImpl implements CarService {
 
         StorageLocation oldLocation = car.getStorageLocation();
 
-        // Update old location
         if (oldLocation != null) {
             oldLocation.setCurrentCarCount(oldLocation.getCurrentCarCount() - 1);
             storageLocationRepository.save(oldLocation);
         }
 
-        // Update new location
         newLocation.setCurrentCarCount(newLocation.getCurrentCarCount() + 1);
         storageLocationRepository.save(newLocation);
 
-        // Create movement record
+        Employee movedBy = resolveCurrentEmployee();
+
         CarMovement movement = CarMovement.builder()
                 .car(car)
                 .fromLocation(oldLocation)
                 .toLocation(newLocation)
                 .movedAt(LocalDateTime.now())
+                .movedBy(movedBy)
                 .build();
         carMovementRepository.save(movement);
 
-        // Update car location
         car.setStorageLocation(newLocation);
-        Car updated = carRepository.save(car);
-
-        log.info("Moved car ID: {} to location ID: {}", carId, locationId);
-        return carMapper.toResponse(updated);
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public CarResponse updateCarStatus(Long carId, CarStatus newStatus) {
         log.debug("Updating car ID: {} status to: {}", carId, newStatus);
 
@@ -291,15 +317,33 @@ public class CarServiceImpl implements CarService {
     }
 
     private void validateStatusTransition(CarStatus currentStatus, CarStatus newStatus) {
-        // Define valid transitions
-        if (currentStatus == CarStatus.SOLD && newStatus != CarStatus.SOLD) {
+        if (currentStatus == CarStatus.SOLD) {
             throw new BusinessException("Cannot change status of a sold car", "INVALID_STATUS_TRANSITION");
         }
 
-        if (currentStatus == CarStatus.RESERVED && newStatus == CarStatus.AVAILABLE) {
-            // Allow only when reservation is cancelled
-            log.info("Reverting reservation status to available");
+        if (newStatus == CarStatus.SOLD) {
+            throw new BusinessException(
+                    "Status cannot be set to SOLD directly; create a sale transaction instead",
+                    "INVALID_STATUS_TRANSITION");
         }
+
+        if (currentStatus == CarStatus.MAINTENANCE && newStatus == CarStatus.RESERVED) {
+            throw new BusinessException("Cannot reserve a car that is under maintenance",
+                    "INVALID_STATUS_TRANSITION");
+        }
+
+        if (currentStatus == CarStatus.RESERVED && newStatus == CarStatus.AVAILABLE) {
+            log.info("Reverting reservation status to available for car");
+        }
+    }
+
+    /** Returns the Employee proxy for the currently authenticated user, or null for system actions. */
+    private Employee resolveCurrentEmployee() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof EmployeeUserDetails userDetails) {
+            return employeeRepository.getReferenceById(userDetails.getId());
+        }
+        return null;
     }
 
     private PageResponse<CarResponse> buildPageResponse(Page<Car> page) {

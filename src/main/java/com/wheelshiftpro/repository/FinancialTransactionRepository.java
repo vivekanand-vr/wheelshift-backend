@@ -21,6 +21,16 @@ import java.util.List;
 public interface FinancialTransactionRepository extends JpaRepository<FinancialTransaction, Long>, JpaSpecificationExecutor<FinancialTransaction> {
 
     /**
+     * Check if any transaction is linked to the given car.
+     */
+    boolean existsByCarId(Long carId);
+
+    /**
+     * Check if any transaction is linked to the given motorcycle.
+     */
+    boolean existsByMotorcycleId(Long motorcycleId);
+
+    /**
      * Find transactions by car.
      */
     Page<FinancialTransaction> findByCarId(Long carId, Pageable pageable);

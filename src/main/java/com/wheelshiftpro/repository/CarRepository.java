@@ -35,9 +35,19 @@ public interface CarRepository extends JpaRepository<Car, Long> {
     boolean existsByVinNumber(String vinNumber);
 
     /**
+     * Check if another car (different id) already uses this VIN.
+     */
+    boolean existsByVinNumberAndIdNot(String vinNumber, Long id);
+
+    /**
      * Check if car exists by registration number.
      */
     boolean existsByRegistrationNumber(String registrationNumber);
+
+    /**
+     * Check if another car (different id) already uses this registration number.
+     */
+    boolean existsByRegistrationNumberAndIdNot(String registrationNumber, Long id);
 
     /**
      * Find all cars by status.

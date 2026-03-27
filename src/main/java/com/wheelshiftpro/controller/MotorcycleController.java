@@ -14,6 +14,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -29,6 +30,7 @@ public class MotorcycleController {
     private final MotorcycleService motorcycleService;
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','STORE_MANAGER')")
     @Operation(summary = "Create a new motorcycle", description = "Adds a new motorcycle to the inventory")
     public ResponseEntity<ApiResponse<MotorcycleResponse>> createMotorcycle(
             @Validated(OnCreate.class) @RequestBody MotorcycleRequest request) {
@@ -38,6 +40,7 @@ public class MotorcycleController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','STORE_MANAGER')")
     @Operation(summary = "Update a motorcycle", description = "Updates an existing motorcycle by ID")
     public ResponseEntity<ApiResponse<MotorcycleResponse>> updateMotorcycle(
             @Parameter(description = "Motorcycle ID") @PathVariable Long id,
@@ -47,6 +50,7 @@ public class MotorcycleController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get motorcycle by ID", description = "Retrieves a specific motorcycle by its ID")
     public ResponseEntity<ApiResponse<MotorcycleResponse>> getMotorcycleById(
             @Parameter(description = "Motorcycle ID") @PathVariable Long id) {
@@ -55,6 +59,7 @@ public class MotorcycleController {
     }
 
     @GetMapping
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get all motorcycles", description = "Retrieves all motorcycles with pagination and sorting")
     public ResponseEntity<ApiResponse<PageResponse<MotorcycleResponse>>> getAllMotorcycles(
             @Parameter(description = "Page number (0-indexed)") @RequestParam(defaultValue = "0") int page,
@@ -66,6 +71,7 @@ public class MotorcycleController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
     @Operation(summary = "Delete a motorcycle", description = "Deletes a motorcycle by ID")
     public ResponseEntity<ApiResponse<Void>> deleteMotorcycle(
             @Parameter(description = "Motorcycle ID") @PathVariable Long id) {
@@ -74,6 +80,7 @@ public class MotorcycleController {
     }
 
     @GetMapping("/search")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Search motorcycles", description = "Search motorcycles by keyword (VIN, registration, make, model)")
     public ResponseEntity<ApiResponse<PageResponse<MotorcycleResponse>>> searchMotorcycles(
             @Parameter(description = "Search term") @RequestParam String searchTerm,
@@ -84,6 +91,7 @@ public class MotorcycleController {
     }
 
     @GetMapping("/vin/{vinNumber}")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get motorcycle by VIN", description = "Retrieves a motorcycle by VIN number")
     public ResponseEntity<ApiResponse<MotorcycleResponse>> getMotorcycleByVin(
             @Parameter(description = "VIN number") @PathVariable String vinNumber) {
@@ -92,6 +100,7 @@ public class MotorcycleController {
     }
 
     @GetMapping("/registration/{registrationNumber}")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get motorcycle by registration", description = "Retrieves a motorcycle by registration number")
     public ResponseEntity<ApiResponse<MotorcycleResponse>> getMotorcycleByRegistration(
             @Parameter(description = "Registration number") @PathVariable String registrationNumber) {
@@ -100,6 +109,7 @@ public class MotorcycleController {
     }
 
     @GetMapping("/status/{status}")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get motorcycles by status", description = "Retrieves all motorcycles with a specific status")
     public ResponseEntity<ApiResponse<List<MotorcycleResponse>>> getMotorcyclesByStatus(
             @Parameter(description = "Motorcycle status") @PathVariable MotorcycleStatus status) {
@@ -108,6 +118,7 @@ public class MotorcycleController {
     }
 
     @GetMapping("/location/{locationId}")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get motorcycles by location", description = "Retrieves all motorcycles at a specific storage location")
     public ResponseEntity<ApiResponse<List<MotorcycleResponse>>> getMotorcyclesByLocation(
             @Parameter(description = "Storage Location ID") @PathVariable Long locationId) {
@@ -116,6 +127,7 @@ public class MotorcycleController {
     }
 
     @GetMapping("/model/{modelId}")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get motorcycles by model", description = "Retrieves all motorcycles of a specific model")
     public ResponseEntity<ApiResponse<List<MotorcycleResponse>>> getMotorcyclesByModel(
             @Parameter(description = "Motorcycle Model ID") @PathVariable Long modelId) {
@@ -124,6 +136,7 @@ public class MotorcycleController {
     }
 
     @GetMapping("/available")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get available motorcycles", description = "Retrieves all available motorcycles")
     public ResponseEntity<ApiResponse<List<MotorcycleResponse>>> getAvailableMotorcycles() {
         List<MotorcycleResponse> response = motorcycleService.getAvailableMotorcycles();
@@ -131,6 +144,7 @@ public class MotorcycleController {
     }
 
     @GetMapping("/needing-attention")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get motorcycles needing attention", description = "Retrieves motorcycles that need maintenance or service")
     public ResponseEntity<ApiResponse<List<MotorcycleResponse>>> getMotorcyclesNeedingAttention() {
         List<MotorcycleResponse> response = motorcycleService.getMotorcyclesNeedingAttention();
@@ -138,6 +152,7 @@ public class MotorcycleController {
     }
 
     @GetMapping("/recent")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get recently added motorcycles", description = "Retrieves recently added motorcycles")
     public ResponseEntity<ApiResponse<List<MotorcycleResponse>>> getRecentlyAddedMotorcycles(
             @Parameter(description = "Limit") @RequestParam(defaultValue = "10") int limit) {
@@ -146,6 +161,7 @@ public class MotorcycleController {
     }
 
     @GetMapping("/price-range")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get motorcycles by price range", description = "Retrieves motorcycles within a price range")
     public ResponseEntity<ApiResponse<PageResponse<MotorcycleResponse>>> getMotorcyclesByPriceRange(
             @Parameter(description = "Minimum price") @RequestParam BigDecimal minPrice,
@@ -157,6 +173,7 @@ public class MotorcycleController {
     }
 
     @PostMapping("/{id}/move")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','STORE_MANAGER')")
     @Operation(summary = "Move motorcycle to location", description = "Moves a motorcycle to a different storage location")
     public ResponseEntity<ApiResponse<MotorcycleResponse>> moveMotorcycleToLocation(
             @Parameter(description = "Motorcycle ID") @PathVariable Long id,
@@ -166,6 +183,7 @@ public class MotorcycleController {
     }
 
     @PutMapping("/{id}/status")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','STORE_MANAGER')")
     @Operation(summary = "Update motorcycle status", description = "Updates the status of a motorcycle")
     public ResponseEntity<ApiResponse<MotorcycleResponse>> updateMotorcycleStatus(
             @Parameter(description = "Motorcycle ID") @PathVariable Long id,
@@ -175,6 +193,7 @@ public class MotorcycleController {
     }
 
     @GetMapping("/inventory-value")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
     @Operation(summary = "Calculate inventory value", description = "Calculates total value of motorcycle inventory")
     public ResponseEntity<ApiResponse<BigDecimal>> calculateInventoryValue() {
         BigDecimal value = motorcycleService.getTotalInventoryValue();
@@ -182,6 +201,7 @@ public class MotorcycleController {
     }
 
     @GetMapping("/average-price")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','STORE_MANAGER')")
     @Operation(summary = "Get average selling price", description = "Retrieves average selling price of motorcycles")
     public ResponseEntity<ApiResponse<BigDecimal>> getAverageSellingPrice() {
         BigDecimal average = motorcycleService.getAverageSellingPrice();
@@ -189,6 +209,7 @@ public class MotorcycleController {
     }
 
     @GetMapping("/count/{status}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','STORE_MANAGER')")
     @Operation(summary = "Count motorcycles by status", description = "Returns the count of motorcycles with specific status")
     public ResponseEntity<ApiResponse<Long>> countMotorcyclesByStatus(
             @Parameter(description = "Motorcycle status") @PathVariable MotorcycleStatus status) {
@@ -197,6 +218,7 @@ public class MotorcycleController {
     }
 
     @GetMapping("/exists/vin/{vinNumber}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','STORE_MANAGER')")
     @Operation(summary = "Check if VIN exists", description = "Checks if a VIN number exists in the system")
     public ResponseEntity<ApiResponse<Boolean>> existsByVin(
             @Parameter(description = "VIN number") @PathVariable String vinNumber) {
@@ -205,6 +227,7 @@ public class MotorcycleController {
     }
 
     @GetMapping("/exists/registration/{registrationNumber}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','STORE_MANAGER')")
     @Operation(summary = "Check if registration exists", description = "Checks if a registration number exists in the system")
     public ResponseEntity<ApiResponse<Boolean>> existsByRegistration(
             @Parameter(description = "Registration number") @PathVariable String registrationNumber) {
