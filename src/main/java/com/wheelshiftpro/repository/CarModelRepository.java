@@ -29,6 +29,11 @@ public interface CarModelRepository extends JpaRepository<CarModel, Long> {
     boolean existsByMakeAndModelAndVariant(String make, String model, String variant);
 
     /**
+     * Check uniqueness on update — excludes the record being updated.
+     */
+    boolean existsByMakeAndModelAndVariantAndIdNot(String make, String model, String variant, Long id);
+
+    /**
      * Find all car models by make.
      */
     List<CarModel> findByMake(String make);

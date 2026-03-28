@@ -79,6 +79,11 @@ public interface MotorcycleModelRepository extends JpaRepository<MotorcycleModel
     boolean existsByMakeAndModelAndVariant(String make, String model, String variant);
 
     /**
+     * Check uniqueness on update — excludes the record being updated.
+     */
+    boolean existsByMakeAndModelAndVariantAndIdNot(String make, String model, String variant, Long id);
+
+    /**
      * Search motorcycle models with multiple filters
      */
     @Query("SELECT mm FROM MotorcycleModel mm WHERE " +

@@ -1,7 +1,7 @@
 ---
 description: "Developer agent for WheelShift Pro. Use when verifying business logic implementation, reviewing service or controller files against BUSINESS_LOGIC.md, fixing missing validations or RBAC, and writing unit tests for service classes."
 name: "WheelShift Developer"
-tools: [read, edit, search, todo]
+tools: [execute/runNotebookCell, execute/testFailure, execute/getTerminalOutput, execute/awaitTerminal, execute/killTerminal, execute/createAndRunTask, execute/runInTerminal, execute/runTests, read/getNotebookSummary, read/problems, read/readFile, read/viewImage, read/terminalSelection, read/terminalLastCommand, edit/createDirectory, edit/createFile, edit/createJupyterNotebook, edit/editFiles, edit/editNotebook, edit/rename, search/changes, search/codebase, search/fileSearch, search/listDirectory, search/searchResults, search/textSearch, search/searchSubagent, search/usages, todo]
 argument-hint: "Provide the file(s) to review, e.g. CarServiceImpl.java, or a domain name, e.g. 'Sale'"
 ---
 
@@ -50,6 +50,8 @@ For every **ServiceImpl** write method check:
 | `@Transactional` on reads | `@Transactional(readOnly = true)` on every read method |
 | Audit field population | fields tracking who performed an action (e.g. `createdBy`, `movedBy`, `processedBy`) resolved from `SecurityContextHolder` |
 | Related record creation | audit / movement / history records created as a side effect where the spec requires it |
+| Audit log call | `auditService.log(AuditCategory, entityId, action, AuditLevel, performedBy, details)` called after every write (create, update, delete, move, status change) |
+| Audit level assignment | CREATE / UPDATE / MOVE → `AuditLevel.REGULAR`; DELETE / STATUS_CHANGE → `AuditLevel.HIGH`; financial, employee, or security operations → `AuditLevel.CRITICAL` |
 | Relationship wiring | all entity relationships explicitly set after `mapper.toEntity(request)` — mappers ignore relationships |
 | Dead / commented-out code | no leftover block comments masking missing logic |
 | Transaction order | validate → adjust counters/linked records → save audit records → save main entity → return DTO |
@@ -86,6 +88,31 @@ private Employee resolveCurrentEmployee() {
 - Extract repeated multi-step logic (e.g. moving an entity, applying a status change with side
   effects) into a private helper method — never inline the same logic in multiple places.
 
+- After every write operation, call `auditService.log(...)` with the correct `AuditCategory` and
+  `AuditLevel`. `AuditService` is injected via `@RequiredArgsConstructor`. Assign levels as follows:
+
+  ```java
+  // Routine writes
+  auditService.log(AuditCategory.CAR, saved.getId(), "CREATE", AuditLevel.REGULAR,
+          resolveCurrentEmployee(), "VIN: " + saved.getVinNumber());
+
+  // Impactful operations
+  auditService.log(AuditCategory.CAR, id, "DELETE", AuditLevel.HIGH,
+          resolveCurrentEmployee(), "VIN: " + vinNumber);
+  auditService.log(AuditCategory.CAR, id, "STATUS_CHANGE", AuditLevel.HIGH,
+          resolveCurrentEmployee(), "From " + previousStatus + " to " + newStatus);
+
+  // Financial / employee / security-sensitive operations
+  auditService.log(AuditCategory.FINANCIAL_TRANSACTION, saved.getId(), "CREATE",
+          AuditLevel.CRITICAL, resolveCurrentEmployee(), details);
+  ```
+
+  Available `AuditCategory` values: `CAR`, `MOTORCYCLE`, `FINANCIAL_TRANSACTION`, `SALE`,
+  `RESERVATION`, `INQUIRY`, `CLIENT`, `EMPLOYEE`, `INSPECTION`, `STORAGE_LOCATION`, `TASK`, `SYSTEM`.
+
+  Always capture the **previous** status or value before mutating the entity so the audit detail
+  string is accurate (e.g. store `previousStatus = entity.getStatus()` before calling `setStatus`).
+
 ### Phase 4 — Write or Update Unit Tests
 
 Create or update the test file at:
@@ -119,6 +146,8 @@ Structure each test class with one `@Nested` inner class per service method:
 | Valid status transition | status updated, no exception |
 | Audit-field (`movedBy`, `createdBy`, etc.) populated when authenticated | `ArgumentCaptor` → field is non-null and matches the employee ID |
 | Audit-field null when no authenticated user | `SecurityContextHolder` cleared → field is null |
+| `auditService.log` called on happy path | `verify(auditService).log(eq(expectedCategory), eq(entityId), eq(expectedAction), eq(expectedLevel), any(), any())` |
+| Audit level is correct for the operation | assert the `AuditLevel` argument matches REGULAR / HIGH / CRITICAL based on the operation type |
 
 **Security context helper** — include in any test class that covers authenticated operations:
 

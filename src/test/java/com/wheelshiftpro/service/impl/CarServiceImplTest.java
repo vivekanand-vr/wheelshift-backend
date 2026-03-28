@@ -19,6 +19,7 @@ import com.wheelshiftpro.repository.EmployeeRepository;
 import com.wheelshiftpro.repository.FinancialTransactionRepository;
 import com.wheelshiftpro.repository.StorageLocationRepository;
 import com.wheelshiftpro.security.EmployeeUserDetails;
+import com.wheelshiftpro.service.AuditService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -51,6 +52,7 @@ class CarServiceImplTest {
     @Mock FinancialTransactionRepository financialTransactionRepository;
     @Mock EmployeeRepository employeeRepository;
     @Mock CarMapper carMapper;
+    @Mock AuditService auditService;
 
     @InjectMocks
     CarServiceImpl carService;
