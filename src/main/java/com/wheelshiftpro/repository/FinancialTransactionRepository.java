@@ -31,6 +31,12 @@ public interface FinancialTransactionRepository extends JpaRepository<FinancialT
     boolean existsByMotorcycleId(Long motorcycleId);
 
     /**
+     * Check if any transaction is linked to the given sale (via car).
+     */
+    @Query("SELECT CASE WHEN COUNT(ft) > 0 THEN true ELSE false END FROM FinancialTransaction ft WHERE ft.car.id = :carId")
+    boolean existsBySaleCarId(@Param("carId") Long carId);
+
+    /**
      * Find transactions by car.
      */
     Page<FinancialTransaction> findByCarId(Long carId, Pageable pageable);

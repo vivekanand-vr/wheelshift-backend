@@ -3,13 +3,22 @@ package com.wheelshiftpro.service.impl;
 import com.wheelshiftpro.dto.request.FinancialTransactionRequest;
 import com.wheelshiftpro.dto.response.FinancialTransactionResponse;
 import com.wheelshiftpro.dto.response.PageResponse;
+import com.wheelshiftpro.entity.Car;
+import com.wheelshiftpro.entity.Employee;
 import com.wheelshiftpro.entity.FinancialTransaction;
+import com.wheelshiftpro.enums.AuditCategory;
+import com.wheelshiftpro.enums.AuditLevel;
 import com.wheelshiftpro.enums.PaymentMethod;
 import com.wheelshiftpro.enums.TransactionType;
+import com.wheelshiftpro.exception.BusinessException;
 import com.wheelshiftpro.exception.ResourceNotFoundException;
 import com.wheelshiftpro.mapper.FinancialTransactionMapper;
+import com.wheelshiftpro.repository.CarRepository;
+import com.wheelshiftpro.repository.EmployeeRepository;
 import com.wheelshiftpro.repository.FinancialTransactionRepository;
 import com.wheelshiftpro.repository.SaleRepository;
+import com.wheelshiftpro.security.EmployeeUserDetails;
+import com.wheelshiftpro.service.AuditService;
 import com.wheelshiftpro.service.FinancialTransactionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +27,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,23 +42,45 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@Transactional
+@Transactional(rollbackFor = Exception.class)
 public class FinancialTransactionServiceImpl implements FinancialTransactionService {
 
     private final FinancialTransactionRepository financialTransactionRepository;
     private final FinancialTransactionMapper financialTransactionMapper;
+    private final CarRepository carRepository;
+    private final EmployeeRepository employeeRepository;
     private final SaleRepository saleRepository;
+    private final AuditService auditService;
 
     @Override
     public FinancialTransactionResponse createTransaction(FinancialTransactionRequest request) {
         log.debug("Creating financial transaction for car ID: {}", request.getCarId());
 
-        if (request.getCarId() != null && !saleRepository.existsById(request.getCarId())) {
-            throw new ResourceNotFoundException("Car", "id", request.getCarId());
+        // Validate amount
+        if (request.getAmount() == null || request.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException("Amount must be greater than 0", "INVALID_AMOUNT");
+        }
+
+        // Validate transaction date
+        if (request.getTransactionDate() != null && request.getTransactionDate().isAfter(LocalDateTime.now())) {
+            throw new BusinessException("Transaction date cannot be in the future", "INVALID_TRANSACTION_DATE");
+        }
+
+        Car car = null;
+        if (request.getCarId() != null) {
+            car = carRepository.findById(request.getCarId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Car", "id", request.getCarId()));
         }
 
         FinancialTransaction transaction = financialTransactionMapper.toEntity(request);
+        if (car != null) {
+            transaction.setCar(car);
+        }
+
         FinancialTransaction saved = financialTransactionRepository.save(transaction);
+
+        auditService.log(AuditCategory.FINANCIAL_TRANSACTION, saved.getId(), "CREATE", AuditLevel.CRITICAL,
+                resolveCurrentEmployee(), "Type: " + saved.getTransactionType() + ", Amount: " + saved.getAmount());
 
         log.info("Created transaction with ID: {}", saved.getId());
         return financialTransactionMapper.toResponse(saved);
@@ -60,8 +93,16 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
         FinancialTransaction transaction = financialTransactionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("FinancialTransaction", "id", id));
 
+        // Block auto-created SALE transactions from being freely edited
+        if (transaction.getTransactionType() == TransactionType.SALE) {
+            throw new BusinessException("Auto-created SALE transactions require SUPER_ADMIN authorization", "IMMUTABLE_TRANSACTION");
+        }
+
         financialTransactionMapper.updateEntityFromRequest(request, transaction);
         FinancialTransaction updated = financialTransactionRepository.save(transaction);
+
+        auditService.log(AuditCategory.FINANCIAL_TRANSACTION, id, "UPDATE", AuditLevel.CRITICAL,
+                resolveCurrentEmployee(), "Transaction updated");
 
         log.info("Updated transaction ID: {}", id);
         return financialTransactionMapper.toResponse(updated);
@@ -96,6 +137,9 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
         if (!financialTransactionRepository.existsById(id)) {
             throw new ResourceNotFoundException("FinancialTransaction", "id", id);
         }
+
+        auditService.log(AuditCategory.FINANCIAL_TRANSACTION, id, "DELETE", AuditLevel.CRITICAL,
+                resolveCurrentEmployee(), "Transaction deleted");
 
         financialTransactionRepository.deleteById(id);
         log.info("Deleted transaction ID: {}", id);
@@ -287,5 +331,13 @@ public class FinancialTransactionServiceImpl implements FinancialTransactionServ
                 .last(page.isLast())
                 .first(page.isFirst())
                 .build();
+    }
+
+    private Employee resolveCurrentEmployee() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof EmployeeUserDetails u) {
+            return employeeRepository.getReferenceById(u.getId());
+        }
+        return null;
     }
 }

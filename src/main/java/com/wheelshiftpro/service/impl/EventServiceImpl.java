@@ -3,13 +3,22 @@ package com.wheelshiftpro.service.impl;
 import com.wheelshiftpro.dto.request.EventRequest;
 import com.wheelshiftpro.dto.response.EventResponse;
 import com.wheelshiftpro.dto.response.PageResponse;
+import com.wheelshiftpro.entity.Car;
+import com.wheelshiftpro.entity.Employee;
 import com.wheelshiftpro.entity.Event;
+import com.wheelshiftpro.enums.AuditCategory;
+import com.wheelshiftpro.enums.AuditLevel;
+import com.wheelshiftpro.enums.CarStatus;
+import com.wheelshiftpro.exception.BusinessException;
 import com.wheelshiftpro.exception.ResourceNotFoundException;
 import com.wheelshiftpro.mapper.EventMapper;
 import com.wheelshiftpro.repository.CarRepository;
 import com.wheelshiftpro.repository.ClientRepository;
 import com.wheelshiftpro.repository.EmployeeRepository;
 import com.wheelshiftpro.repository.EventRepository;
+import com.wheelshiftpro.repository.MotorcycleRepository;
+import com.wheelshiftpro.security.EmployeeUserDetails;
+import com.wheelshiftpro.service.AuditService;
 import com.wheelshiftpro.service.EventService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +27,8 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,25 +38,59 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@Transactional
+@Transactional(rollbackFor = Exception.class)
 public class EventServiceImpl implements EventService {
 
     private final EventRepository eventRepository;
     private final CarRepository carRepository;
+    private final MotorcycleRepository motorcycleRepository;
     private final EmployeeRepository employeeRepository;
     private final ClientRepository clientRepository;
     private final EventMapper eventMapper;
+    private final AuditService auditService;
 
     @Override
     public EventResponse createEvent(EventRequest request) {
         log.debug("Creating event: {}", request.getTitle());
 
-        if (request.getCarId() != null && !carRepository.existsById(request.getCarId())) {
-            throw new ResourceNotFoundException("Car", "id", request.getCarId());
+        // Validate endTime > startTime
+        if (request.getEndTime() != null && request.getStartTime() != null &&
+                !request.getEndTime().isAfter(request.getStartTime())) {
+            throw new BusinessException("End time must be after start time", "INVALID_END_TIME");
+        }
+
+        // Validate single-vehicle discriminator
+        if (request.getCarId() != null && request.getMotorcycleId()  != null) {
+            throw new BusinessException("Event can only reference one vehicle (car or motorcycle)", "MULTIPLE_VEHICLES");
+        }
+
+        Car car = null;
+        if (request.getCarId() != null) {
+            car = carRepository.findById(request.getCarId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Car", "id", request.getCarId()));
+        }
+
+        if (request.getMotorcycleId() != null && !motorcycleRepository.existsById(request.getMotorcycleId())) {
+            throw new ResourceNotFoundException("Motorcycle", "id", request.getMotorcycleId());
         }
 
         Event event = eventMapper.toEntity(request);
+        if (car != null) {
+            event.setCar(car);
+        }
+
+        // For TEST_DRIVE events, update vehicle status to RESERVED if not already
+        if ("TEST_DRIVE".equalsIgnoreCase(request.getType()) && car != null) {
+            if (car.getStatus() != CarStatus.RESERVED && car.getStatus() != CarStatus.SOLD) {
+                car.setStatus(CarStatus.RESERVED);
+                carRepository.save(car);
+            }
+        }
+
         Event saved = eventRepository.save(event);
+
+        auditService.log(AuditCategory.SYSTEM, saved.getId(), "CREATE", AuditLevel.REGULAR,
+                resolveCurrentEmployee(), "Event: " + saved.getTitle());
 
         log.info("Created event with ID: {}", saved.getId());
         return eventMapper.toResponse(saved);
@@ -58,8 +103,17 @@ public class EventServiceImpl implements EventService {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Event", "id", id));
 
+        // Validate endTime > startTime
+        if (request.getEndTime() != null && request.getStartTime() != null &&
+                !request.getEndTime().isAfter(request.getStartTime())) {
+            throw new BusinessException("End time must be after start time", "INVALID_END_TIME");
+        }
+
         eventMapper.updateEntityFromRequest(request, event);
         Event updated = eventRepository.save(event);
+
+        auditService.log(AuditCategory.SYSTEM, id, "UPDATE", AuditLevel.REGULAR,
+                resolveCurrentEmployee(), "Event updated");
 
         log.info("Updated event ID: {}", id);
         return eventMapper.toResponse(updated);
@@ -93,6 +147,9 @@ public class EventServiceImpl implements EventService {
 
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Event", "id", id));
+
+        auditService.log(AuditCategory.SYSTEM, id, "DELETE", AuditLevel.HIGH,
+                resolveCurrentEmployee(), "Event deleted: " + event.getTitle());
 
         eventRepository.delete(event);
         log.info("Deleted event ID: {}", id);
@@ -196,5 +253,13 @@ public class EventServiceImpl implements EventService {
                 .last(page.isLast())
                 .first(page.isFirst())
                 .build();
+    }
+
+    private Employee resolveCurrentEmployee() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof EmployeeUserDetails u) {
+            return employeeRepository.getReferenceById(u.getId());
+        }
+        return null;
     }
 }

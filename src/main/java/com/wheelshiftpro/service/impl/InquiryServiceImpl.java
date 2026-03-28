@@ -3,14 +3,23 @@ package com.wheelshiftpro.service.impl;
 import com.wheelshiftpro.dto.request.InquiryRequest;
 import com.wheelshiftpro.dto.response.InquiryResponse;
 import com.wheelshiftpro.dto.response.PageResponse;
+import com.wheelshiftpro.entity.Client;
+import com.wheelshiftpro.entity.Employee;
 import com.wheelshiftpro.entity.Inquiry;
+import com.wheelshiftpro.enums.AuditCategory;
+import com.wheelshiftpro.enums.AuditLevel;
+import com.wheelshiftpro.enums.ClientStatus;
 import com.wheelshiftpro.enums.InquiryStatus;
 import com.wheelshiftpro.exception.BusinessException;
 import com.wheelshiftpro.exception.ResourceNotFoundException;
 import com.wheelshiftpro.mapper.InquiryMapper;
 import com.wheelshiftpro.repository.CarRepository;
 import com.wheelshiftpro.repository.ClientRepository;
+import com.wheelshiftpro.repository.EmployeeRepository;
 import com.wheelshiftpro.repository.InquiryRepository;
+import com.wheelshiftpro.repository.SaleRepository;
+import com.wheelshiftpro.security.EmployeeUserDetails;
+import com.wheelshiftpro.service.AuditService;
 import com.wheelshiftpro.service.InquiryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +28,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,20 +42,32 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@Transactional
+@Transactional(rollbackFor = Exception.class)
 public class InquiryServiceImpl implements InquiryService {
 
     private final InquiryRepository inquiryRepository;
     private final InquiryMapper inquiryMapper;
     private final ClientRepository clientRepository;
     private final CarRepository carRepository;
+    private final EmployeeRepository employeeRepository;
+    private final SaleRepository saleRepository;
+    private final AuditService auditService;
 
     @Override
     public InquiryResponse createInquiry(InquiryRequest request) {
         log.debug("Creating inquiry for client ID: {}", request.getClientId());
 
-        if (!clientRepository.existsById(request.getClientId())) {
-            throw new ResourceNotFoundException("Client", "id", request.getClientId());
+        // Validate client exists and is active
+        Client client = clientRepository.findById(request.getClientId())
+                .orElseThrow(() -> new ResourceNotFoundException("Client", "id", request.getClientId()));
+        
+        if (client.getStatus() != ClientStatus.ACTIVE) {
+            throw new BusinessException("Client must be active to create inquiry", "CLIENT_NOT_ACTIVE");
+        }
+
+        // Validate single-vehicle discriminator
+        if (request.getCarId() != null && request.getMotorcycleId() != null) {
+            throw new BusinessException("Inquiry can only reference one vehicle (car or motorcycle)", "MULTIPLE_VEHICLES");
         }
 
         if (request.getCarId() != null && !carRepository.existsById(request.getCarId())) {
@@ -52,9 +75,13 @@ public class InquiryServiceImpl implements InquiryService {
         }
 
         Inquiry inquiry = inquiryMapper.toEntity(request);
+        inquiry.setClient(client);
         inquiry.setStatus(InquiryStatus.OPEN);
 
         Inquiry saved = inquiryRepository.save(inquiry);
+
+        auditService.log(AuditCategory.INQUIRY, saved.getId(), "CREATE", AuditLevel.REGULAR,
+                resolveCurrentEmployee(), "Client: " + client.getName());
 
         log.info("Created inquiry with ID: {}", saved.getId());
         return inquiryMapper.toResponse(saved);
@@ -69,6 +96,9 @@ public class InquiryServiceImpl implements InquiryService {
 
         inquiryMapper.updateEntityFromRequest(request, inquiry);
         Inquiry updated = inquiryRepository.save(inquiry);
+
+        auditService.log(AuditCategory.INQUIRY, id, "UPDATE", AuditLevel.REGULAR,
+                resolveCurrentEmployee(), "Inquiry updated");
 
         log.info("Updated inquiry ID: {}", id);
         return inquiryMapper.toResponse(updated);
@@ -100,11 +130,20 @@ public class InquiryServiceImpl implements InquiryService {
     public void deleteInquiry(Long id) {
         log.debug("Deleting inquiry ID: {}", id);
 
-        if (!inquiryRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Inquiry", "id", id);
+        Inquiry inquiry = inquiryRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Inquiry", "id", id));
+
+        // Block deletion of CLOSED inquiries that led to a sale
+        if (inquiry.getStatus() == InquiryStatus.CLOSED) {
+            if (inquiry.getCar() != null && saleRepository.existsByCarId(inquiry.getCar().getId())) {
+                throw new BusinessException("Cannot delete closed inquiry that led to a sale", "INQUIRY_HAS_SALE");
+            }
         }
 
-        inquiryRepository.deleteById(id);
+        auditService.log(AuditCategory.INQUIRY, id, "DELETE", AuditLevel.HIGH,
+                resolveCurrentEmployee(), "Inquiry deleted");
+
+        inquiryRepository.delete(inquiry);
         log.info("Deleted inquiry ID: {}", id);
     }
 
@@ -177,8 +216,21 @@ public class InquiryServiceImpl implements InquiryService {
         Inquiry inquiry = inquiryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Inquiry", "id", id));
 
+        // Validate status transitions
+        InquiryStatus currentStatus = inquiry.getStatus();
+        validateInquiryStatusTransition(currentStatus, status);
+
+        // If transitioning to RESPONDED, response text must be present
+        if (status == InquiryStatus.RESPONDED && (inquiry.getResponse() == null || inquiry.getResponse().trim().isEmpty())) {
+            throw new BusinessException("Response text is required when status is RESPONDED", "RESPONSE_REQUIRED");
+        }
+
+        InquiryStatus previousStatus = inquiry.getStatus();
         inquiry.setStatus(status);
         Inquiry updated = inquiryRepository.save(inquiry);
+
+        auditService.log(AuditCategory.INQUIRY, id, "STATUS_CHANGE", AuditLevel.HIGH,
+                resolveCurrentEmployee(), "From " + previousStatus + " to " + status);
 
         log.info("Updated inquiry ID: {} to status: {}", id, status);
         return inquiryMapper.toResponse(updated);
@@ -191,12 +243,19 @@ public class InquiryServiceImpl implements InquiryService {
         Inquiry inquiry = inquiryRepository.findById(inquiryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Inquiry", "id", inquiryId));
 
-        if (inquiry.getStatus() == InquiryStatus.CLOSED) {
-            throw new BusinessException("Inquiry has already been closed", "INQUIRY_ALREADY_CLOSED");
+        // Validate inquiry status
+        if (inquiry.getStatus() != InquiryStatus.OPEN && inquiry.getStatus() != InquiryStatus.IN_PROGRESS) {
+            throw new BusinessException("Only OPEN or IN_PROGRESS inquiries can be converted to reservation", "INVALID_INQUIRY_STATUS");
         }
 
+        // Validate vehicle exists
         if (!carRepository.existsById(carId)) {
             throw new ResourceNotFoundException("Car", "id", carId);
+        }
+
+        // Deposit amount is required
+        if (depositAmount == null || depositAmount <= 0) {
+            throw new BusinessException("Valid deposit amount is required", "INVALID_DEPOSIT_AMOUNT");
         }
 
         // This will be implemented when ReservationService integration is complete
@@ -223,6 +282,28 @@ public class InquiryServiceImpl implements InquiryService {
 
         log.info("Retrieved inquiry statistics");
         return statistics;
+    }
+
+    private void validateInquiryStatusTransition(InquiryStatus from, InquiryStatus to) {
+        // Allowed transitions: OPEN → IN_PROGRESS → RESPONDED → CLOSED, OPEN → CLOSED
+        boolean valid = switch (from) {
+            case OPEN -> to == InquiryStatus.IN_PROGRESS || to == InquiryStatus.CLOSED;
+            case IN_PROGRESS -> to == InquiryStatus.RESPONDED || to == InquiryStatus.CLOSED;
+            case RESPONDED -> to == InquiryStatus.CLOSED;
+            case CLOSED -> false; // Terminal state
+        };
+
+        if (!valid) {
+            throw new BusinessException("Invalid status transition from " + from + " to " + to, "INVALID_STATUS_TRANSITION");
+        }
+    }
+
+    private Employee resolveCurrentEmployee() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof EmployeeUserDetails u) {
+            return employeeRepository.getReferenceById(u.getId());
+        }
+        return null;
     }
 
     private PageResponse<InquiryResponse> buildPageResponse(Page<Inquiry> page) {

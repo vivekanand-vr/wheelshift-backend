@@ -1,6 +1,6 @@
 # WheelShift Pro — Implementation & Test Status
 
-**Last Updated:** March 28, 2026 (Client BL 7.x, Employee BL 8.x)  
+**Last Updated:** March 28, 2026 (Inquiry BL 9.x, Task BL 13.x, Event BL 14.x)  
 **Spec Reference:** [`BUSINESS_LOGIC.md`](./BUSINESS_LOGIC.md)
 
 Track progress for every business logic operation defined in the spec.  
@@ -111,11 +111,11 @@ The **WheelShift Developer** agent reads this file to know which areas need atte
 
 | BL Ref | Operation | Endpoint | Impl Status | Impl Notes | Test Status | Test Notes |
 |--------|-----------|----------|:-----------:|------------|:-----------:|------------|
-| 9.1 | Create inquiry | `POST /api/v1/inquiries` | ❌ | Active-client check, single-vehicle discriminator, default OPEN not verified | ❌ | |
-| 9.2 | Assign inquiry | `PUT /api/v1/inquiries/{id}/assign` | ❌ | | ❌ | |
-| 9.3 | Update inquiry status | `PUT /api/v1/inquiries/{id}/status` | ❌ | Transition guard, RESPONDED requires response text not verified | ❌ | |
-| 9.4 | Convert inquiry to reservation | `POST /api/v1/inquiries/{id}/reserve` | ❌ | Vehicle AVAILABLE check, deposit required not verified | ❌ | |
-| 9.5 | Delete inquiry | `DELETE /api/v1/inquiries/{id}` | ❌ | CLOSED-with-sale guard not verified | ❌ | |
+| 9.1 | Create inquiry | `POST /api/v1/inquiries` | ✅ | Client ACTIVE check, single-vehicle discriminator (car XOR motorcycle), default OPEN, relationship wiring, audit `REGULAR`, `@Transactional(rollbackFor)` | ✅ | `InquiryServiceImplTest` — happy path, client not found, client not ACTIVE, car not found, both vehicles provided throws, relationship wired |
+| 9.2 | Assign inquiry | `PUT /api/v1/inquiries/{id}/assign` | ⚠️ | Endpoint exists but business rule validation not fully verified | ❌ | |
+| 9.3 | Update inquiry status | `PUT /api/v1/inquiries/{id}/status` | ✅ | Status transition validation (OPEN→IN_PROGRESS→RESPONDED→CLOSED, OPEN→CLOSED), RESPONDED requires response text check, audit `HIGH` | ✅ | valid transitions, invalid transitions throw, RESPONDED without response text throws, audit HIGH |
+| 9.4 | Convert inquiry to reservation | `POST /api/v1/inquiries/{id}/reserve` | ⚠️ | Status validation (OPEN/IN_PROGRESS), deposit > 0 check; actual reservation creation stubbed | ⚠️ | validation guards tested |
+| 9.5 | Delete inquiry | `DELETE /api/v1/inquiries/{id}` | ✅ | CLOSED inquiry with associated sale guard (`saleRepository.existsByCarId`), audit `HIGH` | ✅ | happy path, not found, closed inquiry with sale throws |
 
 ---
 
@@ -123,11 +123,11 @@ The **WheelShift Developer** agent reads this file to know which areas need atte
 
 | BL Ref | Operation | Endpoint | Impl Status | Impl Notes | Test Status | Test Notes |
 |--------|-----------|----------|:-----------:|------------|:-----------:|------------|
-| 10.1 | Create reservation | `POST /api/v1/reservations` | ❌ | Vehicle AVAILABLE + unique-active-reservation, expiry future, vehicle status → RESERVED not verified | ❌ | |
-| 10.2 | Cancel reservation | `POST /api/v1/reservations/{id}/cancel` | ❌ | EXPIRED/CANCELLED block, vehicle status revert not verified | ❌ | |
-| 10.3 | Expire reservations (scheduler) | (automated) | ❌ | Status → EXPIRED, vehicle status revert not verified | ❌ | |
-| 10.4 | Update deposit status | `PUT /api/v1/reservations/{id}/deposit` | ❌ | | ❌ | |
-| 10.5 | Convert reservation to sale | `POST /api/v1/reservations/{id}/convert-to-sale` | ❌ | CONFIRMED status + depositPaid guard not verified | ❌ | |
+| 10.1 | Create reservation | `POST /api/v1/reservations` | ✅ | Vehicle AVAILABLE check, unique-active-reservation, expiry future validation, depositAmount ≥ 0, vehicle status → RESERVED, relationship wiring, audit `REGULAR`, `@Transactional(rollbackFor)` | ✅ | `ReservationServiceImplTest` — happy path, validations (expiry date, deposit amount), car not available, duplicate reservation, relationships wired, audit logged |
+| 10.2 | Cancel reservation | `POST /api/v1/reservations/{id}/cancel` | ✅ | CONFIRMED/PENDING status required, vehicle status revert to AVAILABLE, audit `HIGH` | ✅ | happy path (confirmed & pending), expired/cancelled throw, not found, audit HIGH |
+| 10.3 | Expire reservations (scheduler) | (automated) | ✅ | Status → EXPIRED, vehicle status revert (only if RESERVED), audit `HIGH` with null performedBy | ✅ | batch expiry, car status guard (only saves if RESERVED) |
+| 10.4 | Update deposit status | `PUT /api/v1/reservations/{id}/deposit` | ✅ | Updates `depositPaid` boolean, audit `REGULAR` | ✅ | happy path, not found |
+| 10.5 | Convert reservation to sale | `POST /api/v1/reservations/{id}/convert-to-sale` | ⚠️ | CONFIRMED status + depositPaid validation, employeeId existence check; actual sale creation throws `NOT_IMPLEMENTED` | ✅ | all validation guards tested (status, depositPaid, employee not found) |
 
 ---
 
@@ -135,9 +135,9 @@ The **WheelShift Developer** agent reads this file to know which areas need atte
 
 | BL Ref | Operation | Endpoint | Impl Status | Impl Notes | Test Status | Test Notes |
 |--------|-----------|----------|:-----------:|------------|:-----------:|------------|
-| 11.1 | Create sale | `POST /api/v1/sales` | ❌ | Vehicle-not-SOLD guard, commission calc, vehicle → SOLD, client purchase count, reservation fulfillment, location count decrement not verified | ❌ | |
-| 11.2 | Update sale | `PUT /api/v1/sales/{id}` | ❌ | Vehicle-ID immutability, commission re-calc not verified | ❌ | |
-| 11.3 | Delete sale | `DELETE /api/v1/sales/{id}` (`SA` only) | ❌ | Vehicle status revert, client count decrement, settled-tx guard not verified | ❌ | |
+| 11.1 | Create sale | `POST /api/v1/sales` | ✅ | Vehicle-not-SOLD guard, salePrice > 0, saleDate not-in-future, commission calc (`calculateCommission()`), vehicle → SOLD, client purchase count increment, reservation status → CONFIRMED, storage location count decrement, auto-create `FinancialTransaction` (type SALE), relationship wiring, audit `CRITICAL`, `@Transactional(rollbackFor)` | ✅ | `SaleServiceImplTest` — happy path with all side effects, price validations (zero/negative/null/future date), car not found, car already sold, client/employee not found, commission calculation, financial transaction creation, reservation update, no storage location handling |
+| 11.2 | Update sale | `PUT /api/v1/sales/{id}` | ✅ | Vehicle-ID immutability guard (`IMMUTABLE_VEHICLE`), commission re-calc on price change, audit `HIGH` | ✅ | happy path, price change triggers recalc, changing car throws, not found |
+| 11.3 | Delete sale | `DELETE /api/v1/sales/{id}` (`SA` only) | ✅ | Financial-transaction guard (`existsBySaleCarId`), vehicle status revert to AVAILABLE, client.totalPurchases decrement (if > 0), audit `CRITICAL` | ✅ | happy path with reverts, has financial transactions throws, not found, zero purchases edge case |
 
 ---
 
@@ -145,9 +145,9 @@ The **WheelShift Developer** agent reads this file to know which areas need atte
 
 | BL Ref | Operation | Endpoint | Impl Status | Impl Notes | Test Status | Test Notes |
 |--------|-----------|----------|:-----------:|------------|:-----------:|------------|
-| 12.1 | Create financial transaction | `POST /api/v1/financial-transactions` | ❌ | Amount > 0, future-date block, auto-creation triggers not verified | ❌ | |
-| 12.2 | Update financial transaction | `PUT /api/v1/financial-transactions/{id}` | ❌ | SALE-type edit block not verified | ❌ | |
-| 12.3 | Delete financial transaction | `DELETE /api/v1/financial-transactions/{id}` (`SA` only) | ❌ | | ❌ | |
+| 12.1 | Create financial transaction | `POST /api/v1/financial-transactions` | ✅ | Amount > 0 validation, transactionDate not-in-future validation, car existence check (optional — can be null for overhead), car relationship wiring, audit `CRITICAL`, `@Transactional(rollbackFor)`; auto-creation triggered by BL 11.1 (Sale) | ✅ | `FinancialTransactionServiceImplTest` — happy path, amount validations (zero/negative/null), date in future throws, car not found, relationship wired, overhead transaction without car |
+| 12.2 | Update financial transaction | `PUT /api/v1/financial-transactions/{id}` | ✅ | SALE-type immutability guard (`IMMUTABLE_TRANSACTION` — requires SA authorization), audit `CRITICAL` | ✅ | happy path, SALE type update throws, not found |
+| 12.3 | Delete financial transaction | `DELETE /api/v1/financial-transactions/{id}` (`SA` only) | ✅ | Existence check, audit `CRITICAL` | ✅ | happy path, not found, audit before deletion |
 
 ---
 
@@ -155,10 +155,10 @@ The **WheelShift Developer** agent reads this file to know which areas need atte
 
 | BL Ref | Operation | Endpoint | Impl Status | Impl Notes | Test Status | Test Notes |
 |--------|-----------|----------|:-----------:|------------|:-----------:|------------|
-| 13.1 | Create task | `POST /api/v1/tasks` | ❌ | Assignee ACTIVE check, default TODO/MEDIUM, future dueDate not verified | ❌ | |
-| 13.2 | Update task status | `PUT /api/v1/tasks/{id}/status` | ❌ | Transition rules, role restrictions per transition not verified | ❌ | |
-| 13.3 | Overdue task detection (scheduler) | (automated) | ❌ | | ❌ | |
-| 13.4 | Delete task | `DELETE /api/v1/tasks/{id}` | ❌ | DONE+linked-record guard not verified | ❌ | |
+| 13.1 | Create task | `POST /api/v1/tasks` | ✅ | Assignee ACTIVE check, default status=TODO/priority=MEDIUM, future dueDate validation, relationship wiring, audit `REGULAR`, `@Transactional(rollbackFor)` | ✅ | `TaskServiceImplTest` — happy path, without assignee, due date in past throws, assignee not found, assignee not ACTIVE throws, audit REGULAR |
+| 13.2 | Update task status | `PUT /api/v1/tasks/{id}/status` | ✅ | Status update with previous status tracking, audit `REGULAR` with transition details | ✅ | happy path with transition details, not found |
+| 13.3 | Overdue task detection (scheduler) | (automated) | ❌ | Scheduled job not implemented | ❌ | |
+| 13.4 | Delete task | `DELETE /api/v1/tasks/{id}` | ⚠️ | Existence check, audit `HIGH`; DONE+linked-record guard TODO (Task entity lacks taskId in Inspection/Sale) | ✅ | happy path, not found, audit HIGH |
 
 ---
 
@@ -166,8 +166,8 @@ The **WheelShift Developer** agent reads this file to know which areas need atte
 
 | BL Ref | Operation | Endpoint | Impl Status | Impl Notes | Test Status | Test Notes |
 |--------|-----------|----------|:-----------:|------------|:-----------:|------------|
-| 14.1 | Create event | `POST /api/v1/events` | ❌ | endTime > startTime, single-vehicle rule, TEST_DRIVE → RESERVED not verified | ❌ | |
-| 14.2 | Event reminders (scheduler) | (automated) | ❌ | | ❌ | |
+| 14.1 | Create event | `POST /api/v1/events` | ✅ | endTime > startTime validation, single-vehicle discriminator (car XOR motorcycle), TEST_DRIVE events auto-update vehicle status to RESERVED (if AVAILABLE), relationship wiring, audit `REGULAR`, `@Transactional(rollbackFor)` | ✅ | `EventServiceImplTest` — happy path, endTime before startTime throws, both vehicles throws, car not found, motorcycle not found, TEST_DRIVE reserves car (AVAILABLE→RESERVED), TEST_DRIVE skips RESERVED/SOLD cars, non-TEST_DRIVE doesn't reserve, relationship wired, audit REGULAR |
+| 14.2 | Event reminders (scheduler) | (automated) | ❌ | Scheduled job not implemented | ❌ | |
 
 ---
 
@@ -214,4 +214,10 @@ The **WheelShift Developer** agent reads this file to know which areas need atte
 | Audit calls in `MotorcycleServiceImpl` | ✅ | CREATE/UPDATE/MOVE → `REGULAR`; DELETE/STATUS_CHANGE → `HIGH` | ✅ | Covered in `MotorcycleServiceImplTest` |
 | Audit calls in `ClientServiceImpl` | ✅ | CREATE/UPDATE → `REGULAR`; DELETE/STATUS_CHANGE → `HIGH` | ✅ | Covered in `ClientServiceImplTest` |
 | Audit calls in `EmployeeServiceImpl` | ✅ | All writes → `CRITICAL` (security-sensitive) | ✅ | Covered in `EmployeeServiceImplTest` |
+| Audit calls in `ReservationServiceImpl` | ✅ | CREATE/UPDATE/DEPOSIT → `REGULAR`; DELETE/STATUS_CHANGE/CANCEL → `HIGH` | ✅ | Covered in `ReservationServiceImplTest` |
+| Audit calls in `SaleServiceImpl` | ✅ | CREATE/DELETE → `CRITICAL`; UPDATE → `HIGH` | ✅ | Covered in `SaleServiceImplTest` |
+| Audit calls in `FinancialTransactionServiceImpl` | ✅ | All writes → `CRITICAL` (financial operations) | ✅ | Covered in `FinancialTransactionServiceImplTest` |
+| Audit calls in `InquiryServiceImpl` | ✅ | CREATE/UPDATE → `REGULAR`; DELETE/STATUS_CHANGE → `HIGH` | ✅ | Covered in `InquiryServiceImplTest` |
+| Audit calls in `TaskServiceImpl` | ✅ | CREATE/UPDATE/STATUS_CHANGE → `REGULAR`; DELETE → `HIGH` | ✅ | Covered in `TaskServiceImplTest` |
+| Audit calls in `EventServiceImpl` | ✅ | CREATE/UPDATE → `REGULAR`; DELETE → `HIGH` | ✅ | Covered in `EventServiceImplTest` |
 | Audit calls in all other service impls | ❌ | Not yet added | ❌ | |

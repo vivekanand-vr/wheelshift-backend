@@ -4,13 +4,22 @@ import com.wheelshiftpro.dto.request.SaleRequest;
 import com.wheelshiftpro.dto.response.PageResponse;
 import com.wheelshiftpro.dto.response.SaleResponse;
 import com.wheelshiftpro.entity.Car;
+import com.wheelshiftpro.entity.Client;
+import com.wheelshiftpro.entity.Employee;
+import com.wheelshiftpro.entity.FinancialTransaction;
 import com.wheelshiftpro.entity.Sale;
+import com.wheelshiftpro.entity.StorageLocation;
+import com.wheelshiftpro.enums.AuditCategory;
+import com.wheelshiftpro.enums.AuditLevel;
 import com.wheelshiftpro.enums.CarStatus;
 import com.wheelshiftpro.enums.ReservationStatus;
+import com.wheelshiftpro.enums.TransactionType;
 import com.wheelshiftpro.exception.BusinessException;
 import com.wheelshiftpro.exception.ResourceNotFoundException;
 import com.wheelshiftpro.mapper.SaleMapper;
 import com.wheelshiftpro.repository.*;
+import com.wheelshiftpro.security.EmployeeUserDetails;
+import com.wheelshiftpro.service.AuditService;
 import com.wheelshiftpro.service.ClientService;
 import com.wheelshiftpro.service.SaleService;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +30,8 @@ import org.springframework.data.domain.Pageable;
 import java.time.LocalDateTime;
 import java.math.BigDecimal;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
@@ -29,7 +40,7 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@Transactional
+@Transactional(rollbackFor = Exception.class)
 public class SaleServiceImpl implements SaleService {
 
     private final SaleRepository saleRepository;
@@ -37,12 +48,25 @@ public class SaleServiceImpl implements SaleService {
     private final ClientRepository clientRepository;
     private final EmployeeRepository employeeRepository;
     private final ReservationRepository reservationRepository;
+    private final StorageLocationRepository storageLocationRepository;
+    private final FinancialTransactionRepository financialTransactionRepository;
     private final SaleMapper saleMapper;
     private final ClientService clientService;
+    private final AuditService auditService;
 
     @Override
     public SaleResponse createSale(SaleRequest request) {
         log.debug("Creating sale for car ID: {}", request.getCarId());
+
+        // Validate sale price
+        if (request.getSalePrice() == null || request.getSalePrice().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException("Sale price must be greater than 0", "INVALID_SALE_PRICE");
+        }
+
+        // Validate sale date
+        if (request.getSaleDate() != null && request.getSaleDate().isAfter(LocalDateTime.now())) {
+            throw new BusinessException("Sale date cannot be in the future", "INVALID_SALE_DATE");
+        }
 
         Car car = carRepository.findById(request.getCarId())
                 .orElseThrow(() -> new ResourceNotFoundException("Car", "id", request.getCarId()));
@@ -51,21 +75,32 @@ public class SaleServiceImpl implements SaleService {
             throw new BusinessException("Car is already sold", "CAR_ALREADY_SOLD");
         }
 
-        if (!clientRepository.existsById(request.getClientId())) {
-            throw new ResourceNotFoundException("Client", "id", request.getClientId());
-        }
+        Client client = clientRepository.findById(request.getClientId())
+                .orElseThrow(() -> new ResourceNotFoundException("Client", "id", request.getClientId()));
 
-        if (!employeeRepository.existsById(request.getEmployeeId())) {
-            throw new ResourceNotFoundException("Employee", "id", request.getEmployeeId());
-        }
+        Employee employee = employeeRepository.findById(request.getEmployeeId())
+                .orElseThrow(() -> new ResourceNotFoundException("Employee", "id", request.getEmployeeId()));
 
         Sale sale = saleMapper.toEntity(request);
+        sale.setCar(car);
+        sale.setClient(client);
+        sale.setEmployee(employee);
+
+        // Calculate commission
+        sale.calculateCommission();
 
         // Update car status
         car.setStatus(CarStatus.SOLD);
         carRepository.save(car);
 
-        // If there's an active reservation, mark it as converted
+        // Decrement storage location count
+        if (car.getStorageLocation() != null) {
+            StorageLocation location = car.getStorageLocation();
+            location.setCurrentCarCount(location.getCurrentCarCount() - 1);
+            storageLocationRepository.save(location);
+        }
+
+        // If there's an active reservation, mark it as converted/fulfilled
         reservationRepository.findByCarId(car.getId())
                 .ifPresent(reservation -> {
                     reservation.setStatus(ReservationStatus.CONFIRMED);
@@ -76,6 +111,20 @@ public class SaleServiceImpl implements SaleService {
         clientService.incrementPurchaseCount(request.getClientId());
 
         Sale saved = saleRepository.save(sale);
+
+        // Create financial transaction for the sale
+        FinancialTransaction transaction = FinancialTransaction.builder()
+                .car(car)
+                .transactionType(TransactionType.SALE)
+                .amount(request.getSalePrice())
+                .transactionDate(request.getSaleDate() != null ? request.getSaleDate() : LocalDateTime.now())
+                .description("Sale transaction for car VIN: " + car.getVinNumber())
+                .build();
+        financialTransactionRepository.save(transaction);
+
+        auditService.log(AuditCategory.SALE, saved.getId(), "CREATE", AuditLevel.CRITICAL,
+                resolveCurrentEmployee(), 
+                "Car ID: " + car.getId() + ", Price: " + request.getSalePrice() + ", Commission: " + saved.getTotalCommission());
 
         log.info("Created sale with ID: {}", saved.getId());
         return saleMapper.toResponse(saved);
@@ -88,8 +137,23 @@ public class SaleServiceImpl implements SaleService {
         Sale sale = saleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Sale", "id", id));
 
+        // Prevent changing the car/motorcycle after sale is created
+        if (request.getCarId() != null && !request.getCarId().equals(sale.getCar().getId())) {
+            throw new BusinessException("Cannot change car after sale is recorded", "IMMUTABLE_VEHICLE");
+        }
+
+        BigDecimal previousPrice = sale.getSalePrice();
         saleMapper.updateEntityFromRequest(request, sale);
+
+        // Recalculate commission if price changed
+        if (!previousPrice.equals(sale.getSalePrice())) {
+            sale.calculateCommission();
+        }
+
         Sale updated = saleRepository.save(sale);
+
+        auditService.log(AuditCategory.SALE, id, "UPDATE", AuditLevel.HIGH,
+                resolveCurrentEmployee(), "Previous price: " + previousPrice + ", New price: " + updated.getSalePrice());
 
         log.info("Updated sale ID: {}", id);
         return saleMapper.toResponse(updated);
@@ -135,10 +199,25 @@ public class SaleServiceImpl implements SaleService {
         Sale sale = saleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Sale", "id", id));
 
-        // Optionally revert car status
+        // Block if financial transactions exist
+        if (financialTransactionRepository.existsBySaleCarId(sale.getCar().getId())) {
+            throw new BusinessException("Cannot delete sale: financial transactions exist for this car", "HAS_FINANCIAL_TRANSACTIONS");
+        }
+
+        // Revert car status
         Car car = sale.getCar();
         car.setStatus(CarStatus.AVAILABLE);
         carRepository.save(car);
+
+        // Decrement client purchase count
+        Client client = sale.getClient();
+        if (client.getTotalPurchases() > 0) {
+            client.setTotalPurchases(client.getTotalPurchases() - 1);
+            clientRepository.save(client);
+        }
+
+        auditService.log(AuditCategory.SALE, id, "DELETE", AuditLevel.CRITICAL,
+                resolveCurrentEmployee(), "Sale deleted, car reverted to AVAILABLE");
 
         saleRepository.delete(sale);
         log.info("Deleted sale ID: {}", id);
@@ -230,5 +309,13 @@ public class SaleServiceImpl implements SaleService {
                 .last(page.isLast())
                 .first(page.isFirst())
                 .build();
+    }
+
+    private Employee resolveCurrentEmployee() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof EmployeeUserDetails u) {
+            return employeeRepository.getReferenceById(u.getId());
+        }
+        return null;
     }
 }
