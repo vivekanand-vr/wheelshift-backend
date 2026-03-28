@@ -175,9 +175,9 @@ The **WheelShift Developer** agent reads this file to know which areas need atte
 
 | BL Ref | Operation | Endpoint | Impl Status | Impl Notes | Test Status | Test Notes |
 |--------|-----------|----------|:-----------:|------------|:-----------:|------------|
-| 15.1 | Upload file | `POST /api/v1/files` | ❌ | Type/size validation, UUID generation, access log not verified | ❌ | |
-| 15.2 | Delete file | `DELETE /api/v1/files/{id}` | ❌ | Soft-delete, reference nullification not verified | ❌ | |
-| 15.3 | Access file | `GET /api/v1/files/{id}` | ❌ | Access log entry not verified | ❌ | |
+| 15.1 | Upload file | `POST /api/v1/files` | ✅ | Type/size validation, UUID generation, ACTIVE status set, REGULAR audit log; `@PreAuthorize("isAuthenticated()")` on controller; `FileAccessLog` entity not yet created (pending migration) | ✅ | happyPath, emptyFile, fileTooLarge, statusActive, auditLogged, authenticated/unauthenticated movedBy |
+| 15.2 | Delete file | `DELETE /api/v1/files/{id}` | ✅ | Soft-delete sets DELETED status (HIGH audit); hard-delete removes physical file + DB record (HIGH audit, audited before delete); `@PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")` on controller | ✅ | softDelete happyPath/notFound/auditLevel; hardDelete happyPath/auditOrder/notFound |
+| 15.3 | Access file | `GET /api/v1/files/{id}` | ⚠️ | File served via Resource; `@PreAuthorize("isAuthenticated()")` on controller; `FileAccessLog` entity does not exist — access log entry per BL 15.3 not implemented (pending entity + migration) | ✅ | notFoundInDb, physicalFileMissing, happyPath |
 
 ---
 

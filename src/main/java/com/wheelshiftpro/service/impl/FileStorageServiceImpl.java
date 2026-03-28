@@ -20,9 +20,16 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.wheelshiftpro.entity.Employee;
+import com.wheelshiftpro.enums.AuditCategory;
+import com.wheelshiftpro.enums.AuditLevel;
+import com.wheelshiftpro.repository.EmployeeRepository;
+import com.wheelshiftpro.security.EmployeeUserDetails;
+import com.wheelshiftpro.service.AuditService;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -40,11 +47,13 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@Transactional
+@Transactional(rollbackFor = Exception.class)
 public class FileStorageServiceImpl implements FileStorageService {
 
     private final FileMetadataRepository fileMetadataRepository;
     private final FileMetadataMapper fileMetadataMapper;
+    private final EmployeeRepository employeeRepository;
+    private final AuditService auditService;
 
     @Value("${file.storage.base-path:uploads}")
     private String baseStoragePath;
@@ -130,6 +139,9 @@ public class FileStorageServiceImpl implements FileStorageService {
         // Save to database
         FileMetadata saved = fileMetadataRepository.save(fileMetadata);
         log.info("File metadata saved with ID: {}", fileId);
+
+        auditService.log(AuditCategory.SYSTEM, saved.getId(), "UPLOAD", AuditLevel.REGULAR,
+                resolveCurrentEmployee(), "File: " + fileId + " (" + fileType + ", " + file.getSize() + " bytes)");
 
         return fileMetadataMapper.toResponse(saved);
     }
@@ -257,7 +269,10 @@ public class FileStorageServiceImpl implements FileStorageService {
         
         fileMetadata.markAsDeleted();
         fileMetadataRepository.save(fileMetadata);
-        
+
+        auditService.log(AuditCategory.SYSTEM, fileMetadata.getId(), "SOFT_DELETE", AuditLevel.HIGH,
+                resolveCurrentEmployee(), "File soft-deleted: " + fileId);
+
         log.info("File soft deleted successfully: {}", fileId);
     }
 
@@ -279,6 +294,9 @@ public class FileStorageServiceImpl implements FileStorageService {
         }
         
         // Delete from database
+        auditService.log(AuditCategory.SYSTEM, fileMetadata.getId(), "HARD_DELETE", AuditLevel.HIGH,
+                resolveCurrentEmployee(), "File hard-deleted: " + fileId);
+
         fileMetadataRepository.delete(fileMetadata);
         log.info("File hard deleted successfully: {}", fileId);
     }
@@ -292,7 +310,10 @@ public class FileStorageServiceImpl implements FileStorageService {
         
         fileMetadata.markAsArchived();
         fileMetadataRepository.save(fileMetadata);
-        
+
+        auditService.log(AuditCategory.SYSTEM, fileMetadata.getId(), "ARCHIVE", AuditLevel.REGULAR,
+                resolveCurrentEmployee(), "File archived: " + fileId);
+
         log.info("File archived successfully: {}", fileId);
     }
 
@@ -305,7 +326,10 @@ public class FileStorageServiceImpl implements FileStorageService {
         
         fileMetadata.setStatus(FileStatus.ACTIVE);
         fileMetadataRepository.save(fileMetadata);
-        
+
+        auditService.log(AuditCategory.SYSTEM, fileMetadata.getId(), "RESTORE", AuditLevel.REGULAR,
+                resolveCurrentEmployee(), "File restored: " + fileId);
+
         log.info("File restored successfully: {}", fileId);
     }
 
@@ -446,10 +470,14 @@ public class FileStorageServiceImpl implements FileStorageService {
      * Build public URL for accessing the file.
      */
     private String buildPublicUrl(String fileId) {
-        return ServletUriComponentsBuilder.fromCurrentContextPath()
-                .path(baseUrl)
-                .path("/")
-                .path(fileId)
-                .toUriString();
+        return baseUrl + "/" + fileId;
+    }
+
+    private Employee resolveCurrentEmployee() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof EmployeeUserDetails u) {
+            return employeeRepository.getReferenceById(u.getId());
+        }
+        return null;
     }
 }
