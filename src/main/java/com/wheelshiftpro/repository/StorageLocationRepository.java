@@ -30,6 +30,11 @@ public interface StorageLocationRepository extends JpaRepository<StorageLocation
     boolean existsByName(String name);
 
     /**
+     * Check if another location exists with the same name, excluding the given ID.
+     */
+    boolean existsByNameAndIdNot(String name, Long id);
+
+    /**
      * Get locations ordered by available capacity descending.
      */
     @Query("SELECT sl FROM StorageLocation sl ORDER BY (sl.totalCapacity - sl.currentCarCount - sl.currentMotorcycleCount) DESC")

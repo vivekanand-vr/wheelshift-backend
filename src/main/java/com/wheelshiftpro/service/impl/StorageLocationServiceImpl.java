@@ -1,15 +1,27 @@
 package com.wheelshiftpro.service.impl;
 
 import com.wheelshiftpro.dto.request.StorageLocationRequest;
+import com.wheelshiftpro.dto.response.CarResponse;
+import com.wheelshiftpro.dto.response.MotorcycleResponse;
 import com.wheelshiftpro.dto.response.PageResponse;
 import com.wheelshiftpro.dto.response.StorageLocationResponse;
+import com.wheelshiftpro.entity.Employee;
 import com.wheelshiftpro.entity.StorageLocation;
+import com.wheelshiftpro.enums.AuditCategory;
+import com.wheelshiftpro.enums.AuditLevel;
 import com.wheelshiftpro.exception.BusinessException;
 import com.wheelshiftpro.exception.DuplicateResourceException;
 import com.wheelshiftpro.exception.ResourceNotFoundException;
+import com.wheelshiftpro.mapper.CarMapper;
+import com.wheelshiftpro.mapper.MotorcycleMapper;
 import com.wheelshiftpro.mapper.StorageLocationMapper;
+import com.wheelshiftpro.repository.EmployeeRepository;
 import com.wheelshiftpro.repository.StorageLocationRepository;
+import com.wheelshiftpro.security.EmployeeUserDetails;
+import com.wheelshiftpro.service.AuditService;
 import com.wheelshiftpro.service.StorageLocationService;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -24,11 +36,15 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@Transactional
+@Transactional(rollbackFor = Exception.class)
 public class StorageLocationServiceImpl implements StorageLocationService {
 
     private final StorageLocationRepository storageLocationRepository;
     private final StorageLocationMapper storageLocationMapper;
+    private final CarMapper carMapper;
+    private final MotorcycleMapper motorcycleMapper;
+    private final EmployeeRepository employeeRepository;
+    private final AuditService auditService;
 
     @Override
     public StorageLocationResponse createStorageLocation(StorageLocationRequest request) {
@@ -40,7 +56,9 @@ public class StorageLocationServiceImpl implements StorageLocationService {
 
         StorageLocation location = storageLocationMapper.toEntity(request);
         StorageLocation saved = storageLocationRepository.save(location);
-        
+
+        auditService.log(AuditCategory.STORAGE_LOCATION, saved.getId(), "CREATE",
+                AuditLevel.REGULAR, resolveCurrentEmployee(), "Name: " + saved.getName());
         log.info("Created storage location with ID: {}", saved.getId());
         return storageLocationMapper.toResponse(saved);
     }
@@ -52,7 +70,12 @@ public class StorageLocationServiceImpl implements StorageLocationService {
         StorageLocation location = storageLocationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("StorageLocation", "id", id));
 
-        if (request.getTotalCapacity() != null && 
+        if (request.getName() != null &&
+                storageLocationRepository.existsByNameAndIdNot(request.getName(), id)) {
+            throw new DuplicateResourceException("StorageLocation", "name", request.getName());
+        }
+
+        if (request.getTotalCapacity() != null &&
             request.getTotalCapacity() < location.getCurrentVehicleCount()) {
             throw new BusinessException(
                     "Cannot reduce capacity below current vehicle count: " + location.getCurrentVehicleCount(),
@@ -61,7 +84,9 @@ public class StorageLocationServiceImpl implements StorageLocationService {
 
         storageLocationMapper.updateEntityFromRequest(request, location);
         StorageLocation updated = storageLocationRepository.save(location);
-        
+
+        auditService.log(AuditCategory.STORAGE_LOCATION, id, "UPDATE",
+                AuditLevel.REGULAR, resolveCurrentEmployee(), "Name: " + updated.getName());
         log.info("Updated storage location ID: {}", id);
         return storageLocationMapper.toResponse(updated);
     }
@@ -111,24 +136,56 @@ public class StorageLocationServiceImpl implements StorageLocationService {
         }
 
         storageLocationRepository.delete(location);
+        auditService.log(AuditCategory.STORAGE_LOCATION, id, "DELETE",
+                AuditLevel.HIGH, resolveCurrentEmployee(), "Name: " + location.getName());
         log.info("Deleted storage location ID: {}", id);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public PageResponse<?> getCarsAtLocation(Long locationId, int page, int size) {
+    public PageResponse<CarResponse> getCarsAtLocation(Long locationId, int page, int size) {
         log.debug("Fetching cars at location ID: {}", locationId);
-        
-        if (!storageLocationRepository.existsById(locationId)) {
-            throw new ResourceNotFoundException("StorageLocation", "id", locationId);
-        }
 
-        return PageResponse.builder()
-                .content(List.of()) // Will be implemented when CarService is available
+        StorageLocation location = storageLocationRepository.findById(locationId)
+                .orElseThrow(() -> new ResourceNotFoundException("StorageLocation", "id", locationId));
+
+        var cars = location.getCars();
+        int start = Math.min(page * size, cars.size());
+        int end = Math.min(start + size, cars.size());
+        var pageContent = carMapper.toResponseList(cars.subList(start, end));
+
+        return PageResponse.<CarResponse>builder()
+                .content(pageContent)
                 .pageNumber(page)
                 .pageSize(size)
-                .totalElements(0)
-                .totalPages(0)
+                .totalElements((long) cars.size())
+                .totalPages((int) Math.ceil((double) cars.size() / size))
+                .first(page == 0)
+                .last(end >= cars.size())
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<MotorcycleResponse> getMotorcyclesAtLocation(Long locationId, int page, int size) {
+        log.debug("Fetching motorcycles at location ID: {}", locationId);
+
+        StorageLocation location = storageLocationRepository.findById(locationId)
+                .orElseThrow(() -> new ResourceNotFoundException("StorageLocation", "id", locationId));
+
+        var motorcycles = location.getMotorcycles();
+        int start = Math.min(page * size, motorcycles.size());
+        int end = Math.min(start + size, motorcycles.size());
+        var pageContent = motorcycleMapper.toResponseList(motorcycles.subList(start, end));
+
+        return PageResponse.<MotorcycleResponse>builder()
+                .content(pageContent)
+                .pageNumber(page)
+                .pageSize(size)
+                .totalElements((long) motorcycles.size())
+                .totalPages((int) Math.ceil((double) motorcycles.size() / size))
+                .first(page == 0)
+                .last(end >= motorcycles.size())
                 .build();
     }
 
@@ -141,6 +198,14 @@ public class StorageLocationServiceImpl implements StorageLocationService {
                 .orElseThrow(() -> new ResourceNotFoundException("StorageLocation", "id", locationId));
         
         return location.hasCapacity();
+    }
+
+    private Employee resolveCurrentEmployee() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof EmployeeUserDetails u) {
+            return employeeRepository.getReferenceById(u.getId());
+        }
+        return null;
     }
 
     private PageResponse<StorageLocationResponse> buildPageResponse(Page<StorageLocation> page) {

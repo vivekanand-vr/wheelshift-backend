@@ -60,9 +60,9 @@ The **WheelShift Developer** agent reads this file to know which areas need atte
 
 | BL Ref | Operation | Endpoint | Impl Status | Impl Notes | Test Status | Test Notes |
 |--------|-----------|----------|:-----------:|------------|:-----------:|------------|
-| 4.1 | Create inspection | `POST /api/v1/*-inspections` | ❌ | Future-date guard, vehicle status update, repair task creation not verified | ❌ | |
-| 4.2 | Update inspection | `PUT /api/v1/*-inspections/{id}` | ❌ | Future-date block not verified | ❌ | |
-| 4.3 | Delete inspection | `DELETE /api/v1/*-inspections/{id}` | ❌ | | ❌ | |
+| 4.1 | Create inspection | `POST /api/v1/*-inspections` | ✅ | Future-date guard, vehicle/inspector existence, relationship wiring via `getReferenceById`, audit `REGULAR`, `@PreAuthorize(SA,AD,IN,SM)` | ✅ | happy path, car/motorcycle not found, inspector not found, future date, audit level, auth/no-auth audit field |
+| 4.2 | Update inspection | `PUT /api/v1/*-inspections/{id}` | ✅ | Future-date block on non-null date, inspector re-wired on update, audit `REGULAR`, `@PreAuthorize(SA,AD,IN)` | ✅ | happy path, not found, future date, null date (no throw), inspector not found on update, inspector wired |
+| 4.3 | Delete inspection | `DELETE /api/v1/*-inspections/{id}` | ✅ | Existence check, audit `HIGH`, `@PreAuthorize(SA,AD)` | ✅ | happy path, not found, audit HIGH |
 
 ---
 
@@ -78,10 +78,10 @@ The **WheelShift Developer** agent reads this file to know which areas need atte
 
 | BL Ref | Operation | Endpoint | Impl Status | Impl Notes | Test Status | Test Notes |
 |--------|-----------|----------|:-----------:|------------|:-----------:|------------|
-| 6.1 | Create storage location | `POST /api/v1/storage-locations` | ❌ | Name uniqueness, initial counts not verified | ❌ | |
-| 6.2 | Update storage location | `PUT /api/v1/storage-locations/{id}` | ❌ | Capacity-below-current-count block not verified | ❌ | |
-| 6.3 | Delete storage location | `DELETE /api/v1/storage-locations/{id}` | ❌ | Has-vehicles guard not verified | ❌ | |
-| 6.4 | Capacity threshold alerts (80% / 100%) | (automated side effect) | ❌ | Notification dispatch on count update not verified | ❌ | |
+| 6.1 | Create storage location | `POST /api/v1/storage-locations` | ✅ | Name uniqueness, audit `REGULAR`, `@PreAuthorize(SA,AD)` | ✅ | happy path, duplicate name, audit level, auth/no-auth audit field |
+| 6.2 | Update storage location | `PUT /api/v1/storage-locations/{id}` | ✅ | Name uniqueness-on-update (`existsByNameAndIdNot`), capacity-below-current-count block, audit `REGULAR`, `@PreAuthorize(SA,AD,SM)` | ✅ | happy path, not found, duplicate name on update, capacity below current |
+| 6.3 | Delete storage location | `DELETE /api/v1/storage-locations/{id}` | ✅ | Has-vehicles guard, audit `HIGH`, `@PreAuthorize(SA,AD)` | ✅ | happy path, not found, location has vehicles, audit HIGH |
+| 6.4 | Capacity threshold alerts (80% / 100%) | (automated side effect) | ❌ | Notification dispatch on count update not implemented | ❌ | |
 
 ---
 

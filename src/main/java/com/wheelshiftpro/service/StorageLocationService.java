@@ -1,6 +1,8 @@
 package com.wheelshiftpro.service;
 
 import com.wheelshiftpro.dto.request.StorageLocationRequest;
+import com.wheelshiftpro.dto.response.CarResponse;
+import com.wheelshiftpro.dto.response.MotorcycleResponse;
 import com.wheelshiftpro.dto.response.PageResponse;
 import com.wheelshiftpro.dto.response.StorageLocationResponse;
 
@@ -69,14 +71,24 @@ public interface StorageLocationService {
     void deleteStorageLocation(Long id);
 
     /**
-     * Retrieves cars at a specific storage location.
+     * Retrieves cars at a specific storage location with pagination.
      *
      * @param locationId the storage location ID
      * @param page page number
      * @param size page size
      * @return paginated list of cars
      */
-    PageResponse<?> getCarsAtLocation(Long locationId, int page, int size);
+    PageResponse<CarResponse> getCarsAtLocation(Long locationId, int page, int size);
+
+    /**
+     * Retrieves motorcycles at a specific storage location with pagination.
+     *
+     * @param locationId the storage location ID
+     * @param page page number
+     * @param size page size
+     * @return paginated list of motorcycles
+     */
+    PageResponse<MotorcycleResponse> getMotorcyclesAtLocation(Long locationId, int page, int size);
 
     /**
      * Checks if a location has available capacity.
