@@ -4,12 +4,23 @@ import com.wheelshiftpro.dto.request.ClientRequest;
 import com.wheelshiftpro.dto.response.ClientResponse;
 import com.wheelshiftpro.dto.response.PageResponse;
 import com.wheelshiftpro.entity.Client;
+import com.wheelshiftpro.entity.Employee;
+import com.wheelshiftpro.enums.AuditCategory;
+import com.wheelshiftpro.enums.AuditLevel;
 import com.wheelshiftpro.enums.ClientStatus;
+import com.wheelshiftpro.enums.InquiryStatus;
+import com.wheelshiftpro.enums.ReservationStatus;
+import com.wheelshiftpro.exception.BusinessException;
 import com.wheelshiftpro.exception.DuplicateResourceException;
 import com.wheelshiftpro.exception.ResourceNotFoundException;
 import com.wheelshiftpro.mapper.ClientMapper;
 import com.wheelshiftpro.repository.ClientRepository;
+import com.wheelshiftpro.repository.EmployeeRepository;
+import com.wheelshiftpro.security.EmployeeUserDetails;
+import com.wheelshiftpro.service.AuditService;
 import com.wheelshiftpro.service.ClientService;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -26,11 +37,13 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@Transactional
+@Transactional(rollbackFor = Exception.class)
 public class ClientServiceImpl implements ClientService {
 
     private final ClientRepository clientRepository;
     private final ClientMapper clientMapper;
+    private final EmployeeRepository employeeRepository;
+    private final AuditService auditService;
 
     @Override
     public ClientResponse createClient(ClientRequest request) {
@@ -43,6 +56,8 @@ public class ClientServiceImpl implements ClientService {
         Client client = clientMapper.toEntity(request);
         Client saved = clientRepository.save(client);
 
+        auditService.log(AuditCategory.CLIENT, saved.getId(), "CREATE",
+                AuditLevel.REGULAR, resolveCurrentEmployee(), "Email: " + saved.getEmail());
         log.info("Created client with ID: {}", saved.getId());
         return clientMapper.toResponse(saved);
     }
@@ -54,9 +69,16 @@ public class ClientServiceImpl implements ClientService {
         Client client = clientRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Client", "id", id));
 
+        if (request.getEmail() != null &&
+                clientRepository.existsByEmailAndIdNot(request.getEmail(), id)) {
+            throw new DuplicateResourceException("Client", "email", request.getEmail());
+        }
+
         clientMapper.updateEntityFromRequest(request, client);
         Client updated = clientRepository.save(client);
 
+        auditService.log(AuditCategory.CLIENT, id, "UPDATE",
+                AuditLevel.REGULAR, resolveCurrentEmployee(), "Email: " + updated.getEmail());
         log.info("Updated client ID: {}", id);
         return clientMapper.toResponse(updated);
     }
@@ -101,7 +123,25 @@ public class ClientServiceImpl implements ClientService {
         Client client = clientRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Client", "id", id));
 
+        boolean hasOpenInquiries = client.getInquiries().stream()
+                .anyMatch(i -> i.getStatus() == InquiryStatus.OPEN
+                        || i.getStatus() == InquiryStatus.IN_PROGRESS);
+        if (hasOpenInquiries) {
+            throw new BusinessException(
+                    "Cannot delete client with open inquiries", "CLIENT_HAS_OPEN_INQUIRIES");
+        }
+
+        boolean hasActiveReservations = client.getReservations().stream()
+                .anyMatch(r -> r.getStatus() == ReservationStatus.PENDING
+                        || r.getStatus() == ReservationStatus.CONFIRMED);
+        if (hasActiveReservations) {
+            throw new BusinessException(
+                    "Cannot delete client with active reservations", "CLIENT_HAS_ACTIVE_RESERVATIONS");
+        }
+
         clientRepository.delete(client);
+        auditService.log(AuditCategory.CLIENT, id, "DELETE",
+                AuditLevel.HIGH, resolveCurrentEmployee(), "Email: " + client.getEmail());
         log.info("Deleted client ID: {}", id);
     }
 
@@ -164,6 +204,32 @@ public class ClientServiceImpl implements ClientService {
                 "totalClients", totalClients,
                 "activeClients", activeClients
         );
+    }
+
+    @Override
+    public ClientResponse updateClientStatus(Long id, ClientStatus status) {
+        log.debug("Updating client ID: {} status to: {}", id, status);
+
+        Client client = clientRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Client", "id", id));
+
+        ClientStatus previous = client.getStatus();
+        client.setStatus(status);
+        Client updated = clientRepository.save(client);
+
+        auditService.log(AuditCategory.CLIENT, id, "STATUS_CHANGE",
+                AuditLevel.HIGH, resolveCurrentEmployee(),
+                "From " + previous + " to " + status);
+        log.info("Updated client ID: {} status from {} to {}", id, previous, status);
+        return clientMapper.toResponse(updated);
+    }
+
+    private Employee resolveCurrentEmployee() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof EmployeeUserDetails u) {
+            return employeeRepository.getReferenceById(u.getId());
+        }
+        return null;
     }
 
     private PageResponse<ClientResponse> buildPageResponse(Page<Client> page) {

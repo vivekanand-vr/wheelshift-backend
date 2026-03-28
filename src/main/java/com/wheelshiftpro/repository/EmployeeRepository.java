@@ -31,6 +31,17 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     boolean existsByEmail(String email);
 
     /**
+     * Check if another employee exists with the same email, excluding the given ID.
+     */
+    boolean existsByEmailAndIdNot(String email, Long id);
+
+    /**
+     * Count employees that have a role with the given name.
+     */
+    @Query("SELECT COUNT(e) FROM Employee e JOIN e.roles r WHERE r.name = :roleName")
+    long countByRolesName(@Param("roleName") com.wheelshiftpro.enums.rbac.RoleType roleName);
+
+    /**
      * Find employees by status.
      */
     Page<Employee> findByStatus(EmployeeStatus status, Pageable pageable);

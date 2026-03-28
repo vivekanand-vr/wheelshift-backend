@@ -1,6 +1,6 @@
 # WheelShift Pro — Implementation & Test Status
 
-**Last Updated:** March 28, 2026  
+**Last Updated:** March 28, 2026 (Client BL 7.x, Employee BL 8.x)  
 **Spec Reference:** [`BUSINESS_LOGIC.md`](./BUSINESS_LOGIC.md)
 
 Track progress for every business logic operation defined in the spec.  
@@ -89,10 +89,10 @@ The **WheelShift Developer** agent reads this file to know which areas need atte
 
 | BL Ref | Operation | Endpoint | Impl Status | Impl Notes | Test Status | Test Notes |
 |--------|-----------|----------|:-----------:|------------|:-----------:|------------|
-| 7.1 | Create client | `POST /api/v1/clients` | ❌ | Email uniqueness, default status/totalPurchases not verified | ❌ | |
-| 7.2 | Update client | `PUT /api/v1/clients/{id}` | ❌ | Email uniqueness on update not verified | ❌ | |
-| 7.3 | Delete client | `DELETE /api/v1/clients/{id}` | ❌ | Soft-delete preference, inquiry/reservation guard not verified | ❌ | |
-| 7.4 | Increment purchase count (internal) | (triggered by BL 11.1) | ❌ | Not verified as a side effect of sale creation | ❌ | |
+| 7.1 | Create client | `POST /api/v1/clients` | ✅ | Email uniqueness, audit `REGULAR`, `@PreAuthorize(SA,AD,SALES)` | ✅ | `ClientServiceImplTest` — happy path, duplicate email, audit REGULAR, auth/no-auth audit field |
+| 7.2 | Update client | `PUT /api/v1/clients/{id}` | ✅ | Email uniqueness on update (`existsByEmailAndIdNot`), audit `REGULAR`, `@PreAuthorize(SA,AD,SALES)` | ✅ | happy path, not found, duplicate email on update, null email skips check |
+| 7.3 | Delete client | `DELETE /api/v1/clients/{id}` | ✅ | Open-inquiry guard (`OPEN`/`IN_PROGRESS`), active-reservation guard (`PENDING`/`CONFIRMED`), audit `HIGH`, `@PreAuthorize(SA,AD)` | ✅ | happy path, not found, open inquiry throws, active reservation throws, audit HIGH |
+| 7.4 | Increment purchase count (internal) | (triggered by BL 11.1) | ✅ | Increments `totalPurchases`, sets `lastPurchase` to now | ✅ | happy path increments count and sets lastPurchase, not found |
 
 ---
 
@@ -100,10 +100,10 @@ The **WheelShift Developer** agent reads this file to know which areas need atte
 
 | BL Ref | Operation | Endpoint | Impl Status | Impl Notes | Test Status | Test Notes |
 |--------|-----------|----------|:-----------:|------------|:-----------:|------------|
-| 8.1 | Create employee | `POST /api/v1/employees` | ❌ | Email uniqueness, BCrypt hash, default ACTIVE status not verified | ❌ | |
+| 8.1 | Create employee | `POST /api/v1/employees` | ✅ | Email uniqueness, BCrypt password hash, audit `CRITICAL`, `@PreAuthorize(SA,AD)` | ✅ | `EmployeeServiceImplTest` — happy path, duplicate email, null password (no hash), audit CRITICAL, auth audit field |
 | 8.2 | Assign role | `POST /api/v1/employees/{id}/roles` | ❌ | Role existence check not verified | ❌ | |
-| 8.3 | Update employee status | `PUT /api/v1/employees/{id}/status` | ❌ | SUPER_ADMIN guard, self-status guard not verified | ❌ | |
-| 8.4 | Delete employee | `DELETE /api/v1/employees/{id}` | ❌ | Sale/task/last-SA guards not verified | ❌ | |
+| 8.3 | Update employee status | `PUT /api/v1/employees/{id}/status` | ✅ | Self-INACTIVE/SUSPENDED guard (`SELF_STATUS_CHANGE_FORBIDDEN`), audit `CRITICAL`, `@PreAuthorize(SA,AD)` | ✅ | happy path, not found, self→INACTIVE throws, self→SUSPENDED throws, self→ACTIVE allowed, other employee→INACTIVE allowed, audit CRITICAL |
+| 8.4 | Delete employee | `DELETE /api/v1/employees/{id}` | ✅ | Sales guard (`EMPLOYEE_HAS_SALES`), tasks guard (`EMPLOYEE_HAS_TASKS`), last-SUPER_ADMIN guard (`LAST_SUPER_ADMIN`), audit `CRITICAL`, `@PreAuthorize(SA,AD)` | ✅ | happy path, not found, has sales throws, has tasks throws, last SA throws, not-last SA deletes, audit CRITICAL |
 
 ---
 
@@ -212,4 +212,6 @@ The **WheelShift Developer** agent reads this file to know which areas need atte
 | `AuditLogController` — `GET /api/v1/audit-logs` | ✅ | `@PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")`, filterable by category/level/action/entityId/performedById | ❌ | |
 | Audit calls in `CarServiceImpl` | ✅ | CREATE/UPDATE/MOVE → `REGULAR`; DELETE/STATUS_CHANGE → `HIGH` | ✅ | Covered in `CarServiceImplTest` |
 | Audit calls in `MotorcycleServiceImpl` | ✅ | CREATE/UPDATE/MOVE → `REGULAR`; DELETE/STATUS_CHANGE → `HIGH` | ✅ | Covered in `MotorcycleServiceImplTest` |
+| Audit calls in `ClientServiceImpl` | ✅ | CREATE/UPDATE → `REGULAR`; DELETE/STATUS_CHANGE → `HIGH` | ✅ | Covered in `ClientServiceImplTest` |
+| Audit calls in `EmployeeServiceImpl` | ✅ | All writes → `CRITICAL` (security-sensitive) | ✅ | Covered in `EmployeeServiceImplTest` |
 | Audit calls in all other service impls | ❌ | Not yet added | ❌ | |
