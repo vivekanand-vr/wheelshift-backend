@@ -84,4 +84,9 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
      * Count employees by status.
      */
     long countByStatus(EmployeeStatus status);
+
+    /**
+     * Find all employees that have the specified role.
+     */
+    List<Employee> findByRoles_Name(com.wheelshiftpro.enums.rbac.RoleType roleName);
 }

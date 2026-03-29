@@ -36,6 +36,12 @@ public enum NotificationEventType {
     PAYMENT_RECEIVED,
     PAYMENT_OVERDUE,
 
+    // ── Storage location events ─────────────────────────────────────────────────
+    LOCATION_NEAR_CAPACITY,
+
+    // ── Calendar event reminders ─────────────────────────────────────────────────
+    EVENT_REMINDER,
+
     // ── RBAC / security events ────────────────────────────────────────────────
     DATA_SCOPE_CHANGED,
 

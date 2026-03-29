@@ -81,7 +81,7 @@ The **WheelShift Developer** agent reads this file to know which areas need atte
 | 6.1 | Create storage location | `POST /api/v1/storage-locations` | ✅ | Name uniqueness, audit `REGULAR`, `@PreAuthorize(SA,AD)` | ✅ | happy path, duplicate name, audit level, auth/no-auth audit field |
 | 6.2 | Update storage location | `PUT /api/v1/storage-locations/{id}` | ✅ | Name uniqueness-on-update (`existsByNameAndIdNot`), capacity-below-current-count block, audit `REGULAR`, `@PreAuthorize(SA,AD,SM)` | ✅ | happy path, not found, duplicate name on update, capacity below current |
 | 6.3 | Delete storage location | `DELETE /api/v1/storage-locations/{id}` | ✅ | Has-vehicles guard, audit `HIGH`, `@PreAuthorize(SA,AD)` | ✅ | happy path, not found, location has vehicles, audit HIGH |
-| 6.4 | Capacity threshold alerts (80% / 100%) | (automated side effect) | ❌ | Notification dispatch on count update not implemented | ❌ | |
+| 6.4 | Capacity threshold alerts (80% / 100%) | (automated side effect) | ✅ | `StorageLocationCapacityScheduler` — hourly scan; locations ≥80% utilisation trigger `LOCATION_NEAR_CAPACITY` to all SM, AD, SA employees; `isFull=true` payload key at 100%; deduplicates recipients across roles; ShedLock (55 m / 5 m) | ✅ | `StorageLocationCapacitySchedulerTest` — noLocations_noNotifications, belowThreshold_noNotifications, atEightyPercent_notifiesManagement, atFullCapacity_payloadContainsIsFull, noManagementEmployees_noNotifications, deduplicatedRecipient_notifiedOnce |
 
 ---
 
@@ -157,7 +157,7 @@ The **WheelShift Developer** agent reads this file to know which areas need atte
 |--------|-----------|----------|:-----------:|------------|:-----------:|------------|
 | 13.1 | Create task | `POST /api/v1/tasks` | ✅ | Assignee ACTIVE check, default status=TODO/priority=MEDIUM, future dueDate validation, relationship wiring, audit `REGULAR`, `@Transactional(rollbackFor)` | ✅ | `TaskServiceImplTest` — happy path, without assignee, due date in past throws, assignee not found, assignee not ACTIVE throws, audit REGULAR |
 | 13.2 | Update task status | `PUT /api/v1/tasks/{id}/status` | ✅ | Status update with previous status tracking, audit `REGULAR` with transition details | ✅ | happy path with transition details, not found |
-| 13.3 | Overdue task detection (scheduler) | (automated) | ❌ | Scheduled job not implemented | ❌ | |
+| 13.3 | Overdue task detection (scheduler) | (automated) | ✅ | `OverdueTaskScheduler` — daily at 08:00 (configurable via `task.overdue.cron`); finds tasks via `TaskRepository.findOverdueTasks(now)`; notifies assignee (if set) and all AD/SA/SM employees with `TASK_OVERDUE`; skips duplicate notification when manager equals assignee; deduplicates recipients across roles; ShedLock (1 h / 5 m) | ✅ | `OverdueTaskSchedulerTest` — noOverdueTasks_noNotifications, assigneeNotified, noAssignee_onlyManagersNotified, managerIsAssignee_notifiedOnce, payloadContainsRequiredFields, multipleOverdueTasks_allNotified, deduplicatedRecipient_notifiedOncePerTask |
 | 13.4 | Delete task | `DELETE /api/v1/tasks/{id}` | ⚠️ | Existence check, audit `HIGH`; DONE+linked-record guard TODO (Task entity lacks taskId in Inspection/Sale) | ✅ | happy path, not found, audit HIGH |
 
 ---
@@ -167,7 +167,7 @@ The **WheelShift Developer** agent reads this file to know which areas need atte
 | BL Ref | Operation | Endpoint | Impl Status | Impl Notes | Test Status | Test Notes |
 |--------|-----------|----------|:-----------:|------------|:-----------:|------------|
 | 14.1 | Create event | `POST /api/v1/events` | ✅ | endTime > startTime validation, single-vehicle discriminator (car XOR motorcycle), TEST_DRIVE events auto-update vehicle status to RESERVED (if AVAILABLE), relationship wiring, audit `REGULAR`, `@Transactional(rollbackFor)` | ✅ | `EventServiceImplTest` — happy path, endTime before startTime throws, both vehicles throws, car not found, motorcycle not found, TEST_DRIVE reserves car (AVAILABLE→RESERVED), TEST_DRIVE skips RESERVED/SOLD cars, non-TEST_DRIVE doesn't reserve, relationship wired, audit REGULAR |
-| 14.2 | Event reminders (scheduler) | (automated) | ❌ | Scheduled job not implemented | ❌ | |
+| 14.2 | Event reminders (scheduler) | (automated) | ✅ | `EventReminderScheduler` — hourly (configurable via `event.reminder.check-interval-ms`); 24 h window [now+23h, now+25h] and 1 h window [now+30m, now+90m] via `EventRepository.findEventsBetween`; dispatches `EVENT_REMINDER` to all SM, AD, SA employees (Event entity has no creator/linked-employee relationship — best-effort broadcast to authorised roles per BL 14.1); title falls back to `name` field; deduplicates recipients across roles; ShedLock (55 m / 5 m) | ✅ | `EventReminderSchedulerTest` — noEvents_noNotifications, eventIn24hWindow_notifiesManagement, eventIn1hWindow_notifiesManagement, noManagementEmployees_noNotifications, payloadContainsRequiredFields, eventWithNullTitle_fallsBackToName, deduplicatedRecipient_notifiedOncePerEvent, eventsInBothWindows_bothWindowsNotified |
 
 ---
 
