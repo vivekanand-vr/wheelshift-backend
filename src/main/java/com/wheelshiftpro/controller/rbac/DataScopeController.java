@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Set;
@@ -26,6 +27,7 @@ public class DataScopeController {
     private final DataScopeService dataScopeService;
 
     @GetMapping("/{employeeId}/scopes")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
     @Operation(summary = "Get employee scopes", description = "Retrieve all data scopes for an employee")
     public ResponseEntity<Set<DataScopeResponse>> getEmployeeScopes(@PathVariable Long employeeId) {
         Set<DataScopeResponse> response = dataScopeService.getScopesByEmployeeId(employeeId);
@@ -33,6 +35,7 @@ public class DataScopeController {
     }
 
     @GetMapping("/scopes/{scopeId}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
     @Operation(summary = "Get scope by ID", description = "Retrieve a specific data scope by ID")
     public ResponseEntity<DataScopeResponse> getScopeById(@PathVariable Long scopeId) {
         DataScopeResponse response = dataScopeService.getScopeById(scopeId);
@@ -40,6 +43,7 @@ public class DataScopeController {
     }
 
     @PostMapping("/{employeeId}/scopes")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
     @Operation(summary = "Add scope to employee", description = "Add a data scope to an employee (Admin or Super Admin)")
     public ResponseEntity<DataScopeResponse> addScopeToEmployee(
             @PathVariable Long employeeId,
@@ -49,6 +53,7 @@ public class DataScopeController {
     }
 
     @PutMapping("/scopes/{scopeId}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
     @Operation(summary = "Update a scope", description = "Update an existing data scope (Admin or Super Admin)")
     public ResponseEntity<DataScopeResponse> updateScope(
             @PathVariable Long scopeId,
@@ -58,6 +63,7 @@ public class DataScopeController {
     }
 
     @DeleteMapping("/scopes/{scopeId}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
     @Operation(summary = "Remove scope", description = "Remove a data scope from an employee (Admin or Super Admin)")
     public ResponseEntity<Void> removeScope(@PathVariable Long scopeId) {
         dataScopeService.removeScopeFromEmployee(scopeId);

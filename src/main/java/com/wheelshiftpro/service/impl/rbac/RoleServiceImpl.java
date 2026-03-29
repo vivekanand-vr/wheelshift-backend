@@ -6,12 +6,21 @@ import com.wheelshiftpro.dto.response.rbac.RoleResponse;
 import com.wheelshiftpro.entity.Employee;
 import com.wheelshiftpro.entity.rbac.Permission;
 import com.wheelshiftpro.entity.rbac.Role;
+import com.wheelshiftpro.enums.AuditCategory;
+import com.wheelshiftpro.enums.AuditLevel;
 import com.wheelshiftpro.enums.rbac.RoleType;
+import com.wheelshiftpro.exception.BusinessException;
+import com.wheelshiftpro.exception.DuplicateResourceException;
 import com.wheelshiftpro.exception.ResourceNotFoundException;
 import com.wheelshiftpro.repository.EmployeeRepository;
 import com.wheelshiftpro.repository.rbac.PermissionRepository;
 import com.wheelshiftpro.repository.rbac.RoleRepository;
+import com.wheelshiftpro.security.EmployeeUserDetails;
+import com.wheelshiftpro.service.AuditService;
+import com.wheelshiftpro.service.CacheInvalidationService;
 import com.wheelshiftpro.service.rbac.RoleService;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,29 +37,34 @@ import java.util.stream.Collectors;
 @Service
 @Slf4j
 @RequiredArgsConstructor
-@Transactional
+@Transactional(rollbackFor = Exception.class)
 public class RoleServiceImpl implements RoleService {
 
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
     private final EmployeeRepository employeeRepository;
+    private final AuditService auditService;
+    private final CacheInvalidationService cacheInvalidationService;
 
     @Override
     public RoleResponse createRole(RoleRequest request) {
         log.info("Creating new role: {}", request.getName());
 
         if (roleRepository.existsByName(request.getName())) {
-            throw new IllegalArgumentException("Role with name " + request.getName() + " already exists");
+            throw new DuplicateResourceException("Role", "name", request.getName());
         }
 
         Role role = Role.builder()
                 .name(request.getName())
                 .description(request.getDescription())
-                .isSystem(request.getIsSystem() != null ? request.getIsSystem() : false)
+                .isSystem(false)
                 .build();
 
         role = roleRepository.save(role);
         log.info("Role created successfully with ID: {}", role.getId());
+
+        auditService.log(AuditCategory.EMPLOYEE, role.getId(), "CREATE_ROLE",
+                AuditLevel.CRITICAL, resolveCurrentEmployee(), "Role: " + role.getName());
 
         return mapToResponse(role);
     }
@@ -62,13 +76,17 @@ public class RoleServiceImpl implements RoleService {
         Role role = getRoleEntityById(roleId);
 
         if (role.getIsSystem()) {
-            throw new IllegalArgumentException("Cannot update system role");
+            throw new BusinessException("Cannot modify a system role", "SYSTEM_ROLE_MODIFY");
         }
 
         role.setDescription(request.getDescription());
         role = roleRepository.save(role);
 
         log.info("Role updated successfully: {}", roleId);
+
+        auditService.log(AuditCategory.EMPLOYEE, roleId, "UPDATE_ROLE",
+                AuditLevel.CRITICAL, resolveCurrentEmployee(), "Role: " + role.getName());
+
         return mapToResponse(role);
     }
 
@@ -79,15 +97,21 @@ public class RoleServiceImpl implements RoleService {
         Role role = getRoleEntityById(roleId);
 
         if (role.getIsSystem()) {
-            throw new IllegalArgumentException("Cannot delete system role");
+            throw new BusinessException("Cannot delete a system role", "SYSTEM_ROLE_DELETE");
         }
 
         if (!role.getEmployees().isEmpty()) {
-            throw new IllegalArgumentException("Cannot delete role that is assigned to employees");
+            throw new BusinessException(
+                    "Cannot delete role " + role.getName() + " because it is assigned to employees",
+                    "ROLE_HAS_EMPLOYEES");
         }
 
+        String roleName = role.getName().name();
         roleRepository.delete(role);
         log.info("Role deleted successfully: {}", roleId);
+
+        auditService.log(AuditCategory.EMPLOYEE, roleId, "DELETE_ROLE",
+                AuditLevel.CRITICAL, resolveCurrentEmployee(), "Role: " + roleName);
     }
 
     @Override
@@ -102,7 +126,7 @@ public class RoleServiceImpl implements RoleService {
     public RoleResponse getRoleByName(RoleType name) {
         log.debug("Fetching role with name: {}", name);
         Role role = roleRepository.findByName(name)
-                .orElseThrow(() -> new ResourceNotFoundException("Role not found with name: " + name));
+                .orElseThrow(() -> new ResourceNotFoundException("Role", "name", name));
         return mapToResponse(role);
     }
 
@@ -129,7 +153,7 @@ public class RoleServiceImpl implements RoleService {
         log.info("Assigning role {} to employee {}", roleId, employeeId);
 
         Employee employee = employeeRepository.findById(employeeId)
-                .orElseThrow(() -> new ResourceNotFoundException("Employee not found with ID: " + employeeId));
+                .orElseThrow(() -> new ResourceNotFoundException("Employee", "id", employeeId));
 
         Role role = getRoleEntityById(roleId);
 
@@ -137,6 +161,10 @@ public class RoleServiceImpl implements RoleService {
         employeeRepository.save(employee);
 
         log.info("Role assigned successfully");
+
+        auditService.log(AuditCategory.EMPLOYEE, employeeId, "ASSIGN_ROLE",
+                AuditLevel.CRITICAL, resolveCurrentEmployee(),
+                "Role " + role.getName() + " assigned to employee " + employeeId);
     }
 
     @Override
@@ -144,7 +172,7 @@ public class RoleServiceImpl implements RoleService {
         log.info("Removing role {} from employee {}", roleId, employeeId);
 
         Employee employee = employeeRepository.findById(employeeId)
-                .orElseThrow(() -> new ResourceNotFoundException("Employee not found with ID: " + employeeId));
+                .orElseThrow(() -> new ResourceNotFoundException("Employee", "id", employeeId));
 
         Role role = getRoleEntityById(roleId);
 
@@ -152,6 +180,10 @@ public class RoleServiceImpl implements RoleService {
         employeeRepository.save(employee);
 
         log.info("Role removed successfully");
+
+        auditService.log(AuditCategory.EMPLOYEE, employeeId, "REMOVE_ROLE",
+                AuditLevel.CRITICAL, resolveCurrentEmployee(),
+                "Role " + role.getName() + " removed from employee " + employeeId);
     }
 
     @Override
@@ -160,12 +192,19 @@ public class RoleServiceImpl implements RoleService {
 
         Role role = getRoleEntityById(roleId);
         Permission permission = permissionRepository.findById(permissionId)
-                .orElseThrow(() -> new ResourceNotFoundException("Permission not found with ID: " + permissionId));
+                .orElseThrow(() -> new ResourceNotFoundException("Permission", "id", permissionId));
 
         role.addPermission(permission);
         roleRepository.save(role);
 
         log.info("Permission added successfully");
+
+        role.getEmployees().forEach(emp ->
+                cacheInvalidationService.evictCache("employeePermissions", emp.getId()));
+
+        auditService.log(AuditCategory.EMPLOYEE, roleId, "ADD_PERMISSION_TO_ROLE",
+                AuditLevel.CRITICAL, resolveCurrentEmployee(),
+                "Permission " + permission.getName() + " added to role " + role.getName());
     }
 
     @Override
@@ -174,26 +213,41 @@ public class RoleServiceImpl implements RoleService {
 
         Role role = getRoleEntityById(roleId);
         Permission permission = permissionRepository.findById(permissionId)
-                .orElseThrow(() -> new ResourceNotFoundException("Permission not found with ID: " + permissionId));
+                .orElseThrow(() -> new ResourceNotFoundException("Permission", "id", permissionId));
 
         role.removePermission(permission);
         roleRepository.save(role);
 
         log.info("Permission removed successfully");
+
+        role.getEmployees().forEach(emp ->
+                cacheInvalidationService.evictCache("employeePermissions", emp.getId()));
+
+        auditService.log(AuditCategory.EMPLOYEE, roleId, "REMOVE_PERMISSION_FROM_ROLE",
+                AuditLevel.CRITICAL, resolveCurrentEmployee(),
+                "Permission " + permission.getName() + " removed from role " + role.getName());
     }
 
     @Override
     @Transactional(readOnly = true)
     public Role getRoleEntityById(Long roleId) {
         return roleRepository.findById(roleId)
-                .orElseThrow(() -> new ResourceNotFoundException("Role not found with ID: " + roleId));
+                .orElseThrow(() -> new ResourceNotFoundException("Role", "id", roleId));
     }
 
     @Override
     @Transactional(readOnly = true)
     public Role getRoleEntityByName(RoleType name) {
         return roleRepository.findByName(name)
-                .orElseThrow(() -> new ResourceNotFoundException("Role not found with name: " + name));
+                .orElseThrow(() -> new ResourceNotFoundException("Role", "name", name));
+    }
+
+    private Employee resolveCurrentEmployee() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof EmployeeUserDetails u) {
+            return employeeRepository.getReferenceById(u.getId());
+        }
+        return null;
     }
 
     private RoleResponse mapToResponse(Role role) {

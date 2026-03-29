@@ -36,6 +36,9 @@ public enum NotificationEventType {
     PAYMENT_RECEIVED,
     PAYMENT_OVERDUE,
 
+    // ── RBAC / security events ────────────────────────────────────────────────
+    DATA_SCOPE_CHANGED,
+
     // ── Wildcard — matches any event type when stored in preferences ──────────
     ALL;
 

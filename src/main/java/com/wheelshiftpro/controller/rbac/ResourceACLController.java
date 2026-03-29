@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -27,6 +28,7 @@ public class ResourceACLController {
     private final ResourceACLService aclService;
 
     @GetMapping("/{resourceType}/{resourceId}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
     @Operation(summary = "Get ACL for resource", description = "Retrieve all ACL entries for a specific resource")
     public ResponseEntity<List<ResourceACLResponse>> getACLByResource(
             @PathVariable ResourceType resourceType,
@@ -36,6 +38,7 @@ public class ResourceACLController {
     }
 
     @PostMapping("/{resourceType}/{resourceId}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
     @Operation(summary = "Add ACL entry", description = "Add an ACL entry for a resource (Super Admin or resource owner)")
     public ResponseEntity<ResourceACLResponse> addACL(
             @PathVariable ResourceType resourceType,
@@ -47,6 +50,7 @@ public class ResourceACLController {
     }
 
     @DeleteMapping("/{aclId}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
     @Operation(summary = "Remove ACL entry", description = "Remove an ACL entry (Super Admin or resource owner)")
     public ResponseEntity<Void> removeACL(@PathVariable Long aclId) {
         aclService.removeACL(aclId);
@@ -54,6 +58,7 @@ public class ResourceACLController {
     }
 
     @DeleteMapping("/{resourceType}/{resourceId}")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Operation(summary = "Remove all ACL for resource", description = "Remove all ACL entries for a resource (Super Admin only)")
     public ResponseEntity<Void> removeAllACLForResource(
             @PathVariable ResourceType resourceType,
