@@ -176,6 +176,7 @@ Five tailored dashboard views: Admin, Sales, Inspector, Finance, Store Manager.
 | Tasks | `/tasks` | `TaskController` |
 | Events | `/events` | `EventController` |
 | Inquiries | `/inquiries` | `InquiryController` |
+| Audit Logs | `/audit-logs` | `AuditLogController` |
 | Files | `/files` | `FileStorageController` |
 | Dashboards | `/dashboard` | `DashboardController` |
 | Notifications | `/notifications` | `NotificationController` |
@@ -214,6 +215,10 @@ Schema is managed by **Flyway** — migrations run automatically on startup.
 | V16 | Seed car models from dataset |
 | V17 | Seed motorcycle models from dataset |
 | V18 | Align notification event types to enum |
+| V19 | Storage location triggers |
+| V20 | Split vehicle count by type |
+| V21 | Add vehicle description |
+| V22 | Audit logs table |
 
 Migration files: `src/main/resources/db/migration/`
 Rollback scripts (manual): `src/main/resources/db/rollbacks/`
@@ -310,6 +315,10 @@ A failing architecture test is a **build failure** — fix the architecture, nev
 | Doc | Description |
 |-----|-------------|
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Architecture diagrams, folder conventions, how to add features and migrations |
+| [docs/BUSINESS_LOGIC.md](docs/BUSINESS_LOGIC.md) | Complete business logic specification for all operations |
+| [docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md) | Implementation and test coverage status tracker |
+| [docs/DATABASE_DESIGN.md](docs/DATABASE_DESIGN.md) | Entity-relationship diagrams and database schema |
+| [docs/AI_SERVICE_OVERVIEW.md](docs/AI_SERVICE_OVERVIEW.md) | AI service architecture and implementation plan |
 | [docs/ARCHITECTURE_REVIEW.md](docs/ARCHITECTURE_REVIEW.md) | Architecture review, design patterns, improvement roadmap |
 | [docs/PRODUCT_DOCUMENTATION.md](docs/PRODUCT_DOCUMENTATION.md) | Full system and product overview |
 | [docs/DEVELOPMENT_GUIDE.md](docs/DEVELOPMENT_GUIDE.md) | Detailed development workflow |
