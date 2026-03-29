@@ -1,6 +1,6 @@
 # WheelShift Pro — Implementation & Test Status
 
-**Last Updated:** March 28, 2026 (Inquiry BL 9.x, Task BL 13.x, Event BL 14.x)  
+**Last Updated:** March 29, 2026 (RBAC BL 16.x — all four services fixed and tested)  
 **Spec Reference:** [`BUSINESS_LOGIC.md`](./BUSINESS_LOGIC.md)
 
 Track progress for every business logic operation defined in the spec.  
@@ -185,11 +185,14 @@ The **WheelShift Developer** agent reads this file to know which areas need atte
 
 | BL Ref | Operation | Endpoint | Impl Status | Impl Notes | Test Status | Test Notes |
 |--------|-----------|----------|:-----------:|------------|:-----------:|------------|
-| 16.1 | Create custom role | `POST /api/v1/rbac/roles` | ❌ | Name uniqueness, `isSystem = false` not verified | ❌ | |
-| 16.2 | Delete role | `DELETE /api/v1/rbac/roles/{id}` | ❌ | System-role + assigned-to-employee guards not verified | ❌ | |
-| 16.3 | Add/remove permission | `POST/DELETE /api/v1/rbac/roles/{id}/permissions` | ❌ | Session invalidation not verified | ❌ | |
-| 16.4 | Create data scope | `POST /api/v1/rbac/data-scopes` | ❌ | | ❌ | |
-| 16.5 | Grant/revoke resource ACL | `POST/DELETE /api/v1/rbac/acl` | ❌ | | ❌ | |
+| 16.1 | Create custom role | `POST /api/v1/rbac/roles` | ✅ | Name uniqueness (`existsByName`), `isSystem=false` forced, audit `CRITICAL`, `@PreAuthorize(SA,AD)` | ✅ | `RoleServiceImplTest` — happyPath, duplicateName, auditLevelCritical, auth/no-auth audit field |
+| 16.1 | Update role | `PUT /api/v1/rbac/roles/{id}` | ✅ | System-role guard (`SYSTEM_ROLE_MODIFY`), audit `CRITICAL` | ✅ | happyPath, systemRole throws, notFound |
+| 16.2 | Delete role | `DELETE /api/v1/rbac/roles/{id}` | ✅ | System-role guard (`SYSTEM_ROLE_DELETE`), has-employees guard (`ROLE_HAS_EMPLOYEES`), audit `CRITICAL`, `@PreAuthorize(SA,AD)` | ✅ | happyPath, systemRole throws, roleHasEmployees throws, notFound, auditLevelCritical |
+| 16.2 | Assign/remove role to employee | `POST/DELETE /api/v1/rbac/employees/{id}/roles/{roleId}` | ✅ | Employee + role existence checks, audit `CRITICAL`, cache eviction on permission change | ✅ | assignRole happyPath/employeeNotFound/roleNotFound; removeRole happyPath/employeeNotFound |
+| 16.3 | Add/remove permission | `POST/DELETE /api/v1/rbac/roles/{id}/permissions/{permId}` | ✅ | Role + permission existence, cache evict per assigned employee (`cacheInvalidationService`), audit `CRITICAL`, `@PreAuthorize(SA,AD)` | ✅ | addPermission happyPath/permissionNotFound; removePermission happyPath/roleNotFound/permissionNotFound |
+| 16.3 | Create/delete permission | `POST/DELETE /api/v1/rbac/permissions` | ✅ | Name uniqueness (`existsByName`), has-roles guard (`PERMISSION_HAS_ROLES`) on delete, audit `CRITICAL` | ✅ | `PermissionServiceImplTest` — createPermission: happyPath/duplicate/auditLevel; deletePermission: happyPath/hasRoles throws/notFound/auditLevel |
+| 16.4 | Create data scope | `POST /api/v1/rbac/data-scopes` | ✅ | Employee existence check, duplicate scope guard, audit `CRITICAL`, `DATA_SCOPE_CHANGED` notification dispatched, `@PreAuthorize(SA,AD)` | ✅ | `DataScopeServiceImplTest` — addScope: happyPath/employeeNotFound/duplicateScope/auditLevel/auth/no-auth; updateScope: happyPath/notFound; removeScope: happyPath/notFound/auditLevel; hasScope: include/exclude/missing; getLocationScopes |
+| 16.5 | Grant resource ACL | `POST /api/v1/rbac/acl` | ✅ | Duplicate ACL guard, audit `CRITICAL` (`AuditCategory.SYSTEM`), `@PreAuthorize(SA,AD)` | ✅ | `ResourceACLServiceImplTest` — addACL: happyPath/duplicate/auditLevel/auth/no-auth; removeACL: happyPath/notFound/auditLevel; getACLByResource; hasACLAccess: access/noAccess/employeeNotFound; removeAllACL: happyPath/auditLevel |
 
 ---
 
@@ -220,4 +223,4 @@ The **WheelShift Developer** agent reads this file to know which areas need atte
 | Audit calls in `InquiryServiceImpl` | ✅ | CREATE/UPDATE → `REGULAR`; DELETE/STATUS_CHANGE → `HIGH` | ✅ | Covered in `InquiryServiceImplTest` |
 | Audit calls in `TaskServiceImpl` | ✅ | CREATE/UPDATE/STATUS_CHANGE → `REGULAR`; DELETE → `HIGH` | ✅ | Covered in `TaskServiceImplTest` |
 | Audit calls in `EventServiceImpl` | ✅ | CREATE/UPDATE → `REGULAR`; DELETE → `HIGH` | ✅ | Covered in `EventServiceImplTest` |
-| Audit calls in all other service impls | ❌ | Not yet added | ❌ | |
+| Audit calls in all other service impls | ✅ | RBAC services: `RoleServiceImpl` (all writes → `CRITICAL`), `PermissionServiceImpl` (all writes → `CRITICAL`), `DataScopeServiceImpl` (all writes → `CRITICAL`), `ResourceACLServiceImpl` (all writes → `CRITICAL`, `AuditCategory.SYSTEM`) | ✅ | Covered in RoleServiceImplTest, PermissionServiceImplTest, DataScopeServiceImplTest, ResourceACLServiceImplTest |
