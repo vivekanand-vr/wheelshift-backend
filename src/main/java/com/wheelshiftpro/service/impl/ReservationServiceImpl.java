@@ -1,17 +1,20 @@
 package com.wheelshiftpro.service.impl;
 
 import com.wheelshiftpro.dto.request.ReservationRequest;
+import com.wheelshiftpro.dto.request.SaleRequest;
 import com.wheelshiftpro.dto.response.PageResponse;
 import com.wheelshiftpro.dto.response.ReservationResponse;
 import com.wheelshiftpro.dto.response.SaleResponse;
 import com.wheelshiftpro.entity.Car;
 import com.wheelshiftpro.entity.Client;
 import com.wheelshiftpro.entity.Employee;
+import com.wheelshiftpro.entity.Motorcycle;
 import com.wheelshiftpro.entity.Reservation;
 import com.wheelshiftpro.enums.AuditCategory;
 import com.wheelshiftpro.enums.AuditLevel;
 import com.wheelshiftpro.enums.CarStatus;
 import com.wheelshiftpro.enums.ReservationStatus;
+import com.wheelshiftpro.enums.VehicleType;
 import com.wheelshiftpro.exception.BusinessException;
 import com.wheelshiftpro.exception.ResourceNotFoundException;
 import com.wheelshiftpro.mapper.ReservationMapper;
@@ -22,9 +25,11 @@ import com.wheelshiftpro.repository.ReservationRepository;
 import com.wheelshiftpro.security.EmployeeUserDetails;
 import com.wheelshiftpro.service.AuditService;
 import com.wheelshiftpro.service.ReservationService;
+import com.wheelshiftpro.service.SaleService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -48,6 +53,7 @@ public class ReservationServiceImpl implements ReservationService {
     private final EmployeeRepository employeeRepository;
     private final ReservationMapper reservationMapper;
     private final AuditService auditService;
+    private final SaleService saleService;
 
     @Override
     public ReservationResponse createReservation(ReservationRequest request) {
@@ -253,8 +259,46 @@ public class ReservationServiceImpl implements ReservationService {
             throw new ResourceNotFoundException("Employee", "id", employeeId);
         }
 
-        // This will be implemented when SaleService is integrated
-        throw new BusinessException("Sale conversion not yet implemented", "NOT_IMPLEMENTED");
+        // Determine vehicle details
+        Car car = reservation.getCar();
+        Motorcycle motorcycle = reservation.getMotorcycle();
+        BigDecimal salePrice;
+        Long vehicleId;
+
+        if (reservation.getVehicleType() == VehicleType.CAR && car != null) {
+            vehicleId = car.getId();
+            salePrice = car.getSellingPrice();
+        } else if (reservation.getVehicleType() == VehicleType.MOTORCYCLE && motorcycle != null) {
+            vehicleId = motorcycle.getId();
+            salePrice = motorcycle.getSellingPrice();
+        } else {
+            throw new BusinessException("Reservation has no valid vehicle associated", "NO_VEHICLE");
+        }
+
+        // Build SaleRequest from reservation
+        SaleRequest saleRequest = SaleRequest.builder()
+                .carId(reservation.getVehicleType() == VehicleType.CAR ? car.getId() : null)
+                .motorcycleId(reservation.getVehicleType() == VehicleType.MOTORCYCLE ? motorcycle.getId() : null)
+                .clientId(reservation.getClient().getId())
+                .employeeId(employeeId)
+                .saleDate(LocalDateTime.now())
+                .salePrice(salePrice)
+                .commissionRate(BigDecimal.valueOf(5.0)) // Default 5% commission
+                .build();
+
+        // Create the sale (all sale creation side effects handled by SaleService)
+        SaleResponse saleResponse = saleService.createSale(saleRequest);
+
+        // Update reservation status to fulfilled
+        reservation.setStatus(ReservationStatus.CONFIRMED);
+        reservationRepository.save(reservation);
+
+        auditService.log(AuditCategory.RESERVATION, reservationId, "CONVERT_TO_SALE", AuditLevel.CRITICAL,
+                resolveCurrentEmployee(), 
+                "Converted to sale ID: " + saleResponse.getId() + ", Vehicle ID: " + vehicleId + ", Price: " + salePrice);
+
+        log.info("Converted reservation ID: {} to sale ID: {}", reservationId, saleResponse.getId());
+        return saleResponse;
     }
 
     @Override

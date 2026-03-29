@@ -1,15 +1,20 @@
 package com.wheelshiftpro.service.impl;
 
 import com.wheelshiftpro.dto.request.ReservationRequest;
+import com.wheelshiftpro.dto.request.SaleRequest;
 import com.wheelshiftpro.dto.response.ReservationResponse;
+import com.wheelshiftpro.dto.response.SaleResponse;
 import com.wheelshiftpro.entity.Car;
 import com.wheelshiftpro.entity.Client;
 import com.wheelshiftpro.entity.Employee;
+import com.wheelshiftpro.entity.Motorcycle;
 import com.wheelshiftpro.entity.Reservation;
 import com.wheelshiftpro.enums.AuditCategory;
 import com.wheelshiftpro.enums.AuditLevel;
 import com.wheelshiftpro.enums.CarStatus;
+import com.wheelshiftpro.enums.MotorcycleStatus;
 import com.wheelshiftpro.enums.ReservationStatus;
+import com.wheelshiftpro.enums.VehicleType;
 import com.wheelshiftpro.exception.BusinessException;
 import com.wheelshiftpro.exception.ResourceNotFoundException;
 import com.wheelshiftpro.mapper.ReservationMapper;
@@ -19,6 +24,7 @@ import com.wheelshiftpro.repository.EmployeeRepository;
 import com.wheelshiftpro.repository.ReservationRepository;
 import com.wheelshiftpro.security.EmployeeUserDetails;
 import com.wheelshiftpro.service.AuditService;
+import com.wheelshiftpro.service.SaleService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -63,6 +69,9 @@ class ReservationServiceImplTest {
 
     @Mock
     private AuditService auditService;
+
+    @Mock
+    private SaleService saleService;
 
     @InjectMocks
     private ReservationServiceImpl reservationService;
@@ -512,6 +521,102 @@ class ReservationServiceImplTest {
     @Nested
     @DisplayName("convertToSale")
     class ConvertToSale {
+
+        @Test
+        @DisplayName("should convert car reservation to sale successfully")
+        void happyPath_car() {
+            // Arrange
+            car.setSellingPrice(new BigDecimal("25000.00"));
+            reservation.setStatus(ReservationStatus.CONFIRMED);
+            reservation.setDepositPaid(true);
+            reservation.setVehicleType(VehicleType.CAR);
+            reservation.setCar(car);
+            
+            SaleResponse saleResponse = new SaleResponse();
+            saleResponse.setId(100L);
+
+            when(reservationRepository.findById(1L)).thenReturn(Optional.of(reservation));
+            when(employeeRepository.existsById(1L)).thenReturn(true);
+            when(saleService.createSale(any(SaleRequest.class))).thenReturn(saleResponse);
+            when(reservationRepository.save(any(Reservation.class))).thenReturn(reservation);
+
+            setUpAuthenticatedEmployee(50L);
+
+            // Act
+            SaleResponse result = reservationService.convertToSale(1L, 1L);
+
+            // Assert
+            assertThat(result).isNotNull();
+            assertThat(result.getId()).isEqualTo(100L);
+            
+            verify(saleService).createSale(argThat(request -> 
+                request.getCarId().equals(1L) &&
+                request.getClientId().equals(1L) &&
+                request.getEmployeeId().equals(1L) &&
+                request.getSalePrice().equals(new BigDecimal("25000.00"))
+            ));
+            verify(reservationRepository).save(reservation);
+            verify(auditService).log(eq(AuditCategory.RESERVATION), eq(1L), eq("CONVERT_TO_SALE"), 
+                    eq(AuditLevel.CRITICAL), any(), anyString());
+        }
+
+        @Test
+        @DisplayName("should convert motorcycle reservation to sale successfully")
+        void happyPath_motorcycle() {
+            // Arrange
+            Motorcycle motorcycle = new Motorcycle();
+            motorcycle.setId(2L);
+            motorcycle.setSellingPrice(new BigDecimal("15000.00"));
+            motorcycle.setStatus(MotorcycleStatus.AVAILABLE);
+            
+            reservation.setStatus(ReservationStatus.CONFIRMED);
+            reservation.setDepositPaid(true);
+            reservation.setVehicleType(VehicleType.MOTORCYCLE);
+            reservation.setCar(null);
+            reservation.setMotorcycle(motorcycle);
+            
+            SaleResponse saleResponse = new SaleResponse();
+            saleResponse.setId(101L);
+
+            when(reservationRepository.findById(1L)).thenReturn(Optional.of(reservation));
+            when(employeeRepository.existsById(1L)).thenReturn(true);
+            when(saleService.createSale(any(SaleRequest.class))).thenReturn(saleResponse);
+            when(reservationRepository.save(any(Reservation.class))).thenReturn(reservation);
+
+            setUpAuthenticatedEmployee(50L);
+
+            // Act
+            SaleResponse result = reservationService.convertToSale(1L, 1L);
+
+            // Assert
+            assertThat(result).isNotNull();
+            assertThat(result.getId()).isEqualTo(101L);
+            
+            verify(saleService).createSale(argThat(request -> 
+                request.getMotorcycleId().equals(2L) &&
+                request.getClientId().equals(1L) &&
+                request.getEmployeeId().equals(1L) &&
+                request.getSalePrice().equals(new BigDecimal("15000.00"))
+            ));
+            verify(reservationRepository).save(reservation);
+            verify(auditService).log(eq(AuditCategory.RESERVATION), eq(1L), eq("CONVERT_TO_SALE"), 
+                    eq(AuditLevel.CRITICAL), any(), anyString());
+        }
+
+        @Test
+        @DisplayName("should throw exception when no vehicle associated")
+        void noVehicle_throws() {
+            reservation.setStatus(ReservationStatus.CONFIRMED);
+            reservation.setDepositPaid(true);
+            reservation.setCar(null);
+            reservation.setMotorcycle(null);
+            when(reservationRepository.findById(1L)).thenReturn(Optional.of(reservation));
+            when(employeeRepository.existsById(1L)).thenReturn(true);
+
+            assertThatThrownBy(() -> reservationService.convertToSale(1L, 1L))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("no valid vehicle");
+        }
 
         @Test
         @DisplayName("should throw exception when reservation status is not confirmed")

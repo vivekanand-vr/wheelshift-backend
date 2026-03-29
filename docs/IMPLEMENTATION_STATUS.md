@@ -1,6 +1,6 @@
 # WheelShift Pro — Implementation & Test Status
 
-**Last Updated:** March 29, 2026 (BL 9.4 Convert Inquiry to Reservation — fully implemented with 10 tests)  
+**Last Updated:** March 29, 2026 (BL 10.5 Convert Reservation to Sale + BL 13.4 Delete Task — fully implemented)  
 **Spec Reference:** [`BUSINESS_LOGIC.md`](./BUSINESS_LOGIC.md)
 
 Track progress for every business logic operation defined in the spec.  
@@ -127,7 +127,7 @@ The **WheelShift Developer** agent reads this file to know which areas need atte
 | 10.2 | Cancel reservation | `POST /api/v1/reservations/{id}/cancel` | ✅ | CONFIRMED/PENDING status required, vehicle status revert to AVAILABLE, audit `HIGH` | ✅ | happy path (confirmed & pending), expired/cancelled throw, not found, audit HIGH |
 | 10.3 | Expire reservations (scheduler) | (automated) | ✅ | Status → EXPIRED, vehicle status revert (only if RESERVED), audit `HIGH` with null performedBy | ✅ | batch expiry, car status guard (only saves if RESERVED) |
 | 10.4 | Update deposit status | `PUT /api/v1/reservations/{id}/deposit` | ✅ | Updates `depositPaid` boolean, audit `REGULAR` | ✅ | happy path, not found |
-| 10.5 | Convert reservation to sale | `POST /api/v1/reservations/{id}/convert-to-sale` | ⚠️ | CONFIRMED status + depositPaid validation, employeeId existence check; actual sale creation throws `NOT_IMPLEMENTED` | ✅ | all validation guards tested (status, depositPaid, employee not found) |
+| 10.5 | Convert reservation to sale | `POST /api/v1/reservations/{id}/convert-to-sale` | ✅ | CONFIRMED status + depositPaid validation, employeeId existence check; full sale creation via `SaleService.createSale()` with all BL 11.1 side effects (vehicle→SOLD, storage count decrement, client purchase increment, financial transaction), handles both Car and Motorcycle via `VehicleType` discriminator, reservation status updated to CONFIRMED (fulfilled), audit `CRITICAL`, `@PreAuthorize(SA,AD,SL)` | ✅ | 7 tests: happy path for car, happy path for motorcycle, no vehicle associated, invalid status (non-CONFIRMED), deposit not paid, employee not found, reservation not found |
 
 ---
 
@@ -158,7 +158,7 @@ The **WheelShift Developer** agent reads this file to know which areas need atte
 | 13.1 | Create task | `POST /api/v1/tasks` | ✅ | Assignee ACTIVE check, default status=TODO/priority=MEDIUM, future dueDate validation, relationship wiring, audit `REGULAR`, `@Transactional(rollbackFor)` | ✅ | `TaskServiceImplTest` — happy path, without assignee, due date in past throws, assignee not found, assignee not ACTIVE throws, audit REGULAR |
 | 13.2 | Update task status | `PUT /api/v1/tasks/{id}/status` | ✅ | Status update with previous status tracking, audit `REGULAR` with transition details | ✅ | happy path with transition details, not found |
 | 13.3 | Overdue task detection (scheduler) | (automated) | ✅ | `OverdueTaskScheduler` — daily at 08:00 (configurable via `task.overdue.cron`); finds tasks via `TaskRepository.findOverdueTasks(now)`; notifies assignee (if set) and all AD/SA/SM employees with `TASK_OVERDUE`; skips duplicate notification when manager equals assignee; deduplicates recipients across roles; ShedLock (1 h / 5 m) | ✅ | `OverdueTaskSchedulerTest` — noOverdueTasks_noNotifications, assigneeNotified, noAssignee_onlyManagersNotified, managerIsAssignee_notifiedOnce, payloadContainsRequiredFields, multipleOverdueTasks_allNotified, deduplicatedRecipient_notifiedOncePerTask |
-| 13.4 | Delete task | `DELETE /api/v1/tasks/{id}` | ⚠️ | Existence check, audit `HIGH`; DONE+linked-record guard TODO (Task entity lacks taskId in Inspection/Sale) | ✅ | happy path, not found, audit HIGH |
+| 13.4 | Delete task | `DELETE /api/v1/tasks/{id}` | ✅ | Existence check, audit `HIGH`; DONE status guard blocks deletion (`TASK_DONE_CANNOT_DELETE` — preserves audit trail; future enhancement: check for linked Inspection/Sale records when Task entity relationships are added), `@PreAuthorize(SA,AD,SM)` | ✅ | 3 tests: happy path (TODO task), not found, DONE task deletion blocked with error code verification |
 
 ---
 
@@ -217,7 +217,7 @@ The **WheelShift Developer** agent reads this file to know which areas need atte
 | Audit calls in `MotorcycleServiceImpl` | ✅ | CREATE/UPDATE/MOVE → `REGULAR`; DELETE/STATUS_CHANGE → `HIGH` | ✅ | Covered in `MotorcycleServiceImplTest` |
 | Audit calls in `ClientServiceImpl` | ✅ | CREATE/UPDATE → `REGULAR`; DELETE/STATUS_CHANGE → `HIGH` | ✅ | Covered in `ClientServiceImplTest` |
 | Audit calls in `EmployeeServiceImpl` | ✅ | All writes → `CRITICAL` (security-sensitive) | ✅ | Covered in `EmployeeServiceImplTest` |
-| Audit calls in `ReservationServiceImpl` | ✅ | CREATE/UPDATE/DEPOSIT → `REGULAR`; DELETE/STATUS_CHANGE/CANCEL → `HIGH` | ✅ | Covered in `ReservationServiceImplTest` |
+| Audit calls in `ReservationServiceImpl` | ✅ | CREATE/UPDATE/DEPOSIT → `REGULAR`; DELETE/STATUS_CHANGE/CANCEL/CONVERT_TO_SALE → `HIGH` (CONVERT_TO_SALE upgraded to `CRITICAL` per financial operation) | ✅ | Covered in `ReservationServiceImplTest` |
 | Audit calls in `SaleServiceImpl` | ✅ | CREATE/DELETE → `CRITICAL`; UPDATE → `HIGH` | ✅ | Covered in `SaleServiceImplTest` |
 | Audit calls in `FinancialTransactionServiceImpl` | ✅ | All writes → `CRITICAL` (financial operations) | ✅ | Covered in `FinancialTransactionServiceImplTest` |
 | Audit calls in `InquiryServiceImpl` | ✅ | CREATE/UPDATE → `REGULAR`; DELETE/STATUS_CHANGE/ASSIGN/CONVERT_TO_RESERVATION → `HIGH` | ✅ | Covered in `InquiryServiceImplTest` |

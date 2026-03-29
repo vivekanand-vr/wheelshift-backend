@@ -170,9 +170,13 @@ public class TaskServiceImpl implements TaskService {
         Task task = taskRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Task", "id", id));
 
-        // Current Task entity doesn't have these relationships yet
+        // Block deletion of DONE tasks (future: check for linked inspection/sale records)
         if (task.getStatus() == TaskStatus.DONE) {
-            log.warn("Deleting a DONE task - ensure no linked records exist");
+            throw new BusinessException(
+                "Cannot delete a DONE task. Once the Task entity has relationships to Inspection/Sale, " +
+                "this guard will check for linked records to preserve audit trail.",
+                "TASK_DONE_CANNOT_DELETE"
+            );
         }
 
         auditService.log(AuditCategory.TASK, id, "DELETE", AuditLevel.HIGH,

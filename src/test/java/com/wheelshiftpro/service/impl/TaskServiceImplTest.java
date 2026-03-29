@@ -331,8 +331,8 @@ class TaskServiceImplTest {
         }
 
         @Test
-        @DisplayName("should allow deletion of DONE task with warning in future")
-        void doneTaskDeletion() {
+        @DisplayName("should block deletion of DONE task")
+        void doneTaskDeletion_throws() {
             Long taskId = 1L;
             Task task = new Task();
             task.setId(taskId);
@@ -340,9 +340,13 @@ class TaskServiceImplTest {
 
             when(taskRepository.findById(taskId)).thenReturn(Optional.of(task));
 
-            taskService.deleteTask(taskId);
+            assertThatThrownBy(() -> taskService.deleteTask(taskId))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("Cannot delete a DONE task")
+                    .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode())
+                            .isEqualTo("TASK_DONE_CANNOT_DELETE"));
 
-            verify(taskRepository).delete(task);
+            verify(taskRepository, never()).delete(any(Task.class));
         }
     }
 
