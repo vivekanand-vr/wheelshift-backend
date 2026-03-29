@@ -11,6 +11,47 @@ Event-driven notification system that keeps employees and clients informed about
 
 ---
 
+## Delivery Rules
+
+Three delivery rule systems control when and how notifications are sent:
+
+| Rule | Status | Implementation | Description |
+|------|--------|----------------|-------------|
+| **Opt-out** | ✅ Implemented | Job creation | Users can disable specific event types or channels via `NotificationPreference.enabled=false` |
+| **Severity threshold** | ✅ Implemented | Job creation | Filter out low-priority events via `NotificationPreference.severityThreshold` (INFO/WARN/CRITICAL) |
+| **Quiet hours** | ✅ Implemented | Consumer | Jobs arriving during quiet hours (e.g., 22:00-08:00) are rescheduled to the end of the quiet period |
+| **Digest batching** | ✅ Implemented | Scheduler | Jobs with `frequency=DIGEST` are batched hourly and sent as a single summary notification |
+
+### How It Works
+
+**Opt-out & Severity (Phase 1 — Job Creation):**
+```java
+// NotificationServiceImpl.createJobForRecipient()
+// 1. Query preference for recipient + event type + channel
+// 2. Skip job creation if preference.enabled = false
+// 3. Skip if event.severity < preference.severityThreshold
+// 4. Set scheduledFor + status=SCHEDULED if frequency=DIGEST
+```
+
+**Quiet Hours (Phase 2 — Consumer):**
+```java
+// NotificationKafkaConsumer.consumeInApp()
+// 1. Check if current time is within recipient's quiet hours
+// 2. If yes: reschedule job to quiet hours end + save with status=SCHEDULED
+// 3. If no: publish to Redis Pub/Sub for SSE delivery
+```
+
+**Digest Batching (Phase 3 — Scheduler):**
+```java
+// NotificationDigestScheduler.processDigestBatch()  [@Scheduled hourly]
+// 1. Find jobs with status=SCHEDULED and scheduledFor <= now
+// 2. Group by recipient + channel
+// 3. Build single digest message with count summary
+// 4. Publish to Kafka + mark all jobs as SENT
+```
+
+---
+
 ## Entity Structure
 
 Five entities make up the notification system. The diagram below shows how they are connected:

@@ -53,11 +53,39 @@ public class NotificationKafkaProducer {
             }
         });
     }
+    
+    /**
+     * Publish a pre-built notification message to Kafka.
+     * Used for digest notifications and other custom messages.
+     */
+    @Async("notificationExecutor")
+    public void publishJobMessage(NotificationJobMessage message) {
+        String topic = resolveTopicForChannel(message.getChannel());
+
+        CompletableFuture<SendResult<String, NotificationJobMessage>> future =
+                kafkaTemplate.send(topic, String.valueOf(message.getRecipientId()), message);
+
+        future.whenComplete((result, ex) -> {
+            if (ex != null) {
+                log.error("Failed to publish notification message {} to topic {}: {}",
+                        message.getJobId(), topic, ex.getMessage());
+            } else {
+                log.debug("Published notification message {} to topic {} partition {} offset {}",
+                        message.getJobId(), topic,
+                        result.getRecordMetadata().partition(),
+                        result.getRecordMetadata().offset());
+            }
+        });
+    }
 
     // ── helpers ──────────────────────────────────────────────────────────────
 
     private String resolveTopic(NotificationJob job) {
-        return switch (job.getChannel()) {
+        return resolveTopicForChannel(job.getChannel());
+    }
+    
+    private String resolveTopicForChannel(com.wheelshiftpro.enums.notifications.NotificationChannel channel) {
+        return switch (channel) {
             case EMAIL  -> KafkaConfig.TOPIC_EMAIL;
             default     -> KafkaConfig.TOPIC_INAPP;
         };

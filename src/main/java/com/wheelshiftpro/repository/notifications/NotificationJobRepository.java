@@ -43,6 +43,11 @@ public interface NotificationJobRepository extends JpaRepository<NotificationJob
     Long countByRecipientTypeAndRecipientIdAndStatus(
             RecipientType recipientType, Long recipientId, NotificationStatus status);
     
+    boolean existsByDedupKey(String dedupKey);
+    
+    List<NotificationJob> findByStatusAndScheduledForLessThanEqual(
+            NotificationStatus status, LocalDateTime scheduledFor);
+    
     @Query("SELECT COUNT(j) FROM NotificationJob j WHERE j.recipientType = :recipientType " +
            "AND j.recipientId = :recipientId AND j.channel = :channel AND j.sentAt IS NULL")
     Long countUnreadNotifications(

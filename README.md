@@ -145,6 +145,7 @@ Five tailored dashboard views: Admin, Sales, Inspector, Finance, Store Manager.
 - Multi-channel: In-App, Email, SMS, WhatsApp, Push, Webhook
 - Template engine with variable substitution
 - Per-employee channel preferences
+- **Delivery rules** — opt-out preferences, severity threshold filtering, quiet hours (auto-reschedule), digest batching (hourly scheduler)
 - **Async event-driven delivery via Apache Kafka** — producer publishes `NotificationJobMessage` to `notification.jobs.inapp` / `notification.jobs.email` topics; consumer processes with manual acknowledgement
 - **Real-time push via SSE** — consumers forward processed jobs to Redis Pub/Sub; a `MessageListener` picks them up and pushes to all active `SseEmitter` connections for the recipient
 - Stream endpoint: `GET /api/v1/notifications/stream/{recipientType}/{recipientId}` (`text/event-stream`)
@@ -219,6 +220,7 @@ Schema is managed by **Flyway** — migrations run automatically on startup.
 | V20 | Split vehicle count by type |
 | V21 | Add vehicle description |
 | V22 | Audit logs table |
+| V23 | Notification digest support (compound index) |
 
 Migration files: `src/main/resources/db/migration/`
 Rollback scripts (manual): `src/main/resources/db/rollbacks/`
@@ -288,6 +290,7 @@ A failing architecture test is a **build failure** — fix the architecture, nev
 | Core Business APIs | ✅ Complete |
 | RBAC System | ✅ Complete |
 | Notification System | ✅ Complete |
+| Notification Delivery Rules | ✅ Complete |
 | Kafka Async Delivery | ✅ Complete |
 | SSE Real-time Push | ✅ Complete |
 | Dashboard System | ✅ Complete |
@@ -298,7 +301,7 @@ A failing architecture test is a **build failure** — fix the architecture, nev
 | Error Handling | ✅ Complete |
 | Audit Logging | ✅ Complete |
 | File Storage (Local + S3) | ✅ Complete |
-| Database Migrations (V18) | ✅ Complete |
+| Database Migrations (V23) | ✅ Complete |
 | Docker Setup | ✅ Complete |
 | Observability (Actuator + Prometheus) | ✅ Complete |
 | Request Correlation (X-Request-Id) | ✅ Complete |

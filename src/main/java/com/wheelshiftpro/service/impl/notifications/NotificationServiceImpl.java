@@ -7,9 +7,12 @@ import com.wheelshiftpro.dto.response.notifications.NotificationJobResponse;
 import com.wheelshiftpro.dto.response.notifications.NotificationStatsResponse;
 import com.wheelshiftpro.entity.notifications.NotificationEvent;
 import com.wheelshiftpro.entity.notifications.NotificationJob;
+import com.wheelshiftpro.entity.notifications.NotificationPreference;
 import com.wheelshiftpro.entity.notifications.NotificationTemplate;
+import com.wheelshiftpro.enums.PrincipalType;
 import com.wheelshiftpro.enums.RecipientType;
 import com.wheelshiftpro.enums.notifications.NotificationChannel;
+import com.wheelshiftpro.enums.notifications.NotificationFrequency;
 import com.wheelshiftpro.enums.notifications.NotificationStatus;
 import com.wheelshiftpro.entity.Employee;
 import com.wheelshiftpro.enums.AuditCategory;
@@ -20,6 +23,7 @@ import com.wheelshiftpro.messaging.NotificationKafkaProducer;
 import com.wheelshiftpro.repository.EmployeeRepository;
 import com.wheelshiftpro.repository.notifications.NotificationEventRepository;
 import com.wheelshiftpro.repository.notifications.NotificationJobRepository;
+import com.wheelshiftpro.repository.notifications.NotificationPreferenceRepository;
 import com.wheelshiftpro.repository.notifications.NotificationTemplateRepository;
 import com.wheelshiftpro.security.EmployeeUserDetails;
 import com.wheelshiftpro.service.AuditService;
@@ -36,6 +40,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -47,6 +52,7 @@ public class NotificationServiceImpl implements NotificationService {
     
     private final NotificationEventRepository eventRepository;
     private final NotificationJobRepository jobRepository;
+    private final NotificationPreferenceRepository preferenceRepository;
     private final NotificationTemplateRepository templateRepository;
     private final NotificationTemplateService templateService;
     private final NotificationKafkaProducer kafkaProducer;
@@ -94,7 +100,7 @@ public class NotificationServiceImpl implements NotificationService {
                 Long recipientId = Long.parseLong(recipientIdObj.toString());
                 RecipientType recipientType = RecipientType.valueOf(recipientTypeObj.toString());
                 
-                // Create IN_APP notification job
+                // Create IN_APP notification job with preference checks
                 return createJobForRecipient(event, recipientType, recipientId, NotificationChannel.IN_APP)
                         .map(List::of).orElse(List.of());
             } catch (Exception e) {
@@ -106,20 +112,65 @@ public class NotificationServiceImpl implements NotificationService {
     
     private Optional<NotificationJob> createJobForRecipient(NotificationEvent event, RecipientType recipientType,
                                       Long recipientId, NotificationChannel channel) {
+        // 1. CHECK OPT-OUT & FETCH PREFERENCE
+        NotificationPreference preference = preferenceRepository
+            .findByPrincipalTypeAndPrincipalIdAndEventTypeAndChannel(
+                toPrincipalType(recipientType), 
+                recipientId,
+                event.getEventType(),
+                channel
+            )
+            .or(() -> preferenceRepository.findByPrincipalTypeAndPrincipalIdAndEventTypeAndChannel(
+                toPrincipalType(recipientType), 
+                recipientId,
+                com.wheelshiftpro.enums.notifications.NotificationEventType.ALL,
+                channel
+            ))
+            .orElse(null);
+        
+        // Skip if explicitly disabled
+        if (preference != null && Boolean.FALSE.equals(preference.getEnabled())) {
+            log.debug("Channel {} disabled for recipient {}:{}", 
+                channel, recipientType, recipientId);
+            return Optional.empty();
+        }
+        
+        // 2. CHECK SEVERITY THRESHOLD
+        if (preference != null && preference.getSeverityThreshold() != null) {
+            if (event.getSeverity().ordinal() < preference.getSeverityThreshold().ordinal()) {
+                log.debug("Event severity {} below threshold {} for recipient {}:{}",
+                    event.getSeverity(), preference.getSeverityThreshold(),
+                    recipientType, recipientId);
+                return Optional.empty();
+            }
+        }
+        
+        // 3. HANDLE DIGEST FREQUENCY
+        LocalDateTime scheduledFor = null;
+        NotificationStatus initialStatus = NotificationStatus.PENDING;
+        if (preference != null && preference.getFrequency() == NotificationFrequency.DIGEST) {
+            scheduledFor = calculateNextDigestTime();
+            initialStatus = NotificationStatus.SCHEDULED;
+            log.debug("Digest mode: scheduling notification for {}", scheduledFor);
+        }
+        
+        // 4. BUILD DEDUP KEY
         String dedupKey = generateDedupKey(event.getId(), recipientType, recipientId, channel);
         
-        // Check if job already exists
-        if (jobRepository.findByDedupKey(dedupKey).isPresent()) {
+        // 5. CHECK DEDUP
+        if (jobRepository.existsByDedupKey(dedupKey)) {
             log.debug("Notification job already exists with dedupKey: {}", dedupKey);
             return Optional.empty();
         }
         
+        // 6. CREATE JOB
         NotificationJob job = NotificationJob.builder()
                 .event(event)
                 .recipientType(recipientType)
                 .recipientId(recipientId)
                 .channel(channel)
-                .status(NotificationStatus.PENDING)
+                .status(initialStatus)
+                .scheduledFor(scheduledFor)
                 .dedupKey(dedupKey)
                 .retries(0)
                 .createdAt(LocalDateTime.now())
@@ -127,13 +178,33 @@ public class NotificationServiceImpl implements NotificationService {
                 .build();
         
         jobRepository.save(job);
-        log.debug("Created notification job: id={}, dedupKey={}", job.getId(), dedupKey);
+        log.debug("Created notification job: id={}, status={}, scheduledFor={}", 
+            job.getId(), initialStatus, scheduledFor);
         return Optional.of(job);
     }
     
     private String generateDedupKey(Long eventId, RecipientType recipientType,
                                     Long recipientId, NotificationChannel channel) {
         return String.format("%d-%s-%d-%s", eventId, recipientType, recipientId, channel);
+    }
+    
+    private PrincipalType toPrincipalType(RecipientType recipientType) {
+        return switch (recipientType) {
+            case EMPLOYEE -> PrincipalType.EMPLOYEE;
+            case CLIENT -> PrincipalType.CLIENT;
+            case ROLE -> PrincipalType.ROLE;
+        };
+    }
+    
+    private LocalDateTime calculateNextDigestTime() {
+        // Default: next 9 AM
+        LocalDateTime now = LocalDateTime.now();
+        LocalTime digestTime = LocalTime.of(9, 0);
+        LocalDateTime next9AM = now.toLocalDate().atTime(digestTime);
+        if (now.toLocalTime().isAfter(digestTime)) {
+            next9AM = next9AM.plusDays(1);
+        }
+        return next9AM;
     }
 
     private void validateNotificationOwnership(NotificationJob job) {

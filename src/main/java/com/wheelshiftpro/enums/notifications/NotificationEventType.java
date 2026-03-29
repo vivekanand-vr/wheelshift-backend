@@ -45,6 +45,9 @@ public enum NotificationEventType {
     // ── RBAC / security events ────────────────────────────────────────────────
     DATA_SCOPE_CHANGED,
 
+    // ── Digest notifications ──────────────────────────────────────────────────
+    NOTIFICATION_DIGEST,
+
     // ── Wildcard — matches any event type when stored in preferences ──────────
     ALL;
 
