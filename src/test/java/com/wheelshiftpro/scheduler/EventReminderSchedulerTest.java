@@ -156,7 +156,6 @@ class EventReminderSchedulerTest {
             when(employeeRepository.findByRoles_Name(RoleType.ADMIN)).thenReturn(Collections.emptyList());
             when(employeeRepository.findByRoles_Name(RoleType.SUPER_ADMIN)).thenReturn(Collections.emptyList());
 
-            @SuppressWarnings("unchecked")
             ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
             scheduler.sendEventReminders();
 
@@ -186,7 +185,6 @@ class EventReminderSchedulerTest {
             when(employeeRepository.findByRoles_Name(RoleType.ADMIN)).thenReturn(Collections.emptyList());
             when(employeeRepository.findByRoles_Name(RoleType.SUPER_ADMIN)).thenReturn(Collections.emptyList());
 
-            @SuppressWarnings("unchecked")
             ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
             scheduler.sendEventReminders();
 

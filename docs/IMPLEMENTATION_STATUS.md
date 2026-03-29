@@ -1,6 +1,6 @@
 # WheelShift Pro — Implementation & Test Status
 
-**Last Updated:** March 29, 2026 (Notification System BL 17.x — service fixed and tested)  
+**Last Updated:** March 29, 2026 (BL 9.4 Convert Inquiry to Reservation — fully implemented with 10 tests)  
 **Spec Reference:** [`BUSINESS_LOGIC.md`](./BUSINESS_LOGIC.md)
 
 Track progress for every business logic operation defined in the spec.  
@@ -101,7 +101,7 @@ The **WheelShift Developer** agent reads this file to know which areas need atte
 | BL Ref | Operation | Endpoint | Impl Status | Impl Notes | Test Status | Test Notes |
 |--------|-----------|----------|:-----------:|------------|:-----------:|------------|
 | 8.1 | Create employee | `POST /api/v1/employees` | ✅ | Email uniqueness, BCrypt password hash, audit `CRITICAL`, `@PreAuthorize(SA,AD)` | ✅ | `EmployeeServiceImplTest` — happy path, duplicate email, null password (no hash), audit CRITICAL, auth audit field |
-| 8.2 | Assign role | `POST /api/v1/employees/{id}/roles` | ❌ | Role existence check not verified | ❌ | |
+| 8.2 | Assign role | `POST /api/v1/rbac/employees/{id}/roles/{roleId}` | ✅ | Employee + role existence checks, audit `CRITICAL`, `@PreAuthorize(SA,AD)`, implemented in `RoleServiceImpl.assignRoleToEmployee` | ✅ | `RoleServiceImplTest.AssignRoleToEmployee` — happy path, employee not found, role not found, audit CRITICAL |
 | 8.3 | Update employee status | `PUT /api/v1/employees/{id}/status` | ✅ | Self-INACTIVE/SUSPENDED guard (`SELF_STATUS_CHANGE_FORBIDDEN`), audit `CRITICAL`, `@PreAuthorize(SA,AD)` | ✅ | happy path, not found, self→INACTIVE throws, self→SUSPENDED throws, self→ACTIVE allowed, other employee→INACTIVE allowed, audit CRITICAL |
 | 8.4 | Delete employee | `DELETE /api/v1/employees/{id}` | ✅ | Sales guard (`EMPLOYEE_HAS_SALES`), tasks guard (`EMPLOYEE_HAS_TASKS`), last-SUPER_ADMIN guard (`LAST_SUPER_ADMIN`), audit `CRITICAL`, `@PreAuthorize(SA,AD)` | ✅ | happy path, not found, has sales throws, has tasks throws, last SA throws, not-last SA deletes, audit CRITICAL |
 
@@ -112,9 +112,9 @@ The **WheelShift Developer** agent reads this file to know which areas need atte
 | BL Ref | Operation | Endpoint | Impl Status | Impl Notes | Test Status | Test Notes |
 |--------|-----------|----------|:-----------:|------------|:-----------:|------------|
 | 9.1 | Create inquiry | `POST /api/v1/inquiries` | ✅ | Client ACTIVE check, single-vehicle discriminator (car XOR motorcycle), default OPEN, relationship wiring, audit `REGULAR`, `@Transactional(rollbackFor)` | ✅ | `InquiryServiceImplTest` — happy path, client not found, client not ACTIVE, car not found, both vehicles provided throws, relationship wired |
-| 9.2 | Assign inquiry | `PUT /api/v1/inquiries/{id}/assign` | ⚠️ | Endpoint exists but business rule validation not fully verified | ❌ | |
+| 9.2 | Assign inquiry | `PUT /api/v1/inquiries/{id}/assign` | ✅ | Employee existence check, previous assignee tracking, audit `HIGH`, `@PreAuthorize(SA,AD,SALES)`, implemented in `InquiryServiceImpl.assignInquiry`; employee validation added to `updateInquiry` | ✅ | `InquiryServiceImplTest.AssignInquiry` — happy path, inquiry not found, employee not found, previous assignee captured in audit, audit level HIGH; `UpdateInquiry` — employee validation tests |
 | 9.3 | Update inquiry status | `PUT /api/v1/inquiries/{id}/status` | ✅ | Status transition validation (OPEN→IN_PROGRESS→RESPONDED→CLOSED, OPEN→CLOSED), RESPONDED requires response text check, audit `HIGH` | ✅ | valid transitions, invalid transitions throw, RESPONDED without response text throws, audit HIGH |
-| 9.4 | Convert inquiry to reservation | `POST /api/v1/inquiries/{id}/reserve` | ⚠️ | Status validation (OPEN/IN_PROGRESS), deposit > 0 check; actual reservation creation stubbed | ⚠️ | validation guards tested |
+| 9.4 | Convert inquiry to reservation | `POST /api/v1/inquiries/{id}/reserve` | ✅ | Vehicle AVAILABLE check, status validation (OPEN/IN_PROGRESS), deposit > 0 check, creates reservation via `ReservationService`, updates inquiry status to IN_PROGRESS, audit `HIGH`, handles both cars and motorcycles, `@PreAuthorize(SA,AD,SL)` | ✅ | `InquiryServiceImplTest.ConvertToReservation` — 10 tests: happy path (car & motorcycle), inquiry not found, invalid status (CLOSED), zero/negative deposit, vehicle not AVAILABLE, no vehicle associated, audit level HIGH |
 | 9.5 | Delete inquiry | `DELETE /api/v1/inquiries/{id}` | ✅ | CLOSED inquiry with associated sale guard (`saleRepository.existsByCarId`), audit `HIGH` | ✅ | happy path, not found, closed inquiry with sale throws |
 
 ---
@@ -211,8 +211,8 @@ The **WheelShift Developer** agent reads this file to know which areas need atte
 | Area | Impl Status | Impl Notes | Test Status | Test Notes |
 |------|:-----------:|------------|:-----------:|------------|
 | `audit_logs` table + Flyway migration (V22) | ✅ | `category`, `level`, `entity_id`, `action`, `performed_by_id`, `details`, `created_at` | N/A | |
-| `AuditService` interface + `AuditServiceImpl` | ✅ | `log()` + `getAuditLogs()` with Specification filtering | ❌ | Unit tests not yet written |
-| `AuditLogController` — `GET /api/v1/audit-logs` | ✅ | `@PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")`, filterable by category/level/action/entityId/performedById | ❌ | |
+| `AuditService` interface + `AuditServiceImpl` | ✅ | `log()` + `getAuditLogs()` with Specification filtering | ✅ | `AuditServiceImplTest` — 13 tests covering log() (happy path, null performer, CRITICAL/HIGH levels) and getAuditLogs() (filtering by category/level/action/entityId/performedById, multiple filters, pagination, empty results, null performer handling) |
+| `AuditLogController` — `GET /api/v1/audit-logs` | ✅ | `@PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")`, filterable by category/level/action/entityId/performedById | ✅ | `AuditLogControllerTest` — 9 tests covering happy path, individual filters (category/level/action/entityId/performedById), multiple filters, custom pagination, empty results |
 | Audit calls in `CarServiceImpl` | ✅ | CREATE/UPDATE/MOVE → `REGULAR`; DELETE/STATUS_CHANGE → `HIGH` | ✅ | Covered in `CarServiceImplTest` |
 | Audit calls in `MotorcycleServiceImpl` | ✅ | CREATE/UPDATE/MOVE → `REGULAR`; DELETE/STATUS_CHANGE → `HIGH` | ✅ | Covered in `MotorcycleServiceImplTest` |
 | Audit calls in `ClientServiceImpl` | ✅ | CREATE/UPDATE → `REGULAR`; DELETE/STATUS_CHANGE → `HIGH` | ✅ | Covered in `ClientServiceImplTest` |
@@ -220,7 +220,7 @@ The **WheelShift Developer** agent reads this file to know which areas need atte
 | Audit calls in `ReservationServiceImpl` | ✅ | CREATE/UPDATE/DEPOSIT → `REGULAR`; DELETE/STATUS_CHANGE/CANCEL → `HIGH` | ✅ | Covered in `ReservationServiceImplTest` |
 | Audit calls in `SaleServiceImpl` | ✅ | CREATE/DELETE → `CRITICAL`; UPDATE → `HIGH` | ✅ | Covered in `SaleServiceImplTest` |
 | Audit calls in `FinancialTransactionServiceImpl` | ✅ | All writes → `CRITICAL` (financial operations) | ✅ | Covered in `FinancialTransactionServiceImplTest` |
-| Audit calls in `InquiryServiceImpl` | ✅ | CREATE/UPDATE → `REGULAR`; DELETE/STATUS_CHANGE → `HIGH` | ✅ | Covered in `InquiryServiceImplTest` |
+| Audit calls in `InquiryServiceImpl` | ✅ | CREATE/UPDATE → `REGULAR`; DELETE/STATUS_CHANGE/ASSIGN/CONVERT_TO_RESERVATION → `HIGH` | ✅ | Covered in `InquiryServiceImplTest` |
 | Audit calls in `TaskServiceImpl` | ✅ | CREATE/UPDATE/STATUS_CHANGE → `REGULAR`; DELETE → `HIGH` | ✅ | Covered in `TaskServiceImplTest` |
 | Audit calls in `EventServiceImpl` | ✅ | CREATE/UPDATE → `REGULAR`; DELETE → `HIGH` | ✅ | Covered in `EventServiceImplTest` |
 | Audit calls in all other service impls | ✅ | RBAC services: `RoleServiceImpl` (all writes → `CRITICAL`), `PermissionServiceImpl` (all writes → `CRITICAL`), `DataScopeServiceImpl` (all writes → `CRITICAL`), `ResourceACLServiceImpl` (all writes → `CRITICAL`, `AuditCategory.SYSTEM`); `NotificationServiceImpl` (CREATE_EVENT/CREATE_JOB/MARK_AS_READ/MARK_ALL_AS_READ → `REGULAR`, `AuditCategory.SYSTEM`) | ✅ | Covered in RoleServiceImplTest, PermissionServiceImplTest, DataScopeServiceImplTest, ResourceACLServiceImplTest, NotificationServiceImplTest |

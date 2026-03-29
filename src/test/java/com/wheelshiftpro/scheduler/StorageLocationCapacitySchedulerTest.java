@@ -126,7 +126,6 @@ class StorageLocationCapacitySchedulerTest {
             when(employeeRepository.findByRoles_Name(RoleType.ADMIN)).thenReturn(Collections.emptyList());
             when(employeeRepository.findByRoles_Name(RoleType.SUPER_ADMIN)).thenReturn(Collections.emptyList());
 
-            @SuppressWarnings("unchecked")
             ArgumentCaptor<Map<String, Object>> payloadCaptor = ArgumentCaptor.forClass(Map.class);
             scheduler.checkCapacityThresholds();
 

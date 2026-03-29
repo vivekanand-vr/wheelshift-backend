@@ -13,6 +13,11 @@ import com.wheelshiftpro.enums.InquiryStatus;
 import com.wheelshiftpro.exception.BusinessException;
 import com.wheelshiftpro.exception.ResourceNotFoundException;
 import com.wheelshiftpro.mapper.InquiryMapper;
+import com.wheelshiftpro.dto.request.ReservationRequest;
+import com.wheelshiftpro.dto.response.ReservationResponse;
+import com.wheelshiftpro.enums.CarStatus;
+import com.wheelshiftpro.enums.MotorcycleStatus;
+import com.wheelshiftpro.enums.VehicleType;
 import com.wheelshiftpro.repository.CarRepository;
 import com.wheelshiftpro.repository.ClientRepository;
 import com.wheelshiftpro.repository.EmployeeRepository;
@@ -21,6 +26,9 @@ import com.wheelshiftpro.repository.SaleRepository;
 import com.wheelshiftpro.security.EmployeeUserDetails;
 import com.wheelshiftpro.service.AuditService;
 import com.wheelshiftpro.service.InquiryService;
+import com.wheelshiftpro.service.ReservationService;
+
+import java.math.BigDecimal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -52,6 +60,7 @@ public class InquiryServiceImpl implements InquiryService {
     private final EmployeeRepository employeeRepository;
     private final SaleRepository saleRepository;
     private final AuditService auditService;
+    private final ReservationService reservationService;
 
     @Override
     public InquiryResponse createInquiry(InquiryRequest request) {
@@ -93,6 +102,12 @@ public class InquiryServiceImpl implements InquiryService {
 
         Inquiry inquiry = inquiryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Inquiry", "id", id));
+
+        // Validate assignedEmployeeId if it's being updated
+        if (request.getAssignedEmployeeId() != null &&
+                !employeeRepository.existsById(request.getAssignedEmployeeId())) {
+            throw new ResourceNotFoundException("Employee", "id", request.getAssignedEmployeeId());
+        }
 
         inquiryMapper.updateEntityFromRequest(request, inquiry);
         Inquiry updated = inquiryRepository.save(inquiry);
@@ -248,18 +263,88 @@ public class InquiryServiceImpl implements InquiryService {
             throw new BusinessException("Only OPEN or IN_PROGRESS inquiries can be converted to reservation", "INVALID_INQUIRY_STATUS");
         }
 
-        // Validate vehicle exists
-        if (!carRepository.existsById(carId)) {
-            throw new ResourceNotFoundException("Car", "id", carId);
-        }
-
         // Deposit amount is required
         if (depositAmount == null || depositAmount <= 0) {
             throw new BusinessException("Valid deposit amount is required", "INVALID_DEPOSIT_AMOUNT");
         }
 
-        // This will be implemented when ReservationService integration is complete
-        throw new BusinessException("Conversion to reservation not yet implemented", "NOT_IMPLEMENTED");
+        // Determine vehicle type and validate availability
+        Long vehicleId;
+        VehicleType vehicleType = inquiry.getVehicleType();
+        
+        if (vehicleType == VehicleType.CAR) {
+            if (inquiry.getCar() == null) {
+                throw new BusinessException("Inquiry does not have an associated car", "NO_VEHICLE_ASSOCIATED");
+            }
+            vehicleId = inquiry.getCar().getId();
+            
+            // Validate car is AVAILABLE
+            if (inquiry.getCar().getStatus() != CarStatus.AVAILABLE) {
+                throw new BusinessException("Car must be AVAILABLE to create a reservation", "VEHICLE_NOT_AVAILABLE");
+            }
+        } else if (vehicleType == VehicleType.MOTORCYCLE) {
+            if (inquiry.getMotorcycle() == null) {
+                throw new BusinessException("Inquiry does not have an associated motorcycle", "NO_VEHICLE_ASSOCIATED");
+            }
+            vehicleId = inquiry.getMotorcycle().getId();
+            
+            // Validate motorcycle is AVAILABLE
+            if (inquiry.getMotorcycle().getStatus() != MotorcycleStatus.AVAILABLE) {
+                throw new BusinessException("Motorcycle must be AVAILABLE to create a reservation", "VEHICLE_NOT_AVAILABLE");
+            }
+        } else {
+            throw new BusinessException("Invalid vehicle type", "INVALID_VEHICLE_TYPE");
+        }
+
+        // Build reservation request
+        ReservationRequest reservationRequest = ReservationRequest.builder()
+                .carId(vehicleType == VehicleType.CAR ? vehicleId : null)
+                .motorcycleId(vehicleType == VehicleType.MOTORCYCLE ? vehicleId : null)
+                .clientId(inquiry.getClient().getId())
+                .reservationDate(LocalDateTime.now())
+                .expiryDate(LocalDateTime.now().plusDays(7)) // Default 7 days expiry
+                .depositAmount(BigDecimal.valueOf(depositAmount))
+                .depositPaid(false)
+                .notes("Converted from inquiry ID: " + inquiryId)
+                .build();
+
+        // Create the reservation
+        ReservationResponse reservation = reservationService.createReservation(reservationRequest);
+
+        // Update inquiry status to IN_PROGRESS
+        inquiry.setStatus(InquiryStatus.IN_PROGRESS);
+        inquiryRepository.save(inquiry);
+
+        // Audit log
+        auditService.log(AuditCategory.INQUIRY, inquiryId, "CONVERT_TO_RESERVATION", AuditLevel.HIGH,
+                resolveCurrentEmployee(), 
+                "Converted to reservation ID: " + reservation.getId() + ", Vehicle: " + vehicleType + " #" + vehicleId);
+
+        log.info("Converted inquiry ID: {} to reservation ID: {}", inquiryId, reservation.getId());
+        return reservation;
+    }
+
+    @Override
+    public InquiryResponse assignInquiry(Long inquiryId, Long employeeId) {
+        log.debug("Assigning inquiry ID: {} to employee ID: {}", inquiryId, employeeId);
+
+        Inquiry inquiry = inquiryRepository.findById(inquiryId)
+                .orElseThrow(() -> new ResourceNotFoundException("Inquiry", "id", inquiryId));
+
+        Employee newAssignee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Employee", "id", employeeId));
+
+        Employee previousAssignee = inquiry.getAssignedEmployee();
+        inquiry.setAssignedEmployee(newAssignee);
+        Inquiry updated = inquiryRepository.save(inquiry);
+
+        String previousName = previousAssignee != null ? previousAssignee.getName() : "Unassigned";
+        auditService.log(AuditCategory.INQUIRY, inquiryId, "ASSIGN", AuditLevel.HIGH,
+                resolveCurrentEmployee(),
+                "Assigned to " + newAssignee.getName() + " (previously: " + previousName + ")");
+
+        log.info("Assigned inquiry ID: {} to employee ID: {}", inquiryId, employeeId);
+        return inquiryMapper.toResponse(updated);
     }
 
     @Override

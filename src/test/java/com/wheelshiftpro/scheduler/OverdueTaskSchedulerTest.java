@@ -140,7 +140,6 @@ class OverdueTaskSchedulerTest {
             when(taskRepository.findOverdueTasks(any(LocalDateTime.class))).thenReturn(List.of(task));
             when(employeeRepository.findByRoles_Name(any())).thenReturn(Collections.emptyList());
 
-            @SuppressWarnings("unchecked")
             ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
             scheduler.detectOverdueTasks();
 
