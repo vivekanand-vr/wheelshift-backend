@@ -1,8 +1,6 @@
 package com.wheelshiftpro.scheduler;
 
 import com.wheelshiftpro.entity.notifications.NotificationJob;
-import com.wheelshiftpro.enums.RecipientType;
-import com.wheelshiftpro.enums.notifications.NotificationChannel;
 import com.wheelshiftpro.enums.notifications.NotificationEventType;
 import com.wheelshiftpro.enums.notifications.NotificationSeverity;
 import com.wheelshiftpro.enums.notifications.NotificationStatus;
