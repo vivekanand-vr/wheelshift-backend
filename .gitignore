@@ -5,6 +5,10 @@ target/
 !**/src/test/**/target/
 uploads
 
+# Local environment secrets — never commit
+.env
+.env.local
+
 ### STS ###
 .apt_generated
 .classpath

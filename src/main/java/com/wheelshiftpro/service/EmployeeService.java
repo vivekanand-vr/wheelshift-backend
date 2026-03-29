@@ -3,7 +3,9 @@ package com.wheelshiftpro.service;
 import com.wheelshiftpro.dto.request.EmployeeRequest;
 import com.wheelshiftpro.dto.response.EmployeeResponse;
 import com.wheelshiftpro.dto.response.PageResponse;
+import com.wheelshiftpro.entity.Employee;
 import com.wheelshiftpro.enums.EmployeeStatus;
+import java.util.Optional;
 
 /**
  * Service interface for employee management operations.
@@ -108,4 +110,13 @@ public interface EmployeeService {
      * @throws com.wheelshiftpro.exception.ResourceNotFoundException if employee not found
      */
     Object getEmployeePerformance(Long id);
+
+    /**
+     * Finds an employee entity by email address.
+     * Used internally for authentication flows.
+     *
+     * @param email the employee's email
+     * @return the Employee entity, or empty if not found
+     */
+    Optional<Employee> findByEmail(String email);
 }

@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -26,6 +27,7 @@ public class CarInspectionController {
     private final CarInspectionService carInspectionService;
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','INSPECTOR','STORE_MANAGER')")
     @Operation(summary = "Create a new car inspection", description = "Creates a new vehicle inspection record")
     public ResponseEntity<ApiResponse<CarInspectionResponse>> createCarInspection(
             @Valid @RequestBody CarInspectionRequest request) {
@@ -35,6 +37,7 @@ public class CarInspectionController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','INSPECTOR')")
     @Operation(summary = "Update a car inspection", description = "Updates an existing car inspection by ID")
     public ResponseEntity<ApiResponse<CarInspectionResponse>> updateCarInspection(
             @Parameter(description = "Car Inspection ID") @PathVariable Long id,
@@ -44,6 +47,7 @@ public class CarInspectionController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get car inspection by ID", description = "Retrieves a specific car inspection by its ID")
     public ResponseEntity<ApiResponse<CarInspectionResponse>> getCarInspectionById(
             @Parameter(description = "Car Inspection ID") @PathVariable Long id) {
@@ -52,6 +56,7 @@ public class CarInspectionController {
     }
 
     @GetMapping
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get all car inspections", description = "Retrieves all car inspections with pagination")
     public ResponseEntity<ApiResponse<PageResponse<CarInspectionResponse>>> getAllCarInspections(
             @Parameter(description = "Page number (0-indexed)") @RequestParam(defaultValue = "0") int page,
@@ -61,6 +66,7 @@ public class CarInspectionController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
     @Operation(summary = "Delete a car inspection", description = "Deletes a car inspection by ID")
     public ResponseEntity<ApiResponse<Void>> deleteCarInspection(
             @Parameter(description = "Car Inspection ID") @PathVariable Long id) {
@@ -69,6 +75,7 @@ public class CarInspectionController {
     }
 
     @GetMapping("/car/{carId}")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get inspections by car ID", description = "Retrieves all inspections for a specific car")
     public ResponseEntity<ApiResponse<PageResponse<CarInspectionResponse>>> getInspectionsByCarId(
             @Parameter(description = "Car ID") @PathVariable Long carId,
@@ -79,6 +86,7 @@ public class CarInspectionController {
     }
 
     @GetMapping("/car/{carId}/latest")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get latest inspection by car ID", description = "Retrieves the most recent inspection for a car")
     public ResponseEntity<ApiResponse<CarInspectionResponse>> getLatestInspectionByCarId(
             @Parameter(description = "Car ID") @PathVariable Long carId) {
@@ -87,6 +95,7 @@ public class CarInspectionController {
     }
 
     @GetMapping("/employee/{employeeId}")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get inspections by employee ID", description = "Retrieves all inspections performed by an employee")
     public ResponseEntity<ApiResponse<PageResponse<CarInspectionResponse>>> getInspectionsByEmployeeId(
             @Parameter(description = "Employee ID") @PathVariable Long employeeId,
@@ -97,6 +106,7 @@ public class CarInspectionController {
     }
 
     @GetMapping("/date-range")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get inspections by date range", description = "Retrieves all inspections within a date range")
     public ResponseEntity<ApiResponse<PageResponse<CarInspectionResponse>>> getInspectionsByDateRange(
             @Parameter(description = "Start date (YYYY-MM-DD)") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
@@ -108,6 +118,7 @@ public class CarInspectionController {
     }
 
     @GetMapping("/requiring-inspection")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get cars requiring inspection", description = "Retrieves cars that require inspection")
     public ResponseEntity<ApiResponse<PageResponse<?>>> getCarsRequiringInspection(
             @Parameter(description = "Days since last inspection") @RequestParam(defaultValue = "365") int daysSinceLastInspection,

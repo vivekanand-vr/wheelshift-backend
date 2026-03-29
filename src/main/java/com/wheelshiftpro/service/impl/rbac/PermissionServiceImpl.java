@@ -4,12 +4,19 @@ import com.wheelshiftpro.dto.request.rbac.PermissionRequest;
 import com.wheelshiftpro.dto.response.rbac.PermissionResponse;
 import com.wheelshiftpro.entity.Employee;
 import com.wheelshiftpro.entity.rbac.Permission;
+import com.wheelshiftpro.enums.AuditCategory;
+import com.wheelshiftpro.enums.AuditLevel;
+import com.wheelshiftpro.exception.BusinessException;
 import com.wheelshiftpro.exception.DuplicateResourceException;
 import com.wheelshiftpro.exception.ResourceNotFoundException;
 import com.wheelshiftpro.repository.EmployeeRepository;
 import com.wheelshiftpro.repository.rbac.EmployeePermissionRepository;
 import com.wheelshiftpro.repository.rbac.PermissionRepository;
+import com.wheelshiftpro.security.EmployeeUserDetails;
+import com.wheelshiftpro.service.AuditService;
 import com.wheelshiftpro.service.rbac.PermissionService;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,12 +34,13 @@ import java.util.stream.Collectors;
 @Service
 @Slf4j
 @RequiredArgsConstructor
-@Transactional
+@Transactional(rollbackFor = Exception.class)
 public class PermissionServiceImpl implements PermissionService {
 
     private final PermissionRepository permissionRepository;
     private final EmployeeRepository employeeRepository;
     private final EmployeePermissionRepository employeePermissionRepository;
+    private final AuditService auditService;
 
     @Override
     public PermissionResponse createPermission(PermissionRequest request) {
@@ -54,6 +62,10 @@ public class PermissionServiceImpl implements PermissionService {
         permission = permissionRepository.save(permission);
         log.info("Permission created successfully with ID: {}", permission.getId());
 
+        auditService.log(AuditCategory.EMPLOYEE, permission.getId(), "CREATE_PERMISSION",
+                AuditLevel.CRITICAL, resolveCurrentEmployee(),
+                "Permission: " + permission.getName());
+
         return mapToResponse(permission);
     }
 
@@ -67,6 +79,11 @@ public class PermissionServiceImpl implements PermissionService {
         permission = permissionRepository.save(permission);
 
         log.info("Permission updated successfully: {}", permissionId);
+
+        auditService.log(AuditCategory.EMPLOYEE, permissionId, "UPDATE_PERMISSION",
+                AuditLevel.CRITICAL, resolveCurrentEmployee(),
+                "Permission: " + permission.getName());
+
         return mapToResponse(permission);
     }
 
@@ -77,11 +94,18 @@ public class PermissionServiceImpl implements PermissionService {
         Permission permission = getPermissionEntityById(permissionId);
 
         if (!permission.getRoles().isEmpty()) {
-            throw new IllegalArgumentException("Cannot delete permission that is assigned to roles");
+            throw new BusinessException(
+                    "Cannot delete permission " + permission.getName() + " because it is assigned to roles",
+                    "PERMISSION_HAS_ROLES");
         }
 
+        String permissionName = permission.getName();
         permissionRepository.delete(permission);
         log.info("Permission deleted successfully: {}", permissionId);
+
+        auditService.log(AuditCategory.EMPLOYEE, permissionId, "DELETE_PERMISSION",
+                AuditLevel.CRITICAL, resolveCurrentEmployee(),
+                "Permission: " + permissionName);
     }
 
     @Override
@@ -96,7 +120,7 @@ public class PermissionServiceImpl implements PermissionService {
     public PermissionResponse getPermissionByName(String name) {
         log.debug("Fetching permission with name: {}", name);
         Permission permission = permissionRepository.findByName(name)
-                .orElseThrow(() -> new ResourceNotFoundException("Permission not found with name: " + name));
+                .orElseThrow(() -> new ResourceNotFoundException("Permission", "name", name));
         return mapToResponse(permission);
     }
 
@@ -131,7 +155,7 @@ public class PermissionServiceImpl implements PermissionService {
     @Transactional(readOnly = true)
     public Permission getPermissionEntityById(Long permissionId) {
         return permissionRepository.findById(permissionId)
-                .orElseThrow(() -> new ResourceNotFoundException("Permission not found with ID: " + permissionId));
+                .orElseThrow(() -> new ResourceNotFoundException("Permission", "id", permissionId));
     }
 
     @Override
@@ -140,8 +164,8 @@ public class PermissionServiceImpl implements PermissionService {
         log.debug("Checking if employee {} has permission {}", employeeId, permissionName);
 
         Employee employee = employeeRepository.findById(employeeId)
-                .orElseThrow(() -> new ResourceNotFoundException("Employee not found with ID: " + employeeId));
-        log.atInfo().log("Employee found: {} with email: {}", employee.getId(), employee.getEmail());
+                .orElseThrow(() -> new ResourceNotFoundException("Employee", "id", employeeId));
+        log.debug("Checking permissions for employee ID: {}", employee.getId());
         
         // Check role-based permissions
         Set<Permission> rolePermissions = permissionRepository.findByEmployeeId(employeeId);
@@ -171,7 +195,7 @@ public class PermissionServiceImpl implements PermissionService {
         
         // Verify employee exists
         employeeRepository.findById(employeeId)
-                .orElseThrow(() -> new ResourceNotFoundException("Employee not found with ID: " + employeeId));
+                .orElseThrow(() -> new ResourceNotFoundException("Employee", "id", employeeId));
         
         // Get role-based permissions
         Set<Permission> rolePermissions = permissionRepository.findByEmployeeId(employeeId);
@@ -187,6 +211,14 @@ public class PermissionServiceImpl implements PermissionService {
                   employeeId, allPermissions.size(), rolePermissions.size(), customPermissions.size());
         
         return allPermissions;
+    }
+
+    private Employee resolveCurrentEmployee() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof EmployeeUserDetails u) {
+            return employeeRepository.getReferenceById(u.getId());
+        }
+        return null;
     }
 
     private PermissionResponse mapToResponse(Permission permission) {

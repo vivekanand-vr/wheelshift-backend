@@ -38,5 +38,110 @@
     "name": "file.storage.type",
     "type": "java.lang.String",
     "description": "Type of file storage to be used, can be either local or s3"
+  },
+  {
+    "name": "cors.allowed-origins",
+    "type": "java.lang.String",
+    "description": "Comma-separated list of allowed CORS origins (e.g. http://localhost:3000)"
+  },
+  {
+    "name": "cors.allowed-methods",
+    "type": "java.lang.String",
+    "description": "Comma-separated list of allowed HTTP methods for CORS"
+  },
+  {
+    "name": "cors.allowed-headers",
+    "type": "java.lang.String",
+    "description": "Comma-separated list of allowed request headers for CORS"
+  },
+  {
+    "name": "cors.max-age",
+    "type": "java.lang.Long",
+    "description": "CORS preflight response cache duration in seconds"
+  },
+  {
+    "name": "reservation.expiry.check-interval-ms",
+    "type": "java.lang.Long",
+    "description": "Interval in milliseconds between reservation expiry checks (default: 300000 = 5 minutes)"
+  },
+  {
+    "name": "file.storage.s3.bucket-name",
+    "type": "java.lang.String",
+    "description": "S3 bucket name for file storage (used when file.storage.type=s3)"
+  },
+  {
+    "name": "file.storage.s3.region",
+    "type": "java.lang.String",
+    "description": "AWS region for the S3 bucket (e.g. ap-south-1)"
+  },
+  {
+    "name": "file.storage.s3.access-key",
+    "type": "java.lang.String",
+    "description": "AWS access key ID for S3 authentication"
+  },
+  {
+    "name": "file.storage.s3.secret-key",
+    "type": "java.lang.String",
+    "description": "AWS secret access key for S3 authentication"
+  },
+  {
+    "name": "file.storage.s3.public-url",
+    "type": "java.lang.String",
+    "description": "Public base URL for accessing files stored in S3 (e.g. https://bucket.s3.region.amazonaws.com)"
+  },
+  {
+    "name": "spring.kafka.bootstrap-servers",
+    "type": "java.lang.String",
+    "description": "Comma-delimited list of host:port pairs to use for establishing the initial Kafka connection."
+  },
+  {
+    "name": "spring.kafka.producer.key-serializer",
+    "type": "java.lang.String",
+    "description": "Serializer class for keys."
+  },
+  {
+    "name": "spring.kafka.producer.value-serializer",
+    "type": "java.lang.String",
+    "description": "Serializer class for values."
+  },
+  {
+    "name": "spring.kafka.producer.acks",
+    "type": "java.lang.String",
+    "description": "Number of acknowledgments the producer requires the leader to have received before considering a request complete."
+  },
+  {
+    "name": "spring.kafka.producer.retries",
+    "type": "java.lang.Integer",
+    "description": "Number of times a producer will attempt to retry a failed request."
+  },
+  {
+    "name": "spring.kafka.producer.properties.enable.idempotence",
+    "type": "java.lang.Boolean",
+    "description": "When true, the producer ensures exactly one copy of each message is written to the stream."
+  },
+  {
+    "name": "spring.kafka.consumer.key-deserializer",
+    "type": "java.lang.String",
+    "description": "Deserializer class for keys."
+  },
+  {
+    "name": "spring.kafka.consumer.value-deserializer",
+    "type": "java.lang.String",
+    "description": "Deserializer class for values."
+  },
+  {
+    "name": "spring.kafka.consumer.auto-offset-reset",
+    "type": "java.lang.String",
+    "description": "What to do when there is no initial offset in Kafka or if the current offset no longer exists (earliest, latest, none)."
+  },
+  {
+    "name": "spring.kafka.consumer.properties.spring.json.trusted.packages",
+    "type": "java.lang.String",
+    "description": "Comma-delimited list of package patterns allowed for deserialization via JsonDeserializer. Use * to trust all packages."
+  },
+  {
+    "name": "spring.kafka.consumer.properties.spring.json.use.type.headers",
+    "type": "java.lang.Boolean",
+    "description": "When false, JsonDeserializer uses the configured value type instead of type headers from the record."
   }
 ]}

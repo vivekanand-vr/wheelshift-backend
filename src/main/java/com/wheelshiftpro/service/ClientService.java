@@ -111,4 +111,14 @@ public interface ClientService {
      * @param clientId the client ID
      */
     void incrementPurchaseCount(Long clientId);
+
+    /**
+     * Updates the status of a client.
+     *
+     * @param id     the client ID
+     * @param status the new status
+     * @return updated client response
+     * @throws com.wheelshiftpro.exception.ResourceNotFoundException if client not found
+     */
+    ClientResponse updateClientStatus(Long id, ClientStatus status);
 }

@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 import java.util.Map;
 
+import com.wheelshiftpro.enums.notifications.NotificationEventType;
 import com.wheelshiftpro.enums.notifications.NotificationSeverity;
 
 @Data
@@ -17,7 +18,7 @@ import com.wheelshiftpro.enums.notifications.NotificationSeverity;
 public class NotificationEventResponse {
     
     private Long id;
-    private String eventType;
+    private NotificationEventType eventType;
     private String entityType;
     private Long entityId;
     private Map<String, Object> payload;

@@ -20,6 +20,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -40,6 +41,7 @@ public class FileStorageController {
     private final FileStorageService fileStorageService;
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("isAuthenticated()")
     @Operation(
             summary = "Upload a single file",
             description = "Upload a file and get back the file ID and public URL. Files are automatically segregated by type."
@@ -80,6 +82,7 @@ public class FileStorageController {
     }
 
     @PostMapping(value = "/upload/batch", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("isAuthenticated()")
     @Operation(
             summary = "Upload multiple files in batch",
             description = "Upload multiple files at once. Returns details about successful and failed uploads."
@@ -115,8 +118,8 @@ public class FileStorageController {
     }
 
     @GetMapping("/{fileId}")
+    @PreAuthorize("isAuthenticated()")
     @Operation(
-            summary = "Download file by ID",
             description = "Download or stream a file using its unique file ID"
     )
     @ApiResponses(value = {
@@ -157,6 +160,7 @@ public class FileStorageController {
     }
 
     @GetMapping("/{fileId}/metadata")
+    @PreAuthorize("isAuthenticated()")
     @Operation(
             summary = "Get file metadata",
             description = "Retrieve metadata information for a file without downloading it"
@@ -180,8 +184,8 @@ public class FileStorageController {
     }
 
     @GetMapping
+    @PreAuthorize("isAuthenticated()")
     @Operation(
-            summary = "Get all files",
             description = "Retrieve all files with pagination"
     )
     public ResponseEntity<ApiResponse<Page<FileMetadataResponse>>> getAllFiles(
@@ -193,8 +197,8 @@ public class FileStorageController {
     }
 
     @GetMapping("/type/{fileType}")
+    @PreAuthorize("isAuthenticated()")
     @Operation(
-            summary = "Get files by type",
             description = "Retrieve files of a specific type (IMAGE, PDF, EXCEL, CSV, DOCUMENT, OTHER)"
     )
     public ResponseEntity<ApiResponse<Page<FileMetadataResponse>>> getFilesByType(
@@ -210,8 +214,8 @@ public class FileStorageController {
     }
 
     @GetMapping("/source/{uploadSource}")
+    @PreAuthorize("isAuthenticated()")
     @Operation(
-            summary = "Get files by upload source",
             description = "Retrieve files from a specific upload source"
     )
     public ResponseEntity<ApiResponse<Page<FileMetadataResponse>>> getFilesByUploadSource(
@@ -227,8 +231,8 @@ public class FileStorageController {
     }
 
     @GetMapping("/user/{uploadedBy}")
+    @PreAuthorize("isAuthenticated()")
     @Operation(
-            summary = "Get files by user",
             description = "Retrieve files uploaded by a specific user"
     )
     public ResponseEntity<ApiResponse<Page<FileMetadataResponse>>> getFilesByUploadedBy(
@@ -244,8 +248,8 @@ public class FileStorageController {
     }
 
     @PostMapping("/batch-metadata")
+    @PreAuthorize("isAuthenticated()")
     @Operation(
-            summary = "Get metadata for multiple files",
             description = "Retrieve metadata for multiple files by their IDs"
     )
     public ResponseEntity<ApiResponse<List<FileMetadataResponse>>> getFilesByIds(
@@ -257,6 +261,7 @@ public class FileStorageController {
     }
 
     @DeleteMapping("/{fileId}/soft")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
     @Operation(
             summary = "Soft delete a file",
             description = "Mark a file as deleted without removing it from storage"
@@ -280,6 +285,7 @@ public class FileStorageController {
     }
 
     @DeleteMapping("/{fileId}/hard")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
     @Operation(
             summary = "Hard delete a file",
             description = "Permanently delete a file from storage and database"
@@ -303,8 +309,8 @@ public class FileStorageController {
     }
 
     @PutMapping("/{fileId}/archive")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','STORE_MANAGER')")
     @Operation(
-            summary = "Archive a file",
             description = "Mark a file as archived"
     )
     public ResponseEntity<ApiResponse<Void>> archiveFile(
@@ -316,8 +322,8 @@ public class FileStorageController {
     }
 
     @PutMapping("/{fileId}/restore")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','STORE_MANAGER')")
     @Operation(
-            summary = "Restore a file",
             description = "Restore a deleted or archived file to active status"
     )
     public ResponseEntity<ApiResponse<Void>> restoreFile(
@@ -329,8 +335,8 @@ public class FileStorageController {
     }
 
     @GetMapping("/statistics")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
     @Operation(
-            summary = "Get storage statistics",
             description = "Retrieve storage usage statistics including counts and sizes by file type"
     )
     public ResponseEntity<ApiResponse<Map<String, Object>>> getStorageStatistics() {
@@ -339,8 +345,8 @@ public class FileStorageController {
     }
 
     @PostMapping("/cleanup")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
     @Operation(
-            summary = "Cleanup old deleted files",
             description = "Remove files that have been marked as deleted for more than the specified number of days"
     )
     public ResponseEntity<ApiResponse<Map<String, Integer>>> cleanupOldDeletedFiles(

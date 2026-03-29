@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 import java.util.Map;
 
+import com.wheelshiftpro.enums.notifications.NotificationEventType;
 import com.wheelshiftpro.enums.notifications.NotificationSeverity;
 
 @Data
@@ -18,8 +19,8 @@ import com.wheelshiftpro.enums.notifications.NotificationSeverity;
 @AllArgsConstructor
 public class CreateNotificationEventRequest {
     
-    @NotBlank(message = "Event type is required")
-    private String eventType;
+    @NotNull(message = "Event type is required")
+    private NotificationEventType eventType;
     
     @NotBlank(message = "Entity type is required")
     private String entityType;

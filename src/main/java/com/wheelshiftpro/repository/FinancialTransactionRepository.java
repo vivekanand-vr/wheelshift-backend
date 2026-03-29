@@ -21,6 +21,22 @@ import java.util.List;
 public interface FinancialTransactionRepository extends JpaRepository<FinancialTransaction, Long>, JpaSpecificationExecutor<FinancialTransaction> {
 
     /**
+     * Check if any transaction is linked to the given car.
+     */
+    boolean existsByCarId(Long carId);
+
+    /**
+     * Check if any transaction is linked to the given motorcycle.
+     */
+    boolean existsByMotorcycleId(Long motorcycleId);
+
+    /**
+     * Check if any transaction is linked to the given sale (via car).
+     */
+    @Query("SELECT CASE WHEN COUNT(ft) > 0 THEN true ELSE false END FROM FinancialTransaction ft WHERE ft.car.id = :carId")
+    boolean existsBySaleCarId(@Param("carId") Long carId);
+
+    /**
      * Find transactions by car.
      */
     Page<FinancialTransaction> findByCarId(Long carId, Pageable pageable);

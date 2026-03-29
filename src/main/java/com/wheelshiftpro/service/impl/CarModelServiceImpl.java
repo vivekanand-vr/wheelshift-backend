@@ -4,12 +4,18 @@ import com.wheelshiftpro.dto.request.CarModelRequest;
 import com.wheelshiftpro.dto.response.CarModelResponse;
 import com.wheelshiftpro.dto.response.PageResponse;
 import com.wheelshiftpro.entity.CarModel;
+import com.wheelshiftpro.entity.Employee;
+import com.wheelshiftpro.enums.AuditCategory;
+import com.wheelshiftpro.enums.AuditLevel;
 import com.wheelshiftpro.enums.FuelType;
 import com.wheelshiftpro.exception.BusinessException;
 import com.wheelshiftpro.exception.DuplicateResourceException;
 import com.wheelshiftpro.exception.ResourceNotFoundException;
 import com.wheelshiftpro.mapper.CarModelMapper;
 import com.wheelshiftpro.repository.CarModelRepository;
+import com.wheelshiftpro.repository.EmployeeRepository;
+import com.wheelshiftpro.security.EmployeeUserDetails;
+import com.wheelshiftpro.service.AuditService;
 import com.wheelshiftpro.service.CarModelService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +23,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,8 +39,11 @@ public class CarModelServiceImpl implements CarModelService {
 
     private final CarModelRepository carModelRepository;
     private final CarModelMapper carModelMapper;
+    private final AuditService auditService;
+    private final EmployeeRepository employeeRepository;
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public CarModelResponse createCarModel(CarModelRequest request) {
         log.debug("Creating car model: {} {} {}", request.getMake(), request.getModel(), request.getVariant());
         
@@ -46,20 +57,33 @@ public class CarModelServiceImpl implements CarModelService {
         CarModel saved = carModelRepository.save(carModel);
         
         log.info("Created car model with ID: {}", saved.getId());
+        auditService.log(AuditCategory.CAR, saved.getId(), "CREATE", AuditLevel.REGULAR,
+                resolveCurrentEmployee(), saved.getMake() + " " + saved.getModel() + " " + saved.getVariant());
         return carModelMapper.toResponse(saved);
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public CarModelResponse updateCarModel(Long id, CarModelRequest request) {
         log.debug("Updating car model ID: {}", id);
         
         CarModel carModel = carModelRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("CarModel", "id", id));
 
+        if (request.getMake() != null && request.getModel() != null && request.getVariant() != null) {
+            if (carModelRepository.existsByMakeAndModelAndVariantAndIdNot(
+                    request.getMake(), request.getModel(), request.getVariant(), id)) {
+                throw new DuplicateResourceException("CarModel", "make-model-variant",
+                        request.getMake() + " " + request.getModel() + " " + request.getVariant());
+            }
+        }
+
         carModelMapper.updateEntityFromRequest(request, carModel);
         CarModel updated = carModelRepository.save(carModel);
         
         log.info("Updated car model ID: {}", id);
+        auditService.log(AuditCategory.CAR, updated.getId(), "UPDATE", AuditLevel.REGULAR,
+                resolveCurrentEmployee(), null);
         return carModelMapper.toResponse(updated);
     }
 
@@ -86,6 +110,7 @@ public class CarModelServiceImpl implements CarModelService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void deleteCarModel(Long id) {
         log.debug("Deleting car model ID: {}", id);
         
@@ -94,12 +119,15 @@ public class CarModelServiceImpl implements CarModelService {
 
         if (!carModel.getCars().isEmpty()) {
             throw new BusinessException(
-                    "Cannot delete car model. Cars are associated with this model.", 
-                    "CAR_MODEL_HAS_CARS");
+                    "Cannot delete car model with associated vehicles.",
+                    "MODEL_HAS_VEHICLES");
         }
 
+        String label = carModel.getMake() + " " + carModel.getModel() + " " + carModel.getVariant();
         carModelRepository.delete(carModel);
         log.info("Deleted car model ID: {}", id);
+        auditService.log(AuditCategory.CAR, id, "DELETE", AuditLevel.HIGH,
+                resolveCurrentEmployee(), label);
     }
 
     @Override
@@ -162,5 +190,14 @@ public class CarModelServiceImpl implements CarModelService {
                 .last(page.isLast())
                 .first(page.isFirst())
                 .build();
+    }
+
+    /** Returns the Employee proxy for the currently authenticated user, or null for system actions. */
+    private Employee resolveCurrentEmployee() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof EmployeeUserDetails userDetails) {
+            return employeeRepository.getReferenceById(userDetails.getId());
+        }
+        return null;
     }
 }

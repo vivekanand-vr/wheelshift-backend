@@ -100,6 +100,10 @@ public class Car extends BaseEntity {
     @Column(name = "selling_price", precision = 12, scale = 2)
     private BigDecimal sellingPrice;
 
+    @Size(max = 600, message = "Description must not exceed 600 characters")
+    @Column(name = "description", length = 600)
+    private String description;
+
     // Detailed Specs (merged from CarDetailedSpecs)
     @Min(value = 0, message = "Doors cannot be negative")
     @Column(name = "doors")

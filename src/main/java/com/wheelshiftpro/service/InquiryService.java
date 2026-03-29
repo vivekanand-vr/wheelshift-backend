@@ -121,4 +121,15 @@ public interface InquiryService {
      * @return inquiry statistics
      */
     Object getInquiryStatistics();
+
+    /**
+     * Assigns an inquiry to an employee.
+     * Validates employee existence and dispatches notifications.
+     *
+     * @param inquiryId the inquiry ID
+     * @param employeeId the employee ID to assign to
+     * @return the updated inquiry response
+     * @throws com.wheelshiftpro.exception.ResourceNotFoundException if inquiry or employee not found
+     */
+    InquiryResponse assignInquiry(Long inquiryId, Long employeeId);
 }

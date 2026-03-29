@@ -4,12 +4,20 @@ import com.wheelshiftpro.dto.request.CarInspectionRequest;
 import com.wheelshiftpro.dto.response.CarInspectionResponse;
 import com.wheelshiftpro.dto.response.PageResponse;
 import com.wheelshiftpro.entity.CarInspection;
+import com.wheelshiftpro.entity.Employee;
+import com.wheelshiftpro.enums.AuditCategory;
+import com.wheelshiftpro.enums.AuditLevel;
+import com.wheelshiftpro.exception.BusinessException;
 import com.wheelshiftpro.exception.ResourceNotFoundException;
 import com.wheelshiftpro.mapper.CarInspectionMapper;
 import com.wheelshiftpro.repository.CarInspectionRepository;
 import com.wheelshiftpro.repository.CarRepository;
 import com.wheelshiftpro.repository.EmployeeRepository;
+import com.wheelshiftpro.security.EmployeeUserDetails;
+import com.wheelshiftpro.service.AuditService;
 import com.wheelshiftpro.service.CarInspectionService;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -26,13 +34,14 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@Transactional
+@Transactional(rollbackFor = Exception.class)
 public class CarInspectionServiceImpl implements CarInspectionService {
 
     private final CarInspectionRepository carInspectionRepository;
     private final CarInspectionMapper carInspectionMapper;
     private final CarRepository carRepository;
     private final EmployeeRepository employeeRepository;
+    private final AuditService auditService;
 
     @Override
     public CarInspectionResponse createInspection(CarInspectionRequest request) {
@@ -42,9 +51,17 @@ public class CarInspectionServiceImpl implements CarInspectionService {
             throw new ResourceNotFoundException("Car", "id", request.getCarId());
         }
 
+        if (request.getInspectionDate().isAfter(LocalDate.now())) {
+            throw new BusinessException("Inspection date cannot be in the future", "FUTURE_INSPECTION_DATE");
+        }
+
         CarInspection inspection = carInspectionMapper.toEntity(request);
+        inspection.setCar(carRepository.getReferenceById(request.getCarId()));
         CarInspection saved = carInspectionRepository.save(inspection);
 
+        auditService.log(AuditCategory.INSPECTION, saved.getId(), "CREATE",
+                AuditLevel.REGULAR, resolveCurrentEmployee(),
+                "Car ID: " + request.getCarId() + ", Date: " + saved.getInspectionDate());
         log.info("Created inspection with ID: {}", saved.getId());
         return carInspectionMapper.toResponse(saved);
     }
@@ -56,9 +73,15 @@ public class CarInspectionServiceImpl implements CarInspectionService {
         CarInspection inspection = carInspectionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("CarInspection", "id", id));
 
+        if (request.getInspectionDate() != null && request.getInspectionDate().isAfter(LocalDate.now())) {
+            throw new BusinessException("Inspection date cannot be in the future", "FUTURE_INSPECTION_DATE");
+        }
+
         carInspectionMapper.updateEntityFromRequest(request, inspection);
         CarInspection updated = carInspectionRepository.save(inspection);
 
+        auditService.log(AuditCategory.INSPECTION, id, "UPDATE",
+                AuditLevel.REGULAR, resolveCurrentEmployee(), "Car inspection updated");
         log.info("Updated inspection ID: {}", id);
         return carInspectionMapper.toResponse(updated);
     }
@@ -94,6 +117,8 @@ public class CarInspectionServiceImpl implements CarInspectionService {
         }
 
         carInspectionRepository.deleteById(id);
+        auditService.log(AuditCategory.INSPECTION, id, "DELETE",
+                AuditLevel.HIGH, resolveCurrentEmployee(), "Car inspection deleted");
         log.info("Deleted inspection ID: {}", id);
     }
 
@@ -172,6 +197,14 @@ public class CarInspectionServiceImpl implements CarInspectionService {
                 .last(true)
                 .first(true)
                 .build();
+    }
+
+    private Employee resolveCurrentEmployee() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof EmployeeUserDetails u) {
+            return employeeRepository.getReferenceById(u.getId());
+        }
+        return null;
     }
 
     private PageResponse<CarInspectionResponse> buildPageResponse(Page<CarInspection> page) {

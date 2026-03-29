@@ -1,27 +1,41 @@
 package com.wheelshiftpro.service.impl;
 
 import com.wheelshiftpro.dto.request.ReservationRequest;
+import com.wheelshiftpro.dto.request.SaleRequest;
 import com.wheelshiftpro.dto.response.PageResponse;
 import com.wheelshiftpro.dto.response.ReservationResponse;
 import com.wheelshiftpro.dto.response.SaleResponse;
 import com.wheelshiftpro.entity.Car;
+import com.wheelshiftpro.entity.Client;
+import com.wheelshiftpro.entity.Employee;
+import com.wheelshiftpro.entity.Motorcycle;
 import com.wheelshiftpro.entity.Reservation;
+import com.wheelshiftpro.enums.AuditCategory;
+import com.wheelshiftpro.enums.AuditLevel;
 import com.wheelshiftpro.enums.CarStatus;
 import com.wheelshiftpro.enums.ReservationStatus;
+import com.wheelshiftpro.enums.VehicleType;
 import com.wheelshiftpro.exception.BusinessException;
 import com.wheelshiftpro.exception.ResourceNotFoundException;
 import com.wheelshiftpro.mapper.ReservationMapper;
 import com.wheelshiftpro.repository.CarRepository;
 import com.wheelshiftpro.repository.ClientRepository;
+import com.wheelshiftpro.repository.EmployeeRepository;
 import com.wheelshiftpro.repository.ReservationRepository;
+import com.wheelshiftpro.security.EmployeeUserDetails;
+import com.wheelshiftpro.service.AuditService;
 import com.wheelshiftpro.service.ReservationService;
+import com.wheelshiftpro.service.SaleService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,17 +44,30 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@Transactional
+@Transactional(rollbackFor = Exception.class)
 public class ReservationServiceImpl implements ReservationService {
 
     private final ReservationRepository reservationRepository;
     private final CarRepository carRepository;
     private final ClientRepository clientRepository;
+    private final EmployeeRepository employeeRepository;
     private final ReservationMapper reservationMapper;
+    private final AuditService auditService;
+    private final SaleService saleService;
 
     @Override
     public ReservationResponse createReservation(ReservationRequest request) {
         log.debug("Creating reservation for car ID: {}", request.getCarId());
+
+        // Validate expiry date
+        if (request.getExpiryDate() != null && request.getExpiryDate().isBefore(LocalDateTime.now())) {
+            throw new BusinessException("Expiry date must be in the future", "INVALID_EXPIRY_DATE");
+        }
+
+        // Validate deposit amount
+        if (request.getDepositAmount() != null && request.getDepositAmount().compareTo(java.math.BigDecimal.ZERO) < 0) {
+            throw new BusinessException("Deposit amount cannot be negative", "INVALID_DEPOSIT_AMOUNT");
+        }
 
         Car car = carRepository.findById(request.getCarId())
                 .orElseThrow(() -> new ResourceNotFoundException("Car", "id", request.getCarId()));
@@ -50,9 +77,8 @@ public class ReservationServiceImpl implements ReservationService {
                     "CAR_NOT_AVAILABLE");
         }
 
-        if (!clientRepository.existsById(request.getClientId())) {
-            throw new ResourceNotFoundException("Client", "id", request.getClientId());
-        }
+        Client client = clientRepository.findById(request.getClientId())
+                .orElseThrow(() -> new ResourceNotFoundException("Client", "id", request.getClientId()));
 
         // Check for existing active reservation
         if (reservationRepository.existsByCarId(request.getCarId())) {
@@ -60,6 +86,8 @@ public class ReservationServiceImpl implements ReservationService {
         }
 
         Reservation reservation = reservationMapper.toEntity(request);
+        reservation.setCar(car);
+        reservation.setClient(client);
         reservation.setStatus(ReservationStatus.CONFIRMED);
 
         // Update car status
@@ -67,6 +95,9 @@ public class ReservationServiceImpl implements ReservationService {
         carRepository.save(car);
 
         Reservation saved = reservationRepository.save(reservation);
+
+        auditService.log(AuditCategory.RESERVATION, saved.getId(), "CREATE", AuditLevel.REGULAR,
+                resolveCurrentEmployee(), "Car ID: " + car.getId() + ", Client: " + client.getName());
 
         log.info("Created reservation with ID: {}", saved.getId());
         return reservationMapper.toResponse(saved);
@@ -81,6 +112,9 @@ public class ReservationServiceImpl implements ReservationService {
 
         reservationMapper.updateEntityFromRequest(request, reservation);
         Reservation updated = reservationRepository.save(reservation);
+
+        auditService.log(AuditCategory.RESERVATION, id, "UPDATE", AuditLevel.REGULAR,
+                resolveCurrentEmployee(), "Reservation updated");
 
         log.info("Updated reservation ID: {}", id);
         return reservationMapper.toResponse(updated);
@@ -120,6 +154,9 @@ public class ReservationServiceImpl implements ReservationService {
             car.setStatus(CarStatus.AVAILABLE);
             carRepository.save(car);
         }
+
+        auditService.log(AuditCategory.RESERVATION, id, "DELETE", AuditLevel.HIGH,
+                resolveCurrentEmployee(), "Reservation deleted");
 
         reservationRepository.delete(reservation);
         log.info("Deleted reservation ID: {}", id);
@@ -169,8 +206,22 @@ public class ReservationServiceImpl implements ReservationService {
         Reservation reservation = reservationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Reservation", "id", id));
 
+        ReservationStatus previousStatus = reservation.getStatus();
         reservation.setStatus(status);
+
+        // Revert car status if cancelled or expired
+        if (status == ReservationStatus.CANCELLED || status == ReservationStatus.EXPIRED) {
+            if (previousStatus == ReservationStatus.CONFIRMED || previousStatus == ReservationStatus.PENDING) {
+                Car car = reservation.getCar();
+                car.setStatus(CarStatus.AVAILABLE);
+                carRepository.save(car);
+            }
+        }
+
         Reservation updated = reservationRepository.save(reservation);
+
+        auditService.log(AuditCategory.RESERVATION, id, "STATUS_CHANGE", AuditLevel.HIGH,
+                resolveCurrentEmployee(), "From " + previousStatus + " to " + status);
 
         log.info("Updated reservation ID: {} status to: {}", id, status);
         return reservationMapper.toResponse(updated);
@@ -200,8 +251,54 @@ public class ReservationServiceImpl implements ReservationService {
             throw new BusinessException("Only confirmed reservations can be converted to sales", "INVALID_RESERVATION_STATUS");
         }
 
-        // This will be implemented when SaleService is integrated
-        throw new BusinessException("Sale conversion not yet implemented", "NOT_IMPLEMENTED");
+        if (!reservation.getDepositPaid()) {
+            throw new BusinessException("Deposit must be paid before converting to sale", "DEPOSIT_NOT_PAID");
+        }
+
+        if (!employeeRepository.existsById(employeeId)) {
+            throw new ResourceNotFoundException("Employee", "id", employeeId);
+        }
+
+        // Determine vehicle details
+        Car car = reservation.getCar();
+        Motorcycle motorcycle = reservation.getMotorcycle();
+        BigDecimal salePrice;
+        Long vehicleId;
+
+        if (reservation.getVehicleType() == VehicleType.CAR && car != null) {
+            vehicleId = car.getId();
+            salePrice = car.getSellingPrice();
+        } else if (reservation.getVehicleType() == VehicleType.MOTORCYCLE && motorcycle != null) {
+            vehicleId = motorcycle.getId();
+            salePrice = motorcycle.getSellingPrice();
+        } else {
+            throw new BusinessException("Reservation has no valid vehicle associated", "NO_VEHICLE");
+        }
+
+        // Build SaleRequest from reservation
+        SaleRequest saleRequest = SaleRequest.builder()
+                .carId(reservation.getVehicleType() == VehicleType.CAR ? car.getId() : null)
+                .motorcycleId(reservation.getVehicleType() == VehicleType.MOTORCYCLE ? motorcycle.getId() : null)
+                .clientId(reservation.getClient().getId())
+                .employeeId(employeeId)
+                .saleDate(LocalDateTime.now())
+                .salePrice(salePrice)
+                .commissionRate(BigDecimal.valueOf(5.0)) // Default 5% commission
+                .build();
+
+        // Create the sale (all sale creation side effects handled by SaleService)
+        SaleResponse saleResponse = saleService.createSale(saleRequest);
+
+        // Update reservation status to fulfilled
+        reservation.setStatus(ReservationStatus.CONFIRMED);
+        reservationRepository.save(reservation);
+
+        auditService.log(AuditCategory.RESERVATION, reservationId, "CONVERT_TO_SALE", AuditLevel.CRITICAL,
+                resolveCurrentEmployee(), 
+                "Converted to sale ID: " + saleResponse.getId() + ", Vehicle ID: " + vehicleId + ", Price: " + salePrice);
+
+        log.info("Converted reservation ID: {} to sale ID: {}", reservationId, saleResponse.getId());
+        return saleResponse;
     }
 
     @Override
@@ -211,8 +308,8 @@ public class ReservationServiceImpl implements ReservationService {
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Reservation", "id", reservationId));
 
-        if (reservation.getStatus() != ReservationStatus.CONFIRMED) {
-            throw new BusinessException("Only confirmed reservations can be cancelled", "INVALID_RESERVATION_STATUS");
+        if (reservation.getStatus() != ReservationStatus.CONFIRMED && reservation.getStatus() != ReservationStatus.PENDING) {
+            throw new BusinessException("Only confirmed or pending reservations can be cancelled", "INVALID_RESERVATION_STATUS");
         }
 
         reservation.setStatus(ReservationStatus.CANCELLED);
@@ -223,6 +320,9 @@ public class ReservationServiceImpl implements ReservationService {
         carRepository.save(car);
 
         Reservation updated = reservationRepository.save(reservation);
+
+        auditService.log(AuditCategory.RESERVATION, reservationId, "STATUS_CHANGE", AuditLevel.HIGH,
+                resolveCurrentEmployee(), "Reservation cancelled");
 
         log.info("Cancelled reservation ID: {}", reservationId);
         return reservationMapper.toResponse(updated);
@@ -246,6 +346,9 @@ public class ReservationServiceImpl implements ReservationService {
             }
 
             reservationRepository.save(reservation);
+
+            auditService.log(AuditCategory.RESERVATION, reservation.getId(), "STATUS_CHANGE", AuditLevel.HIGH,
+                    null, "Reservation expired (automated)");
         }
 
         log.info("Expired {} reservations", expiredReservations.size());
@@ -260,6 +363,9 @@ public class ReservationServiceImpl implements ReservationService {
 
         reservation.setDepositPaid(depositPaid);
         Reservation updated = reservationRepository.save(reservation);
+
+        auditService.log(AuditCategory.RESERVATION, reservationId, "UPDATE", AuditLevel.REGULAR,
+                resolveCurrentEmployee(), "Deposit status: " + depositPaid);
 
         log.info("Updated deposit status for reservation ID: {}", reservationId);
         return reservationMapper.toResponse(updated);
@@ -277,5 +383,13 @@ public class ReservationServiceImpl implements ReservationService {
                 .last(page.isLast())
                 .first(page.isFirst())
                 .build();
+    }
+
+    private Employee resolveCurrentEmployee() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof EmployeeUserDetails u) {
+            return employeeRepository.getReferenceById(u.getId());
+        }
+        return null;
     }
 }

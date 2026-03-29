@@ -1,248 +1,334 @@
-# WheelShift Pro
+# WheelShift Pro — Backend
 
-> A production-ready Spring Boot application for used car trading and inventory management with comprehensive RBAC and notification systems.
+> Production-ready Spring Boot backend for a used-vehicle trading enterprise.
+> Covers the full lifecycle of a sale: inventory, inspections, reservations, clients,
+> employees, financials, tasks, events, and a multi-channel notification system —
+> all secured by a fine-grained RBAC layer.
+
+---
 
 ## Quick Start
 
-### Option 1: Run Everything with Docker (Recommended)
+### Option 1 — Full Docker (Recommended)
 
 ```bash
-# Clone the repository
 git clone <repository-url>
-cd WheelShiftPro
+cd wheelshift-backend
 
-# Start all services (MySQL, Redis, Redis Insights, and Application)
+# Start MySQL, Redis, Kafka, Kafka UI, phpMyAdmin, Redis Commander
 docker-compose -f docker-compose-dev.yml up -d
 
-# View logs
+# Follow application logs
 docker-compose -f docker-compose-dev.yml logs -f ws-pro
 
-# Stop all services
+# Tear down (keeps data)
 docker-compose -f docker-compose-dev.yml down
 
-# Stop and remove all data (clean slate)
+# Tear down + wipe all data
 docker-compose -f docker-compose-dev.yml down -v
 ```
 
-**Access Services:**
-- Application: http://localhost:8080
-- Swagger UI: http://localhost:8080/api/v1/swagger-ui.html
-- phpMyAdmin: http://localhost:8081
-- Redis Commander: http://localhost:8082
-- Redis Insights: http://localhost:5540
+**Dev services:**
 
-### Option 2: Local Development
+| Service | URL |
+|---------|-----|
+| API | http://localhost:8080 |
+| Swagger UI | http://localhost:8080/swagger-ui.html |
+| Actuator / Health | http://localhost:8080/actuator/health |
+| phpMyAdmin | http://localhost:8081 |
+| Redis Commander | http://localhost:8082 |
+| Kafka UI | http://localhost:8083 |
+| Redis Insights | http://localhost:5540 |
+
+---
+
+### Option 2 — Local (IDE / Terminal)
+
+**Prerequisites:** Java 17, Maven 3.9+, Docker
 
 ```bash
-# Clone the repository
-git clone <repository-url>
-cd WheelShiftPro
+# 1. Start infrastructure only
+docker-compose -f docker-compose-dev.yml up -d mysql redis kafka
 
-# Start MySQL and Redis with Docker Compose
-docker-compose -f docker-compose-dev.yml up -d mysql redis
+# 2. Set environment variables
+#    IntelliJ: EnvFile plugin → add .env to Run Configuration
+#    Terminal:
+export $(cat .env | grep -v '^#' | xargs)
 
-# Build and run the application locally
-./mvnw clean install
-./mvnw spring-boot:run
-
-# Access API documentation
-http://localhost:8080/api/v1/swagger-ui.html
-
-# Stop services when done
-docker-compose -f docker-compose-dev.yml down
+# 3. Run with dev profile
+mvn spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
-**For detailed Docker setup and hot-reload configuration, see [DOCKER_GUIDE.md](DOCKER_GUIDE.md)**
+---
 
-## Features
+## Environment Variables
 
-### Core Business Modules
-- **Vehicle Inventory Management** - Complete car lifecycle tracking
-- **Customer (Client) Management** - Client profiles and purchase history
-- **Employee Management** - Staff tracking and performance metrics
-- **Lead Management (Inquiries)** - Inquiry tracking and conversion
-- **Reservation System** - Vehicle holds with deposit management
-- **Sales Processing** - Transaction recording and commissions
-- **Financial Management** - Transaction tracking and reporting
-- **Storage Locations** - Multi-facility management with capacity tracking
-- **Car Inspections** - Vehicle inspection records and reports
-- **Task Management** - Task assignment and tracking (Kanban board)
-- **Event Calendar** - Appointment and event scheduling
-- **Dashboard System** - Role-based dashboard views for all user types
+All secrets are injected via environment variables. The `.env` file at the project root
+(gitignored — never committed) holds local dev values:
 
-### Security & System Features
-- **Role-Based Access Control (RBAC)** - Comprehensive permission system
-- **Notification System** - Multi-channel notifications with templates
-- **Redis Caching** - High-performance caching with configurable TTLs
-- **Audit Logging** - Automatic change tracking
-- **File Logging** - Application logging with rotation
-- **Error Handling** - Custom error pages
-- **JWT Authentication** - Secure token-based authentication
+```bash
+# Database
+DB_URL=jdbc:mysql://localhost:3307/wheelshift_db?...
+DB_USERNAME=wheelshift_user
+DB_PASSWORD=your_password
 
-> **Note:** Check individual feature documentation in `docs/features/` for detailed implementation guides.
+# Redis
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
 
-## Security & Authorization
+# Kafka
+# localhost:9092 maps to the broker's EXTERNAL listener when running outside Docker
+KAFKA_BOOTSTRAP_SERVERS=localhost:9092
 
-- **6 Built-in Roles** with hierarchical permissions
-- **40+ Fine-grained Permissions** (resource:action format)
-- **Data Scoping** for location/department-based filtering
-- **Resource-level ACLs** for individual access control
-- **JWT Authentication** with secure token management
+# JWT  (generate with: openssl rand -hex 32)
+JWT_SECRET=change_this_in_production
+JWT_EXPIRATION_MS=86400000
 
-[View RBAC Documentation](docs/features/rbac/README.md)
+# AWS S3 (leave blank to use local file storage)
+AWS_ACCESS_KEY=
+AWS_SECRET_KEY=
+```
 
-## Notification System
+Never hardcode secrets in `application.properties` or any committed file.
 
-- **Multi-channel Support**: In-App, Email, SMS, WhatsApp, Push, Webhooks
-- **Template Engine** with variable substitution
-- **User Preferences** per channel
-- **Event-driven Architecture** for automatic notifications
-- **Delivery Tracking** and status monitoring
-
-[View Notifications Documentation](docs/features/notifications/README.md)
-[View Dashboard Documentation](docs/features/dashboard/README.md)
+---
 
 ## Technology Stack
 
 | Category | Technology |
 |----------|------------|
-| **Framework** | Spring Boot 4.0.1 |
-| **Language** | Java 17 |
-| **Build Tool** | Maven 3.9+ |
-| **Database** | MySQL 8.0+ |
-| **ORM** | Spring Data JPA (Hibernate) |
-| **Migrations** | Flyway |
-| **Mapping** | MapStruct 1.5.5 |
-| **Security** | Spring Security + JWT |
-| **API Docs** | SpringDoc OpenAPI 2.7.0 |
-| **Validation** | Jakarta Bean Validation |
-| **Caching** | Redis |
-| **Logging** | Logback with file rotation |
+| Framework | Spring Boot 4.x |
+| Language | Java 17 |
+| Build | Maven 3.9+, JaCoCo, OWASP dependency-check |
+| Database | MySQL 8.0 |
+| ORM / Schema | Spring Data JPA (Hibernate) + Flyway |
+| Mapping | MapStruct 1.5.5 + Lombok |
+| Security | Spring Security 6, JWT (JJWT 0.12) |
+| Caching | Redis 7 (Spring Cache) || Async Messaging | Apache Kafka 4.x, KRaft mode (spring-kafka) |
+| Real-time Push | Server-Sent Events (SSE) || Scheduling | `@Scheduled` + ShedLock (Redis distributed lock) |
+| Observability | Spring Actuator, Micrometer / Prometheus |
+| API Docs | SpringDoc OpenAPI 3 / Swagger UI |
+| Resilience | Resilience4j |
+| Testing | JUnit 5, Testcontainers, ArchUnit, REST Assured |
+| Logging | Logback (console + file; JSON via Logstash encoder in prod) |
+| Containers | Docker, Docker Compose |
 
-## API Overview
+---
 
-Base URL: `http://localhost:8080/api/v1`
+## Features
 
-**Total Endpoints:** 150+ REST endpoints organized by resource
+### Core Business
+- **Vehicle Inventory** — full car & motorcycle lifecycle (available → reserved → sold)
+- **Client Management** — profiles, purchase history, status tracking
+- **Employee Management** — staff profiles, roles, performance metrics
+- **Lead Management** — inquiry tracking and conversion pipeline
+- **Reservation System** — vehicle holds with deposit management; auto-expiry via scheduler
+- **Sales Processing** — transaction recording, commission tracking
+- **Financial Management** — transaction ledger and reporting
+- **Storage Locations** — multi-facility management with capacity tracking
+- **Inspections** — car and motorcycle inspection records
+- **Task Management** — task assignment, priorities, Kanban-style workflow
+- **Event Calendar** — appointments and event scheduling
 
-### Resource Categories
+### Role-Based Dashboards
+Five tailored dashboard views: Admin, Sales, Inspector, Finance, Store Manager.
 
-| Category | Endpoints | Description |
-|----------|-----------|-------------|
-| **Core Business** | 90+ | Vehicle, Client, Employee, Sales, Inquiries, etc. |
-| **RBAC & Auth** | 25+ | Authentication, Roles, Permissions, ACLs |
-| **Notifications** | 20+ | Notifications, Preferences, Templates |
-| **Task & Calendar** | 15+ | Tasks, Events, Calendar operations |
+### Security & RBAC
+- 6 built-in roles: `SUPER_ADMIN`, `ADMIN`, `SALES`, `STORE_MANAGER`, `INSPECTOR`, `FINANCE`
+- 40+ fine-grained permissions in `resource:action` format
+- Data scoping (location / department-based filtering)
+- Resource-level ACLs for per-record access control
+- Stateless JWT authentication
 
-**Interactive API Documentation:** [Swagger UI](http://localhost:8080/api/v1/swagger-ui.html)
+### Notifications
+- Multi-channel: In-App, Email, SMS, WhatsApp, Push, Webhook
+- Template engine with variable substitution
+- Per-employee channel preferences
+- **Delivery rules** — opt-out preferences, severity threshold filtering, quiet hours (auto-reschedule), digest batching (hourly scheduler)
+- **Async event-driven delivery via Apache Kafka** — producer publishes `NotificationJobMessage` to `notification.jobs.inapp` / `notification.jobs.email` topics; consumer processes with manual acknowledgement
+- **Real-time push via SSE** — consumers forward processed jobs to Redis Pub/Sub; a `MessageListener` picks them up and pushes to all active `SseEmitter` connections for the recipient
+- Stream endpoint: `GET /api/v1/notifications/stream/{recipientType}/{recipientId}` (`text/event-stream`)
+- Typed event catalogue via `NotificationEventType` enum (e.g. `INQUIRY_ASSIGNED`, `TASK_DUE`, `SALE_COMPLETED`)
+- Status tracking per delivery attempt
 
-## Database Schema
+---
 
-The application uses Flyway for database migrations with a comprehensive schema:
+## API Reference
 
-- **Core Tables**: 15 main business entities
-- **RBAC Tables**: 6 tables for security and permissions
-- **Notification Tables**: 7 tables for notification system
-- **Total**: 28+ tables with proper relationships and indexes
+**Base URL:** `http://localhost:8080/api/v1`
+**Interactive docs:** http://localhost:8080/swagger-ui.html
 
-Migration files located in: `src/main/resources/db/migration/`
+| Group | Base Path | Controller |
+|-------|-----------|------------|
+| Auth | `/auth` | `AuthController` |
+| Cars | `/cars` | `CarController` |
+| Car Models | `/car-models` | `CarModelController` |
+| Car Inspections | `/car-inspections` | `CarInspectionController` |
+| Motorcycles | `/motorcycles` | `MotorcycleController` |
+| Motorcycle Models | `/motorcycle-models` | `MotorcycleModelController` |
+| Motorcycle Inspections | `/motorcycle-inspections` | `MotorcycleInspectionController` |
+| Clients | `/clients` | `ClientController` |
+| Employees | `/employees` | `EmployeeController` |
+| Sales | `/sales` | `SaleController` |
+| Reservations | `/reservations` | `ReservationController` |
+| Financial Transactions | `/financial-transactions` | `FinancialTransactionController` |
+| Storage Locations | `/storage-locations` | `StorageLocationController` |
+| Tasks | `/tasks` | `TaskController` |
+| Events | `/events` | `EventController` |
+| Inquiries | `/inquiries` | `InquiryController` |
+| Audit Logs | `/audit-logs` | `AuditLogController` |
+| Files | `/files` | `FileStorageController` |
+| Dashboards | `/dashboard` | `DashboardController` |
+| Notifications | `/notifications` | `NotificationController` |
+| Notification Preferences | `/notifications/preferences` | `NotificationPreferenceController` |
+| Notification Templates | `/notifications/templates` | `NotificationTemplateController` |
+| Roles | `/rbac/roles` | `RoleController` |
+| Permissions | `/rbac/permissions` | `PermissionController` |
+| Employee Roles | `/rbac/employees/{id}/roles` | `EmployeeRoleController` |
+| Employee Permissions | `/rbac/employee-permissions` | `EmployeePermissionController` |
+| Resource ACLs | `/rbac/acl` | `ResourceACLController` |
+| Data Scopes | `/rbac/employees/{id}/scope` | `DataScopeController` |
 
-## Configuration
+---
 
-Key configuration in `application.properties`:
+## Database
 
-```properties
-# Server
-server.port=8080
+Schema is managed by **Flyway** — migrations run automatically on startup.
 
-# Database
-spring.datasource.url=jdbc:mysql://localhost:3306/wheelshiftpro
-spring.datasource.username=your_username
-spring.datasource.password=your_password
+| Version | Description |
+|---------|-------------|
+| V1 | Initial schema |
+| V2 | Seed data |
+| V3 | Column type fixes |
+| V4 | RBAC tables |
+| V5 | RBAC seed data |
+| V6 | Notifications tables |
+| V7 | Assign employee roles |
+| V8 | Fix roles + super admin |
+| V9 | Motorcycle tables |
+| V10 | Motorcycle movements |
+| V11 | Employee custom permissions |
+| V12 | File storage tables |
+| V13 | File storage columns |
+| V14 | Merge car-related tables |
+| V15 | Merge motorcycle-related tables |
+| V16 | Seed car models from dataset |
+| V17 | Seed motorcycle models from dataset |
+| V18 | Align notification event types to enum |
+| V19 | Storage location triggers |
+| V20 | Split vehicle count by type |
+| V21 | Add vehicle description |
+| V22 | Audit logs table |
+| V23 | Notification digest support (compound index) |
 
-# JPA
-spring.jpa.hibernate.ddl-auto=validate
-spring.jpa.show-sql=false
+Migration files: `src/main/resources/db/migration/`
+Rollback scripts (manual): `src/main/resources/db/rollbacks/`
 
-# Flyway
-spring.flyway.enabled=true
+**Never modify a committed migration.** Create a new `V{n+1}__...sql` for any schema change.
 
-# JWT Authentication
-jwt.secret=your-secret-key-here
-jwt.expiration=86400000
+### Running Migrations Manually
 
-# API Documentation
-springdoc.api-docs.path=/api/v1/api-docs
-springdoc.swagger-ui.path=/api/v1/swagger-ui.html
+Migrations run automatically on every app startup. The Flyway Maven plugin is pre-configured in `pom.xml` and reads `DB_USERNAME` / `DB_PASSWORD` from your environment, so you can run any Flyway goal with a single command:
+
+```bash
+# Source your credentials first (once per shell session)
+export $(cat .env | grep -v '^#' | xargs)   # Linux/macOS
+# or load .env via your IDE's EnvFile plugin on Windows
+
+# Apply all pending migrations
+mvn flyway:migrate
+
+# Check current migration status
+mvn flyway:info
+
+# Validate applied migrations match the local scripts
+mvn flyway:validate
+
+# Repair the schema history table (use after fixing a failed migration)
+mvn flyway:repair
 ```
 
-## Project Structure
+To target a different host or database, override only what you need:
 
+```bash
+mvn flyway:migrate -Dflyway.url=jdbc:mysql://other-host:3306/wheelshift_db
 ```
-WheelShiftPro/
-├── src/main/java/com/wheelshiftpro/
-│   ├── config/          # Application configuration
-│   ├── controller/      # REST API controllers
-│   ├── dto/            # Data Transfer Objects
-│   ├── entity/         # JPA entities
-│   ├── enums/          # Enumerations
-│   ├── exception/      # Exception handling
-│   ├── mapper/         # MapStruct mappers
-│   ├── repository/     # Spring Data repositories
-│   ├── security/       # Security configuration
-│   └── service/        # Business logic
-├── src/main/resources/
-│   ├── db/migration/   # Flyway migrations
-│   ├── templates/      # Error page templates
-│   ├── application.properties
-│   └── logback-spring.xml
-└── docs/               # Documentation
-    ├── features/       # Feature-specific docs
-    └── guides/         # Developer guides
-```
+
+> Ensure the MySQL container is up (`docker-compose -f docker-compose-dev.yml up -d mysql`) before running any Flyway commands.
+
+---
 
 ## Testing
 
 ```bash
-# Run all tests
-./mvnw test
+# Full build: compile → test → coverage check → architecture rules
+mvn clean install
 
-# Run with coverage
-./mvnw clean test jacoco:report
+# Tests only
+mvn test
+
+# Skip tests for fast iteration
+mvn install -DskipTests
+
+# Architecture rules only
+mvn test -Dtest=ArchitectureRulesTest
+
+# Coverage report → open target/site/jacoco/index.html after running
+mvn test jacoco:report
 ```
+
+`ArchitectureRulesTest` enforces layered architecture rules on every build via ArchUnit.
+A failing architecture test is a **build failure** — fix the architecture, never skip the test.
+
+---
 
 ## Development Status
 
 | Module | Status |
 |--------|--------|
-| Core Business APIs | Complete |
-| RBAC System | Complete |
-| Notification System | Complete |
-| Dashboard System | Complete |
-| Redis Caching | Complete |
-| Task Management | Complete |
-| JWT Authentication | Complete |
-| Swagger Documentation | Complete |
-| Error Handling | Complete |
-| Audit Logging | Complete |
-| File Logging | Complete |
-| Database Migrations | Complete |
-| Docker Setup | Complete |
-| Unit Tests | In Progress |
-| Integration Tests | Planned |
-| End-to-End Tests | Planned |
+| Core Business APIs | ✅ Complete |
+| RBAC System | ✅ Complete |
+| Notification System | ✅ Complete |
+| Notification Delivery Rules | ✅ Complete |
+| Kafka Async Delivery | ✅ Complete |
+| SSE Real-time Push | ✅ Complete |
+| Dashboard System | ✅ Complete |
+| Redis Caching | ✅ Complete |
+| Task Management | ✅ Complete |
+| JWT Authentication | ✅ Complete |
+| Swagger / OpenAPI | ✅ Complete |
+| Error Handling | ✅ Complete |
+| Audit Logging | ✅ Complete |
+| File Storage (Local + S3) | ✅ Complete |
+| Database Migrations (V23) | ✅ Complete |
+| Docker Setup | ✅ Complete |
+| Observability (Actuator + Prometheus) | ✅ Complete |
+| Request Correlation (X-Request-Id) | ✅ Complete |
+| Distributed Scheduling (ShedLock) | ✅ Complete |
+| Architecture Tests (ArchUnit) | ✅ Complete |
+| Unit Tests | 🔄 In Progress |
+| Integration Tests (Testcontainers) | 📋 Planned |
+| End-to-End Tests (REST Assured) | 📋 Planned |
 
-**Overall Progress**: 95% Complete
+---
 
 ## Documentation
 
-- [Product Documentation](docs/PRODUCT_DOCUMENTATION.md) - Complete system overview and design
-- [Developer Guide](docs/guides/DEVELOPER_GUIDE.md) - Setup and development workflow
-- [Redis Caching Guide](docs/REDIS_CACHING_GUIDE.md) - Comprehensive caching implementation guide
-- [Cache Invalidation Reference](docs/CACHE_INVALIDATION_REFERENCE.md) - Quick reference for cache management
-- [RBAC Guide](docs/features/rbac/README.md) - Role-Based Access Control
-- [Notifications Guide](docs/features/notifications/README.md) - Notification system
-- [Dashboard Guide](docs/features/dashboard/README.md) - Dashboard implementation
-- [Tasks Guide](docs/features/tasks/README.md) - Task management system
-- [Documentation Standard](docs/features/DOCUMENTATION_STANDARD.md) - How to document features
-- [API Reference](http://localhost:8080/api/v1/swagger-ui.html) - Interactive API docs
+| Doc | Description |
+|-----|-------------|
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Architecture diagrams, folder conventions, how to add features and migrations |
+| [docs/BUSINESS_LOGIC.md](docs/BUSINESS_LOGIC.md) | Complete business logic specification for all operations |
+| [docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md) | Implementation and test coverage status tracker |
+| [docs/DATABASE_DESIGN.md](docs/DATABASE_DESIGN.md) | Entity-relationship diagrams and database schema |
+| [docs/AI_SERVICE_OVERVIEW.md](docs/AI_SERVICE_OVERVIEW.md) | AI service architecture and implementation plan |
+| [docs/ARCHITECTURE_REVIEW.md](docs/ARCHITECTURE_REVIEW.md) | Architecture review, design patterns, improvement roadmap |
+| [docs/PRODUCT_DOCUMENTATION.md](docs/PRODUCT_DOCUMENTATION.md) | Full system and product overview |
+| [docs/DEVELOPMENT_GUIDE.md](docs/DEVELOPMENT_GUIDE.md) | Detailed development workflow |
+| [docs/rbac/RBAC_COMPLETE_GUIDE.md](docs/rbac/RBAC_COMPLETE_GUIDE.md) | RBAC system deep dive |
+| [docs/caching/REDIS_CACHING_GUIDE.md](docs/caching/REDIS_CACHING_GUIDE.md) | Redis caching implementation |
+| [docs/file-handling/README.md](docs/file-handling/README.md) | File storage and S3 migration |
+| [docs/features/notifications/README.md](docs/features/notifications/README.md) | Notification system |
+| [docs/features/dashboard/README.md](docs/features/dashboard/README.md) | Dashboard system |
+| [docs/features/tasks/README.md](docs/features/tasks/README.md) | Task management |
+| Swagger UI | http://localhost:8080/swagger-ui.html *(requires app running)* |

@@ -2,6 +2,7 @@ package com.wheelshiftpro.dto.response.notifications;
 
 import com.wheelshiftpro.enums.RecipientType;
 import com.wheelshiftpro.enums.notifications.NotificationChannel;
+import com.wheelshiftpro.enums.notifications.NotificationEventType;
 import com.wheelshiftpro.enums.notifications.NotificationStatus;
 
 import lombok.AllArgsConstructor;
@@ -34,7 +35,7 @@ public class NotificationJobResponse {
     // Enriched fields for IN_APP notifications
     private String title;
     private String message;
-    private String eventType;
+    private NotificationEventType eventType;
     private String entityType;
     private Long entityId;
 }

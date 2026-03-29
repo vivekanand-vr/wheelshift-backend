@@ -29,6 +29,11 @@ public interface ClientRepository extends JpaRepository<Client, Long> {
     boolean existsByEmail(String email);
 
     /**
+     * Check if another client exists with the same email, excluding the given ID.
+     */
+    boolean existsByEmailAndIdNot(String email, Long id);
+
+    /**
      * Find clients by status.
      */
     Page<Client> findByStatus(ClientStatus status, Pageable pageable);

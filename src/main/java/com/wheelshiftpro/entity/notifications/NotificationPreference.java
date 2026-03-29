@@ -2,6 +2,7 @@ package com.wheelshiftpro.entity.notifications;
 
 import com.wheelshiftpro.enums.PrincipalType;
 import com.wheelshiftpro.enums.notifications.NotificationChannel;
+import com.wheelshiftpro.enums.notifications.NotificationEventType;
 import com.wheelshiftpro.enums.notifications.NotificationFrequency;
 import com.wheelshiftpro.enums.notifications.NotificationSeverity;
 
@@ -33,8 +34,9 @@ public class NotificationPreference {
     @Column(name = "principal_id")
     private Long principalId;
     
+    @Enumerated(EnumType.STRING)
     @Column(name = "event_type", nullable = false, length = 64)
-    private String eventType;
+    private NotificationEventType eventType;
     
     @Enumerated(EnumType.STRING)
     @Column(name = "channel", nullable = false)

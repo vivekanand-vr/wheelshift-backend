@@ -3,13 +3,20 @@ package com.wheelshiftpro.service.impl;
 import com.wheelshiftpro.dto.request.TaskRequest;
 import com.wheelshiftpro.dto.response.PageResponse;
 import com.wheelshiftpro.dto.response.TaskResponse;
+import com.wheelshiftpro.entity.Employee;
 import com.wheelshiftpro.entity.Task;
+import com.wheelshiftpro.enums.AuditCategory;
+import com.wheelshiftpro.enums.AuditLevel;
+import com.wheelshiftpro.enums.EmployeeStatus;
 import com.wheelshiftpro.enums.TaskPriority;
 import com.wheelshiftpro.enums.TaskStatus;
+import com.wheelshiftpro.exception.BusinessException;
 import com.wheelshiftpro.exception.ResourceNotFoundException;
 import com.wheelshiftpro.mapper.TaskMapper;
 import com.wheelshiftpro.repository.EmployeeRepository;
 import com.wheelshiftpro.repository.TaskRepository;
+import com.wheelshiftpro.security.EmployeeUserDetails;
+import com.wheelshiftpro.service.AuditService;
 import com.wheelshiftpro.service.TaskService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +25,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,16 +39,34 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@Transactional
+@Transactional(rollbackFor = Exception.class)
 public class TaskServiceImpl implements TaskService {
 
     private final TaskRepository taskRepository;
     private final TaskMapper taskMapper;
     private final EmployeeRepository employeeRepository;
+    private final AuditService auditService;
 
     @Override
     public TaskResponse createTask(TaskRequest request) {
         log.debug("Creating task: {}", request.getTitle());
+
+        // Validate due date if provided
+        if (request.getDueDate() != null && request.getDueDate().isBefore(java.time.LocalDateTime.now())) {
+            throw new BusinessException("Due date must be in the future", "INVALID_DUE_DATE");
+        }
+
+        // Validate assignee if provided (before mapping)
+        Employee assignee = null;
+        if (request.getAssigneeId() != null) {
+            assignee = employeeRepository.findById(request.getAssigneeId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Employee", "id", request.getAssigneeId()));
+            
+            // Validate employee is ACTIVE
+            if (assignee.getStatus() != EmployeeStatus.ACTIVE) {
+                throw new BusinessException("Assignee must be ACTIVE", "ASSIGNEE_NOT_ACTIVE");
+            }
+        }
 
         Task task = taskMapper.toEntity(request);
         
@@ -53,13 +80,15 @@ public class TaskServiceImpl implements TaskService {
             task.setPriority(TaskPriority.MEDIUM);
         }
 
-        // Handle employee assignment if provided
-        if (request.getAssigneeId() != null) {
-            task.setAssignee(employeeRepository.findById(request.getAssigneeId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Employee", "id", request.getAssigneeId())));
+        // Set assignee after validation
+        if (assignee != null) {
+            task.setAssignee(assignee);
         }
 
         Task saved = taskRepository.save(task);
+
+        auditService.log(AuditCategory.TASK, saved.getId(), "CREATE", AuditLevel.REGULAR,
+                resolveCurrentEmployee(), "Task: " + saved.getTitle() + (saved.getAssignee() != null ? ", Assigned to: " + saved.getAssignee().getName() : ""));
 
         log.info("Created task with ID: {}", saved.getId());
         return taskMapper.toResponse(saved);
@@ -72,19 +101,34 @@ public class TaskServiceImpl implements TaskService {
         Task task = taskRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Task", "id", id));
 
+        // Validate due date if being updated
+        if (request.getDueDate() != null && request.getDueDate().isBefore(java.time.LocalDateTime.now())) {
+            throw new BusinessException("Due date must be in the future", "INVALID_DUE_DATE");
+        }
+
         // Update basic fields via mapper
         taskMapper.updateEntityFromRequest(request, task);
         
         // Handle employee assignment separately
         if (request.getAssigneeId() != null) {
-            task.setAssignee(employeeRepository.findById(request.getAssigneeId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Employee", "id", request.getAssigneeId())));
+            Employee assignee = employeeRepository.findById(request.getAssigneeId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Employee", "id", request.getAssigneeId()));
+            
+            // Validate employee is ACTIVE
+            if (assignee.getStatus() != EmployeeStatus.ACTIVE) {
+                throw new BusinessException("Assignee must be an active employee", "ASSIGNEE_NOT_ACTIVE");
+            }
+            
+            task.setAssignee(assignee);
         } else if (request.getAssigneeId() == null && task.getAssignee() != null) {
             // If assigneeId is explicitly null in request, unassign the task
             task.setAssignee(null);
         }
         
         Task updated = taskRepository.save(task);
+
+        auditService.log(AuditCategory.TASK, id, "UPDATE", AuditLevel.REGULAR,
+                resolveCurrentEmployee(), "Task updated");
 
         log.info("Updated task ID: {}", id);
         return taskMapper.toResponse(updated);
@@ -127,11 +171,22 @@ public class TaskServiceImpl implements TaskService {
     public void deleteTask(Long id) {
         log.debug("Deleting task ID: {}", id);
 
-        if (!taskRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Task", "id", id);
+        Task task = taskRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Task", "id", id));
+
+        // Block deletion of DONE tasks (future: check for linked inspection/sale records)
+        if (task.getStatus() == TaskStatus.DONE) {
+            throw new BusinessException(
+                "Cannot delete a DONE task. Once the Task entity has relationships to Inspection/Sale, " +
+                "this guard will check for linked records to preserve audit trail.",
+                "TASK_DONE_CANNOT_DELETE"
+            );
         }
 
-        taskRepository.deleteById(id);
+        auditService.log(AuditCategory.TASK, id, "DELETE", AuditLevel.HIGH,
+                resolveCurrentEmployee(), "Task deleted: " + task.getTitle());
+
+        taskRepository.delete(task);
         log.info("Deleted task ID: {}", id);
     }
 
@@ -253,8 +308,12 @@ public class TaskServiceImpl implements TaskService {
         Task task = taskRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Task", "id", id));
 
+        TaskStatus previousStatus = task.getStatus();
         task.setStatus(status);
         Task updated = taskRepository.save(task);
+
+        auditService.log(AuditCategory.TASK, id, "STATUS_CHANGE", AuditLevel.REGULAR,
+                resolveCurrentEmployee(), "From " + previousStatus + " to " + status);
 
         log.info("Updated task ID: {} to status: {}", id, status);
         return taskMapper.toResponse(updated);
@@ -316,6 +375,14 @@ public class TaskServiceImpl implements TaskService {
 
         log.info("Retrieved task statistics");
         return statistics;
+    }
+
+    private Employee resolveCurrentEmployee() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof EmployeeUserDetails u) {
+            return employeeRepository.getReferenceById(u.getId());
+        }
+        return null;
     }
 
     private PageResponse<TaskResponse> buildPageResponse(Page<Task> page) {

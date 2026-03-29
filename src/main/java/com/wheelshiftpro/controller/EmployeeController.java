@@ -13,6 +13,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -24,6 +25,7 @@ public class EmployeeController {
     private final EmployeeService employeeService;
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
     @Operation(summary = "Create a new employee", description = "Registers a new employee in the system")
     public ResponseEntity<ApiResponse<EmployeeResponse>> createEmployee(
             @Valid @RequestBody EmployeeRequest request) {
@@ -33,6 +35,7 @@ public class EmployeeController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
     @Operation(summary = "Update an employee", description = "Updates an existing employee by ID")
     public ResponseEntity<ApiResponse<EmployeeResponse>> updateEmployee(
             @Parameter(description = "Employee ID") @PathVariable Long id,
@@ -42,6 +45,7 @@ public class EmployeeController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get employee by ID", description = "Retrieves a specific employee by their ID")
     public ResponseEntity<ApiResponse<EmployeeResponse>> getEmployeeById(
             @Parameter(description = "Employee ID") @PathVariable Long id) {
@@ -50,6 +54,7 @@ public class EmployeeController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
     @Operation(summary = "Get all employees", description = "Retrieves all employees with pagination and optional regex search")
     public ResponseEntity<ApiResponse<PageResponse<EmployeeResponse>>> getAllEmployees(
             @Parameter(description = "Search term (regex pattern) to filter employees by name, email, position, or department") @RequestParam(required = false) String search,
@@ -60,6 +65,7 @@ public class EmployeeController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
     @Operation(summary = "Delete an employee", description = "Deletes an employee by ID")
     public ResponseEntity<ApiResponse<Void>> deleteEmployee(
             @Parameter(description = "Employee ID") @PathVariable Long id) {
@@ -68,6 +74,7 @@ public class EmployeeController {
     }
 
     @GetMapping("/search")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
     @Operation(summary = "Search employees", description = "Search employees by name, role, or status")
     public ResponseEntity<ApiResponse<PageResponse<EmployeeResponse>>> searchEmployees(
             @Parameter(description = "Name filter") @RequestParam(required = false) String name,
@@ -80,6 +87,7 @@ public class EmployeeController {
     }
 
     @GetMapping("/role/{role}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
     @Operation(summary = "Get employees by role", description = "Retrieves all employees with a specific role")
     public ResponseEntity<ApiResponse<PageResponse<EmployeeResponse>>> getEmployeesByRole(
             @Parameter(description = "Employee role") @PathVariable String role,
@@ -90,6 +98,7 @@ public class EmployeeController {
     }
 
     @GetMapping("/active")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
     @Operation(summary = "Get active employees", description = "Retrieves all active employees")
     public ResponseEntity<ApiResponse<PageResponse<EmployeeResponse>>> getActiveEmployees(
             @Parameter(description = "Page number") @RequestParam(defaultValue = "0") int page,
@@ -99,6 +108,7 @@ public class EmployeeController {
     }
 
     @PutMapping("/{id}/status")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
     @Operation(summary = "Update employee status", description = "Updates the status of an employee")
     public ResponseEntity<ApiResponse<Void>> updateEmployeeStatus(
             @Parameter(description = "Employee ID") @PathVariable Long id,
@@ -108,6 +118,7 @@ public class EmployeeController {
     }
 
     @GetMapping("/{id}/performance")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
     @Operation(summary = "Get employee performance", description = "Retrieves performance metrics for an employee")
     public ResponseEntity<ApiResponse<Object>> getEmployeePerformance(
             @Parameter(description = "Employee ID") @PathVariable Long id) {

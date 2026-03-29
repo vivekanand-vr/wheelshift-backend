@@ -3,7 +3,9 @@ package com.wheelshiftpro.service.impl;
 import com.wheelshiftpro.dto.request.MotorcycleRequest;
 import com.wheelshiftpro.dto.response.MotorcycleResponse;
 import com.wheelshiftpro.dto.response.PageResponse;
+import com.wheelshiftpro.entity.Employee;
 import com.wheelshiftpro.entity.Motorcycle;
+import com.wheelshiftpro.entity.MotorcycleModel;
 import com.wheelshiftpro.entity.MotorcycleMovement;
 import com.wheelshiftpro.entity.StorageLocation;
 import com.wheelshiftpro.enums.MotorcycleStatus;
@@ -11,10 +13,16 @@ import com.wheelshiftpro.exception.BusinessException;
 import com.wheelshiftpro.exception.DuplicateResourceException;
 import com.wheelshiftpro.exception.ResourceNotFoundException;
 import com.wheelshiftpro.mapper.MotorcycleMapper;
+import com.wheelshiftpro.repository.EmployeeRepository;
+import com.wheelshiftpro.repository.FinancialTransactionRepository;
 import com.wheelshiftpro.repository.MotorcycleModelRepository;
 import com.wheelshiftpro.repository.MotorcycleMovementRepository;
 import com.wheelshiftpro.repository.MotorcycleRepository;
 import com.wheelshiftpro.repository.StorageLocationRepository;
+import com.wheelshiftpro.security.EmployeeUserDetails;
+import com.wheelshiftpro.enums.AuditCategory;
+import com.wheelshiftpro.enums.AuditLevel;
+import com.wheelshiftpro.service.AuditService;
 import com.wheelshiftpro.service.MotorcycleService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +30,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,32 +49,33 @@ public class MotorcycleServiceImpl implements MotorcycleService {
     private final MotorcycleModelRepository motorcycleModelRepository;
     private final StorageLocationRepository storageLocationRepository;
     private final MotorcycleMovementRepository motorcycleMovementRepository;
+    private final FinancialTransactionRepository financialTransactionRepository;
+    private final EmployeeRepository employeeRepository;
     private final MotorcycleMapper motorcycleMapper;
+    private final AuditService auditService;
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public MotorcycleResponse createMotorcycle(MotorcycleRequest request) {
         log.debug("Creating motorcycle with VIN: {}", request.getVinNumber());
 
-        // Validate VIN uniqueness
         if (motorcycleRepository.existsByVinNumber(request.getVinNumber())) {
             throw new DuplicateResourceException("Motorcycle", "VIN", request.getVinNumber());
         }
 
-        // Validate registration uniqueness if provided
-        if (request.getRegistrationNumber() != null && 
-            motorcycleRepository.existsByRegistrationNumber(request.getRegistrationNumber())) {
+        if (request.getRegistrationNumber() != null &&
+                motorcycleRepository.existsByRegistrationNumber(request.getRegistrationNumber())) {
             throw new DuplicateResourceException("Motorcycle", "Registration Number", request.getRegistrationNumber());
         }
 
-        // Validate motorcycle model exists
-        if (!motorcycleModelRepository.existsById(request.getMotorcycleModelId())) {
-            throw new ResourceNotFoundException("MotorcycleModel", "id", request.getMotorcycleModelId());
-        }
+        MotorcycleModel motorcycleModel = motorcycleModelRepository.findById(request.getMotorcycleModelId())
+                .orElseThrow(() -> new ResourceNotFoundException("MotorcycleModel", "id", request.getMotorcycleModelId()));
 
-        // Validate storage location if provided
+        StorageLocation location = null;
         if (request.getStorageLocationId() != null) {
-            StorageLocation location = storageLocationRepository.findById(request.getStorageLocationId())
-                    .orElseThrow(() -> new ResourceNotFoundException("StorageLocation", "id", request.getStorageLocationId()));
+            location = storageLocationRepository.findById(request.getStorageLocationId())
+                    .orElseThrow(() -> new ResourceNotFoundException("StorageLocation", "id",
+                            request.getStorageLocationId()));
 
             if (!location.hasCapacity()) {
                 throw new BusinessException("Storage location has reached maximum capacity", "LOCATION_FULL");
@@ -72,16 +83,19 @@ public class MotorcycleServiceImpl implements MotorcycleService {
         }
 
         Motorcycle motorcycle = motorcycleMapper.toEntity(request);
+        motorcycle.setMotorcycleModel(motorcycleModel);
+        motorcycle.setStorageLocation(location);
+
         Motorcycle saved = motorcycleRepository.save(motorcycle);
 
-        // Update storage location count
         if (saved.getStorageLocation() != null) {
-            StorageLocation location = saved.getStorageLocation();
-            location.setCurrentVehicleCount(location.getCurrentVehicleCount() + 1);
+            location.setCurrentMotorcycleCount(location.getCurrentMotorcycleCount() + 1);
             storageLocationRepository.save(location);
         }
 
         log.info("Created motorcycle with ID: {} and VIN: {}", saved.getId(), saved.getVinNumber());
+        auditService.log(AuditCategory.MOTORCYCLE, saved.getId(), "CREATE", AuditLevel.REGULAR,
+                resolveCurrentEmployee(), "VIN: " + saved.getVinNumber());
         return motorcycleMapper.toResponse(saved);
     }
 
@@ -210,58 +224,96 @@ public class MotorcycleServiceImpl implements MotorcycleService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public MotorcycleResponse updateMotorcycle(Long id, MotorcycleRequest request) {
         log.debug("Updating motorcycle ID: {}", id);
 
         Motorcycle motorcycle = motorcycleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Motorcycle", "id", id));
 
-        // Check for VIN conflicts (excluding current motorcycle)
-        if (!motorcycle.getVinNumber().equals(request.getVinNumber()) && 
-            motorcycleRepository.existsByVinNumber(request.getVinNumber())) {
+        // Guard VIN uniqueness when it is being changed
+        if (request.getVinNumber() != null && !request.getVinNumber().equals(motorcycle.getVinNumber()) &&
+                motorcycleRepository.existsByVinNumber(request.getVinNumber())) {
             throw new DuplicateResourceException("Motorcycle", "VIN", request.getVinNumber());
         }
 
-        // Check for registration conflicts (excluding current motorcycle)
-        if (request.getRegistrationNumber() != null && 
-            !request.getRegistrationNumber().equals(motorcycle.getRegistrationNumber()) &&
-            motorcycleRepository.existsByRegistrationNumber(request.getRegistrationNumber())) {
+        // Guard registration-number uniqueness when it is being changed
+        if (request.getRegistrationNumber() != null &&
+                !request.getRegistrationNumber().equals(motorcycle.getRegistrationNumber()) &&
+                motorcycleRepository.existsByRegistrationNumber(request.getRegistrationNumber())) {
             throw new DuplicateResourceException("Motorcycle", "Registration Number", request.getRegistrationNumber());
+        }
+
+        // Update model if provided
+        if (request.getMotorcycleModelId() != null) {
+            MotorcycleModel motorcycleModel = motorcycleModelRepository.findById(request.getMotorcycleModelId())
+                    .orElseThrow(() -> new ResourceNotFoundException("MotorcycleModel", "id",
+                            request.getMotorcycleModelId()));
+            motorcycle.setMotorcycleModel(motorcycleModel);
+        }
+
+        // If the storage location is changing, use full move logic (count updates + movement record)
+        if (request.getStorageLocationId() != null) {
+            Long currentLocationId = motorcycle.getStorageLocation() != null
+                    ? motorcycle.getStorageLocation().getId() : null;
+            if (!request.getStorageLocationId().equals(currentLocationId)) {
+                applyMotorcycleMove(motorcycle, request.getStorageLocationId());
+            }
         }
 
         motorcycleMapper.updateEntityFromRequest(request, motorcycle);
         Motorcycle updated = motorcycleRepository.save(motorcycle);
 
         log.info("Updated motorcycle ID: {}", id);
+        auditService.log(AuditCategory.MOTORCYCLE, updated.getId(), "UPDATE", AuditLevel.REGULAR,
+                resolveCurrentEmployee(), null);
         return motorcycleMapper.toResponse(updated);
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public MotorcycleResponse updateMotorcycleStatus(Long id, MotorcycleStatus status) {
         log.debug("Updating motorcycle ID: {} status to: {}", id, status);
 
         Motorcycle motorcycle = motorcycleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Motorcycle", "id", id));
 
+        MotorcycleStatus previousStatus = motorcycle.getStatus();
+
         // Validate status transitions
-        validateStatusTransition(motorcycle.getStatus(), status);
+        validateStatusTransition(previousStatus, status);
 
         motorcycle.setStatus(status);
         Motorcycle updated = motorcycleRepository.save(motorcycle);
 
         log.info("Updated motorcycle ID: {} status to: {}", id, status);
+        auditService.log(AuditCategory.MOTORCYCLE, id, "STATUS_CHANGE", AuditLevel.HIGH,
+                resolveCurrentEmployee(), "From " + previousStatus + " to " + status);
         return motorcycleMapper.toResponse(updated);
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public MotorcycleResponse moveMotorcycleToLocation(Long motorcycleId, Long locationId) {
         log.debug("Moving motorcycle ID: {} to location ID: {}", motorcycleId, locationId);
 
         Motorcycle motorcycle = motorcycleRepository.findById(motorcycleId)
                 .orElseThrow(() -> new ResourceNotFoundException("Motorcycle", "id", motorcycleId));
 
-        StorageLocation newLocation = storageLocationRepository.findById(locationId)
-                .orElseThrow(() -> new ResourceNotFoundException("StorageLocation", "id", locationId));
+        applyMotorcycleMove(motorcycle, locationId);
+
+        Motorcycle updated = motorcycleRepository.save(motorcycle);
+        log.info("Moved motorcycle ID: {} to location ID: {}", motorcycleId, locationId);
+        return motorcycleMapper.toResponse(updated);
+    }
+
+    /**
+     * Internal helper: move a motorcycle to a new location, update counts and create an audit movement record.
+     * The motorcycle entity is NOT saved here — caller must save() after.
+     */
+    private void applyMotorcycleMove(Motorcycle motorcycle, Long newLocationId) {
+        StorageLocation newLocation = storageLocationRepository.findById(newLocationId)
+                .orElseThrow(() -> new ResourceNotFoundException("StorageLocation", "id", newLocationId));
 
         if (!newLocation.hasCapacity()) {
             throw new BusinessException("Storage location has reached maximum capacity", "LOCATION_FULL");
@@ -269,55 +321,61 @@ public class MotorcycleServiceImpl implements MotorcycleService {
 
         StorageLocation oldLocation = motorcycle.getStorageLocation();
 
-        // Update old location count
         if (oldLocation != null) {
-            oldLocation.setCurrentVehicleCount(oldLocation.getCurrentVehicleCount() - 1);
+            oldLocation.setCurrentMotorcycleCount(oldLocation.getCurrentMotorcycleCount() - 1);
             storageLocationRepository.save(oldLocation);
         }
 
-        // Update new location count
-        newLocation.setCurrentVehicleCount(newLocation.getCurrentVehicleCount() + 1);
+        newLocation.setCurrentMotorcycleCount(newLocation.getCurrentMotorcycleCount() + 1);
         storageLocationRepository.save(newLocation);
 
-        // Create movement record
+        Employee movedBy = resolveCurrentEmployee();
+
         MotorcycleMovement movement = MotorcycleMovement.builder()
                 .motorcycle(motorcycle)
                 .fromLocation(oldLocation)
                 .toLocation(newLocation)
                 .movedAt(LocalDateTime.now())
+                .movedBy(movedBy)
                 .build();
         motorcycleMovementRepository.save(movement);
+        auditService.log(AuditCategory.MOTORCYCLE, motorcycle.getId(), "MOVE", AuditLevel.REGULAR, movedBy,
+                "From location " + (oldLocation != null ? oldLocation.getId() : "none")
+                        + " to " + newLocation.getId());
 
-        // Update motorcycle location
         motorcycle.setStorageLocation(newLocation);
-        Motorcycle updated = motorcycleRepository.save(motorcycle);
-
-        log.info("Moved motorcycle ID: {} to location ID: {}", motorcycleId, locationId);
-        return motorcycleMapper.toResponse(updated);
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void deleteMotorcycle(Long id) {
         log.debug("Deleting motorcycle ID: {}", id);
 
         Motorcycle motorcycle = motorcycleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Motorcycle", "id", id));
 
-        // Business rule: Cannot delete reserved or sold motorcycles
-        if (motorcycle.getStatus() == MotorcycleStatus.RESERVED || 
-            motorcycle.getStatus() == MotorcycleStatus.SOLD) {
-            throw new BusinessException("Cannot delete motorcycle with status: " + motorcycle.getStatus(), 
+        if (motorcycle.getStatus() == MotorcycleStatus.RESERVED ||
+                motorcycle.getStatus() == MotorcycleStatus.SOLD) {
+            throw new BusinessException("Cannot delete motorcycle with status: " + motorcycle.getStatus(),
                     "INVALID_MOTORCYCLE_STATUS");
         }
 
-        // Update storage location count
+        if (financialTransactionRepository.existsByMotorcycleId(id)) {
+            throw new BusinessException(
+                    "Cannot delete motorcycle with existing financial transactions",
+                    "MOTORCYCLE_HAS_TRANSACTIONS");
+        }
+
         if (motorcycle.getStorageLocation() != null) {
             StorageLocation location = motorcycle.getStorageLocation();
-            location.setCurrentVehicleCount(location.getCurrentVehicleCount() - 1);
+            location.setCurrentMotorcycleCount(location.getCurrentMotorcycleCount() - 1);
             storageLocationRepository.save(location);
         }
 
+        String vinNumber = motorcycle.getVinNumber();
         motorcycleRepository.delete(motorcycle);
+        auditService.log(AuditCategory.MOTORCYCLE, id, "DELETE", AuditLevel.HIGH,
+                resolveCurrentEmployee(), "VIN: " + vinNumber);
         log.info("Deleted motorcycle ID: {}", id);
     }
 
@@ -359,19 +417,32 @@ public class MotorcycleServiceImpl implements MotorcycleService {
     }
 
     private void validateStatusTransition(MotorcycleStatus currentStatus, MotorcycleStatus newStatus) {
-        // Business rules for status transitions
-        if (currentStatus == MotorcycleStatus.SOLD && newStatus != MotorcycleStatus.SOLD) {
+        if (currentStatus == MotorcycleStatus.SOLD) {
             throw new BusinessException("Cannot change status of a sold motorcycle", "INVALID_STATUS_TRANSITION");
         }
 
-        if (currentStatus == MotorcycleStatus.RESERVED && newStatus == MotorcycleStatus.AVAILABLE) {
-            // Allow only when reservation is cancelled
-            log.info("Reverting reservation status to available");
+        if (newStatus == MotorcycleStatus.SOLD) {
+            throw new BusinessException(
+                    "Status cannot be set to SOLD directly; create a sale transaction instead",
+                    "INVALID_STATUS_TRANSITION");
         }
 
         if (currentStatus == MotorcycleStatus.MAINTENANCE && newStatus == MotorcycleStatus.RESERVED) {
             throw new BusinessException("Cannot reserve motorcycle in maintenance", "INVALID_STATUS_TRANSITION");
         }
+
+        if (currentStatus == MotorcycleStatus.RESERVED && newStatus == MotorcycleStatus.AVAILABLE) {
+            log.info("Reverting reservation status to available for motorcycle");
+        }
+    }
+
+    /** Returns the Employee proxy for the currently authenticated user, or null for system actions. */
+    private Employee resolveCurrentEmployee() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof EmployeeUserDetails userDetails) {
+            return employeeRepository.getReferenceById(userDetails.getId());
+        }
+        return null;
     }
 
     private PageResponse<MotorcycleResponse> buildPageResponse(Page<Motorcycle> page) {

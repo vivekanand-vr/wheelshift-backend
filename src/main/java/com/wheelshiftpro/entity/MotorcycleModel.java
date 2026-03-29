@@ -10,6 +10,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 
+import java.math.BigDecimal;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -77,9 +79,8 @@ public class MotorcycleModel extends BaseEntity {
     @Builder.Default
     private MotorcycleVehicleType vehicleType = MotorcycleVehicleType.MOTORCYCLE;
 
-    @Column(name = "seating_capacity")
-    @Builder.Default
-    private Integer seatingCapacity = 2;
+    @Column(name = "ex_showroom_price", precision = 12, scale = 2)
+    private BigDecimal exShowroomPrice;
 
     @Column(name = "is_active")
     @Builder.Default

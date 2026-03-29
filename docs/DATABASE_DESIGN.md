@@ -10,13 +10,13 @@ erDiagram
         VARCHAR make
         VARCHAR model
         VARCHAR variant
-        INT year
+        VARCHAR emission_norm
         VARCHAR body_type
         VARCHAR fuel_type
         VARCHAR transmission_type
-        INT seating_capacity
+        INT gears
+        DECIMAL ex_showroom_price "Ex-showroom price in INR"
         VARCHAR model_image_id "File ID for model image"
-        BOOLEAN is_active
         TIMESTAMP created_at
         TIMESTAMP updated_at
     }
@@ -35,10 +35,6 @@ erDiagram
         DECIMAL purchase_price
         DATE purchase_date
         DECIMAL selling_price
-        INT previous_owners
-        DATE insurance_expiry_date
-        BOOLEAN is_financed
-        TEXT description
         VARCHAR primary_image_id "Primary car image"
         TEXT gallery_image_ids "Gallery images (comma-separated)"
         TEXT document_file_ids "Documents (comma-separated)"
@@ -48,6 +44,7 @@ erDiagram
         DECIMAL acceleration_0_100 "Merged from car_detailed_specs"
         INT top_speed_kmh "Merged from car_detailed_specs"
         JSON features "Merged from car_features as JSON"
+        VARCHAR description "Optional vehicle description (max 600 chars)"
         TIMESTAMP created_at
         TIMESTAMP updated_at
     }
@@ -63,7 +60,7 @@ erDiagram
         VARCHAR fuel_type
         VARCHAR transmission_type
         VARCHAR vehicle_type
-        INT seating_capacity
+        DECIMAL ex_showroom_price "Ex-showroom price in INR"
         VARCHAR model_image_id "File ID for model image"
         BOOLEAN is_active
         TIMESTAMP created_at
@@ -121,6 +118,7 @@ erDiagram
         BOOLEAN has_usb_charging "Merged from motorcycle_detailed_specs"
         BOOLEAN has_led_lights "Merged from motorcycle_detailed_specs"
         TEXT additional_features "Merged from motorcycle_detailed_specs"
+        VARCHAR description "Optional vehicle description (max 600 chars)"
         TIMESTAMP created_at
         TIMESTAMP updated_at
     }
@@ -154,16 +152,18 @@ erDiagram
         BIGINT id PK
         BIGINT car_id FK
         DATE inspection_date
-        BIGINT inspector_id FK
-        VARCHAR overall_condition
-        BOOLEAN has_accident_history
-        BOOLEAN requires_repair
+        VARCHAR inspector_name "Inspector name (not a FK)"
+        TEXT exterior_condition
+        TEXT interior_condition
+        TEXT mechanical_condition
+        TEXT electrical_condition
+        TEXT accident_history
+        TEXT required_repairs
         DECIMAL estimated_repair_cost
-        TEXT repair_notes
+        BOOLEAN inspection_pass
+        VARCHAR report_url
         TEXT inspection_image_ids "Inspection photos (comma-separated)"
         VARCHAR inspection_report_file_id "Inspection report PDF"
-        BOOLEAN passed
-        TEXT notes
         TIMESTAMP created_at
         TIMESTAMP updated_at
     }
@@ -192,15 +192,12 @@ erDiagram
         BIGINT id PK
         VARCHAR name
         VARCHAR address
-        VARCHAR city
-        VARCHAR state
-        VARCHAR postal_code
         VARCHAR contact_person
-        VARCHAR contact_phone
+        VARCHAR contact_number
         INT total_capacity
-        INT current_vehicle_count
+        INT current_car_count "Active (non-SOLD) cars at this location"
+        INT current_motorcycle_count "Active (non-SOLD) motorcycles at this location"
         VARCHAR location_image_id "Location photo"
-        BOOLEAN is_active
         TIMESTAMP created_at
         TIMESTAMP updated_at
     }
@@ -211,13 +208,10 @@ erDiagram
         VARCHAR name
         VARCHAR email UK
         VARCHAR phone
-        VARCHAR address
-        VARCHAR city
-        VARCHAR state
-        VARCHAR postal_code
+        VARCHAR location
         VARCHAR status
-        INT purchase_count
-        DATE last_purchase_date
+        INT total_purchases
+        DATE last_purchase
         VARCHAR profile_image_id "Client profile photo"
         TEXT document_file_ids "Client documents (comma-separated)"
         TIMESTAMP created_at
@@ -228,13 +222,13 @@ erDiagram
         BIGINT id PK
         VARCHAR name
         VARCHAR email UK
-        VARCHAR password
+        VARCHAR password_hash
         VARCHAR phone
         VARCHAR department
         VARCHAR position
+        DATE join_date
         VARCHAR status
         DATETIME last_login
-        INT sales_handled
         VARCHAR profile_image_id "Employee profile photo"
         TIMESTAMP created_at
         TIMESTAMP updated_at
@@ -332,9 +326,9 @@ erDiagram
         TEXT description
         VARCHAR status
         VARCHAR priority
-        BIGINT assigned_employee_id FK
+        BIGINT assignee_id FK
         DATE due_date
-        VARCHAR tags
+        JSON tags
         TEXT attachment_file_ids "Task attachments (comma-separated)"
         TIMESTAMP created_at
         TIMESTAMP updated_at
@@ -365,9 +359,11 @@ erDiagram
         BIGINT id PK
         VARCHAR name UK
         VARCHAR description
-        INT hierarchy_level
+        BOOLEAN is_system
         TIMESTAMP created_at
         TIMESTAMP updated_at
+        VARCHAR created_by
+        VARCHAR updated_by
     }
 
     PERMISSIONS {
@@ -378,23 +374,160 @@ erDiagram
         VARCHAR description
         TIMESTAMP created_at
         TIMESTAMP updated_at
+        VARCHAR created_by
+        VARCHAR updated_by
     }
 
     ROLE_PERMISSIONS {
-        BIGINT id PK
         BIGINT role_id FK
         BIGINT permission_id FK
-        TIMESTAMP created_at
-        TIMESTAMP updated_at
     }
 
     EMPLOYEE_ROLES {
-        BIGINT id PK
         BIGINT employee_id FK
         BIGINT role_id FK
-        TIMESTAMP assigned_at
+    }
+
+    EMPLOYEE_DATA_SCOPES {
+        BIGINT id PK
+        BIGINT employee_id FK
+        VARCHAR scope_type "LOCATION, DEPARTMENT, ASSIGNMENT"
+        VARCHAR scope_value
+        VARCHAR effect "INCLUDE or EXCLUDE"
+        VARCHAR description
         TIMESTAMP created_at
         TIMESTAMP updated_at
+        VARCHAR created_by
+        VARCHAR updated_by
+    }
+
+    RESOURCE_ACL {
+        BIGINT id PK
+        VARCHAR resource_type "CAR, CLIENT, INQUIRY, RESERVATION, SALE, TRANSACTION"
+        BIGINT resource_id
+        VARCHAR subject_type "ROLE or EMPLOYEE"
+        BIGINT subject_id
+        VARCHAR access "READ, WRITE, ADMIN"
+        VARCHAR reason
+        BIGINT granted_by "Admin employee ID"
+        TIMESTAMP created_at
+        TIMESTAMP updated_at
+        VARCHAR created_by
+        VARCHAR updated_by
+    }
+
+    EMPLOYEE_PERMISSIONS {
+        BIGINT id PK
+        BIGINT employee_id FK
+        BIGINT permission_id FK
+        BIGINT granted_by "Admin employee ID"
+        VARCHAR reason
+        DATETIME created_at
+        DATETIME updated_at
+    }
+
+    %% Notifications System
+    NOTIFICATION_EVENTS {
+        BIGINT id PK
+        VARCHAR event_type
+        VARCHAR entity_type
+        BIGINT entity_id
+        JSON payload
+        VARCHAR severity "INFO, WARN, CRITICAL"
+        DATETIME occurred_at
+        DATETIME created_at
+    }
+
+    NOTIFICATION_JOBS {
+        BIGINT id PK
+        BIGINT event_id FK
+        VARCHAR recipient_type "EMPLOYEE, CLIENT, ROLE"
+        BIGINT recipient_id
+        VARCHAR channel "EMAIL, SMS, WHATSAPP, PUSH, IN_APP, WEBHOOK"
+        VARCHAR status "PENDING, SCHEDULED, SENT, FAILED, CANCELLED"
+        DATETIME scheduled_for
+        VARCHAR dedup_key UK
+        INT retries
+        VARCHAR last_error
+        DATETIME sent_at
+        DATETIME created_at
+        DATETIME updated_at
+    }
+
+    NOTIFICATION_DELIVERIES {
+        BIGINT id PK
+        BIGINT job_id FK
+        VARCHAR provider
+        VARCHAR provider_message_id
+        VARCHAR status "SENT, DELIVERED, BOUNCED, FAILED"
+        DATETIME sent_at
+        DATETIME delivered_at
+        VARCHAR error_message
+        DATETIME created_at
+    }
+
+    NOTIFICATION_TEMPLATES {
+        BIGINT id PK
+        VARCHAR name
+        VARCHAR channel "EMAIL, SMS, WHATSAPP, PUSH, IN_APP, WEBHOOK"
+        VARCHAR locale
+        INT version
+        VARCHAR subject
+        TEXT content
+        JSON variables
+        BIGINT created_by_employee_id FK
+        DATETIME created_at
+        DATETIME updated_at
+    }
+
+    NOTIFICATION_PREFERENCES {
+        BIGINT id PK
+        VARCHAR principal_type "EMPLOYEE, CLIENT, ROLE, COMPANY"
+        BIGINT principal_id
+        VARCHAR event_type
+        VARCHAR channel "EMAIL, SMS, WHATSAPP, PUSH, IN_APP, WEBHOOK"
+        BOOLEAN enabled
+        VARCHAR frequency "IMMEDIATE, DIGEST"
+        TIME quiet_hours_start
+        TIME quiet_hours_end
+        VARCHAR severity_threshold
+        DATETIME created_at
+        DATETIME updated_at
+    }
+
+    NOTIFICATION_PROVIDERS {
+        BIGINT id PK
+        VARCHAR channel "EMAIL, SMS, WHATSAPP, PUSH, WEBHOOK"
+        VARCHAR name
+        JSON config
+        BOOLEAN is_primary
+        INT priority
+        BOOLEAN enabled
+        DATETIME created_at
+        DATETIME updated_at
+    }
+
+    NOTIFICATION_DIGESTS {
+        BIGINT id PK
+        VARCHAR recipient_type "EMPLOYEE, CLIENT, ROLE"
+        BIGINT recipient_id
+        DATETIME window_start
+        DATETIME window_end
+        TEXT compiled_content
+        VARCHAR channel "EMAIL, SMS, PUSH, IN_APP"
+        VARCHAR status "PENDING, SENT"
+        DATETIME sent_at
+        DATETIME created_at
+    }
+
+    FILE_ACCESS_LOGS {
+        BIGINT id PK
+        VARCHAR file_id FK
+        VARCHAR access_type "VIEW, DOWNLOAD, DELETE"
+        VARCHAR accessed_by
+        VARCHAR ip_address
+        TEXT user_agent
+        DATETIME accessed_at
     }
 
     %% Relationships - Cars
@@ -433,7 +566,6 @@ erDiagram
     EVENTS }o--o| MOTORCYCLES : "related to motorcycle"
 
     %% Relationships - Inspections
-    CAR_INSPECTIONS }o--|| EMPLOYEES : "inspected by"
     MOTORCYCLE_INSPECTIONS }o--|| EMPLOYEES : "inspected by"
 
     %% Relationships - Movements
@@ -455,6 +587,17 @@ erDiagram
     ROLE_PERMISSIONS }o--|| PERMISSIONS : "grants"
     EMPLOYEE_ROLES }o--|| EMPLOYEES : "has"
     EMPLOYEE_ROLES }o--|| ROLES : "assigned"
+    EMPLOYEES ||--o{ EMPLOYEE_DATA_SCOPES : "has scope"
+    EMPLOYEES ||--o{ EMPLOYEE_PERMISSIONS : "direct permission"
+    PERMISSIONS ||--o{ EMPLOYEE_PERMISSIONS : "granted to"
+
+    %% Relationships - Notifications
+    NOTIFICATION_EVENTS ||--o{ NOTIFICATION_JOBS : "triggers"
+    NOTIFICATION_JOBS ||--o{ NOTIFICATION_DELIVERIES : "attempts"
+    NOTIFICATION_TEMPLATES }o--o| EMPLOYEES : "created by"
+
+    %% Relationships - File Access
+    FILE_METADATA ||--o{ FILE_ACCESS_LOGS : "access tracked"
 ```
 
 ## Key Design Principles
@@ -501,6 +644,9 @@ erDiagram
 
 ### 7. **RBAC Integration**
 - Role-based permissions apply across all entities
+- `employee_data_scopes` allows location/department-based data filtering per employee
+- `resource_acl` supports per-resource ACLs for CAR, CLIENT, INQUIRY, RESERVATION, SALE, TRANSACTION
+- `employee_permissions` allows custom permissions assigned directly to individual employees
 - Data scopes can filter by vehicle type
 - Resource ACLs work for both cars and motorcycles
 
@@ -550,18 +696,23 @@ erDiagram
 | **Storage Locations** | ← Cars, Motorcycles |
 | **Car Movements** | → Cars, Storage Locations, Employees |
 | **Motorcycle Movements** | → Motorcycles, Storage Locations, Employees |
-| **Employees** | ← Inquiries, Sales, Tasks, Inspections, Employee Roles, Movements |
+| **Employees** | ← Inquiries, Sales, Tasks, Inspections, Employee Roles, Employee Permissions, Employee Data Scopes, Movements |
 | **Clients** | ← Inquiries, Reservations, Sales |
-| **File Metadata** | Referenced by all entities with file storage columns (no FK) |
+| **File Metadata** | Referenced by all entities with file storage columns (no FK); ← File Access Logs |
+| **Roles** | ← Role Permissions, Employee Roles |
+| **Permissions** | ← Role Permissions, Employee Permissions |
+| **Notification Events** | → Notification Jobs → Notification Deliveries |
+| **Notification Templates** | Referenced by notification jobs at send time |
 
 ## Database Statistics (After Seeding)
 
 ### Vehicles
-- **Car Models**: ~50 models across major manufacturers
-- **Motorcycle Models**: ~80 models across 8 brands
+- **Car Models**: ~1,201 models seeded from `car-models.csv` (V16) across 40+ manufacturers
+- **Motorcycle Models**: ~361 models seeded from `motorcycle-models.csv` (V17) across 25+ brands
 - **Sample Cars**: 20+ cars with complete details
 - **Sample Motorcycles**: 15 motorcycles with complete details
-- **Vehicle Types**: Sedan, SUV, Hatchback, Motorcycle, Scooter, Sport Bike, Cruiser, Off-Road
+- **Vehicle Types**: Sedan, SUV, Hatchback, Motorcycle, Scooter, Sport Bike, Cruiser, Off-Road, Dirt Bike, Touring, Naked, Café Racer
+- **Price Coverage**: Ex-showroom prices included for all seeded car and motorcycle models
 - **Manufacturers**: Honda, Hero, Yamaha, Royal Enfield, TVS, Bajaj, Suzuki, KTM, Ather, Ola Electric, Toyota, Maruti, Hyundai, Tata, Mahindra, etc.
 
 ### File Storage
@@ -605,7 +756,29 @@ Entity → File ID (VARCHAR) → File Metadata Table → S3 Storage Path
 - Application code remains unchanged
 - URLs updated automatically via file_metadata table
 
-## Recent Schema Changes (V15 & V16)
+## Recent Schema Changes (V15–V21)
+
+### V17: Add Ex-Showroom Prices + Drop seating_capacity
+**Date:** March 25, 2026
+
+**Changes:**
+1. **Added `ex_showroom_price DECIMAL(12,2)` to `car_models` table** (V1 schema)
+   - Prices sourced from `car-models.csv` (`Ex-Showroom_Price` column)
+   - Format parsed from Indian locale: "Rs. 2,92,667" → 292667
+   - Populated via V16 seeder (1,201 rows)
+
+2. **Added `ex_showroom_price DECIMAL(12,2)` to `motorcycle_models` table** (V9 schema)
+   - Prices sourced from `motorcycle-models.csv` (`price` column — plain integer)
+   - Populated via V17 seeder (361 rows)
+
+3. **Removed `seating_capacity` from `motorcycle_models` table**
+   - Column not tracked or relevant for dealership use-case
+   - V17 migration runs `ALTER TABLE motorcycle_models DROP COLUMN seating_capacity`
+
+**Benefits:**
+- Enables price-based filtering and sorting of model catalogs
+- Provides reference pricing for sales comparisons
+- Cleaner motorcycle model schema
 
 ### V15: Car Table Structure Simplification
 **Date:** March 15, 2026
@@ -644,5 +817,36 @@ Entity → File ID (VARCHAR) → File Metadata Table → S3 Storage Path
 
 ---
 
-**Last Updated:** March 15, 2026
-**Version:** 2.1 (with Table Structure Simplification)
+### V20: Split Vehicle Count By Type
+**Date:** March 26, 2026
+
+**Changes:**
+1. **Replaced `current_vehicle_count` with `current_car_count` and `current_motorcycle_count`** in `storage_locations`
+   - Enables separate tracking of cars and motorcycles per location
+   - Counts back-filled from live vehicle data on migration
+   - Old CHECK constraints (`chk_capacity`, `chk_vehicle_count_positive`) dropped and replaced with type-specific ones
+
+2. **Removed all database triggers** (V19 triggers dropped, none recreated)
+   - `trg_cars_after_insert/update/delete` — removed
+   - `trg_motorcycles_after_insert/update/delete` — removed
+   - Counts are now maintained entirely at the **application/service layer** on vehicle add, delete, status change, and storage location transfer
+
+**Benefits:**
+- Eliminates MySQL error 1442 (trigger conflict with `storage_locations` subqueries in seed scripts)
+- Finer-grained capacity reporting per vehicle type
+- Simpler, more predictable count management in application code
+
+---
+
+### V21: Add Vehicle Description
+**Date:** March 26, 2026
+
+**Changes:**
+1. **Added `description VARCHAR(600)` to `cars` table**
+2. **Resized `description` on `motorcycles` from `TEXT` to `VARCHAR(600)`**
+   - 600-character limit enforced via `@Size` validation at the application layer
+
+---
+
+**Last Updated:** March 26, 2026
+**Version:** 2.5 (Added description to cars; capped motorcycles description to VARCHAR(600))

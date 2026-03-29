@@ -3,13 +3,21 @@ package com.wheelshiftpro.service.impl;
 import com.wheelshiftpro.dto.request.MotorcycleInspectionRequest;
 import com.wheelshiftpro.dto.response.MotorcycleInspectionResponse;
 import com.wheelshiftpro.dto.response.PageResponse;
+import com.wheelshiftpro.entity.Employee;
 import com.wheelshiftpro.entity.MotorcycleInspection;
+import com.wheelshiftpro.enums.AuditCategory;
+import com.wheelshiftpro.enums.AuditLevel;
+import com.wheelshiftpro.exception.BusinessException;
 import com.wheelshiftpro.exception.ResourceNotFoundException;
 import com.wheelshiftpro.mapper.MotorcycleInspectionMapper;
 import com.wheelshiftpro.repository.EmployeeRepository;
 import com.wheelshiftpro.repository.MotorcycleInspectionRepository;
 import com.wheelshiftpro.repository.MotorcycleRepository;
+import com.wheelshiftpro.security.EmployeeUserDetails;
+import com.wheelshiftpro.service.AuditService;
 import com.wheelshiftpro.service.MotorcycleInspectionService;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -25,13 +33,14 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@Transactional
+@Transactional(rollbackFor = Exception.class)
 public class MotorcycleInspectionServiceImpl implements MotorcycleInspectionService {
 
     private final MotorcycleInspectionRepository motorcycleInspectionRepository;
     private final MotorcycleInspectionMapper motorcycleInspectionMapper;
     private final MotorcycleRepository motorcycleRepository;
     private final EmployeeRepository employeeRepository;
+    private final AuditService auditService;
 
     @Override
     public MotorcycleInspectionResponse createInspection(MotorcycleInspectionRequest request) {
@@ -45,9 +54,20 @@ public class MotorcycleInspectionServiceImpl implements MotorcycleInspectionServ
             throw new ResourceNotFoundException("Employee", "id", request.getInspectorId());
         }
 
+        if (request.getInspectionDate().isAfter(LocalDate.now())) {
+            throw new BusinessException("Inspection date cannot be in the future", "FUTURE_INSPECTION_DATE");
+        }
+
         MotorcycleInspection inspection = motorcycleInspectionMapper.toEntity(request);
+        inspection.setMotorcycle(motorcycleRepository.getReferenceById(request.getMotorcycleId()));
+        if (request.getInspectorId() != null) {
+            inspection.setInspector(employeeRepository.getReferenceById(request.getInspectorId()));
+        }
         MotorcycleInspection saved = motorcycleInspectionRepository.save(inspection);
 
+        auditService.log(AuditCategory.INSPECTION, saved.getId(), "CREATE",
+                AuditLevel.REGULAR, resolveCurrentEmployee(),
+                "Motorcycle ID: " + request.getMotorcycleId() + ", Date: " + saved.getInspectionDate());
         log.info("Created motorcycle inspection with ID: {}", saved.getId());
         return motorcycleInspectionMapper.toResponse(saved);
     }
@@ -59,9 +79,22 @@ public class MotorcycleInspectionServiceImpl implements MotorcycleInspectionServ
         MotorcycleInspection inspection = motorcycleInspectionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("MotorcycleInspection", "id", id));
 
+        if (request.getInspectionDate() != null && request.getInspectionDate().isAfter(LocalDate.now())) {
+            throw new BusinessException("Inspection date cannot be in the future", "FUTURE_INSPECTION_DATE");
+        }
+
+        if (request.getInspectorId() != null && !employeeRepository.existsById(request.getInspectorId())) {
+            throw new ResourceNotFoundException("Employee", "id", request.getInspectorId());
+        }
+
         motorcycleInspectionMapper.updateEntityFromRequest(request, inspection);
+        if (request.getInspectorId() != null) {
+            inspection.setInspector(employeeRepository.getReferenceById(request.getInspectorId()));
+        }
         MotorcycleInspection updated = motorcycleInspectionRepository.save(inspection);
 
+        auditService.log(AuditCategory.INSPECTION, id, "UPDATE",
+                AuditLevel.REGULAR, resolveCurrentEmployee(), "Motorcycle inspection updated");
         log.info("Updated motorcycle inspection ID: {}", id);
         return motorcycleInspectionMapper.toResponse(updated);
     }
@@ -97,6 +130,8 @@ public class MotorcycleInspectionServiceImpl implements MotorcycleInspectionServ
         }
 
         motorcycleInspectionRepository.deleteById(id);
+        auditService.log(AuditCategory.INSPECTION, id, "DELETE",
+                AuditLevel.HIGH, resolveCurrentEmployee(), "Motorcycle inspection deleted");
         log.info("Deleted motorcycle inspection ID: {}", id);
     }
 
@@ -235,6 +270,14 @@ public class MotorcycleInspectionServiceImpl implements MotorcycleInspectionServ
         Page<MotorcycleInspection> inspectionsPage = motorcycleInspectionRepository.findByOverallCondition(condition, pageable);
 
         return buildPageResponse(inspectionsPage);
+    }
+
+    private Employee resolveCurrentEmployee() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof EmployeeUserDetails u) {
+            return employeeRepository.getReferenceById(u.getId());
+        }
+        return null;
     }
 
     private PageResponse<MotorcycleInspectionResponse> buildPageResponse(Page<MotorcycleInspection> page) {

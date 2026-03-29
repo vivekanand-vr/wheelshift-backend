@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -126,5 +127,15 @@ public class InquiryController {
     public ResponseEntity<ApiResponse<Object>> getInquiryStatistics() {
         Object statistics = inquiryService.getInquiryStatistics();
         return ResponseEntity.ok(ApiResponse.success(statistics));
+    }
+
+    @PutMapping("/{id}/assign")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','SALES')")
+    @Operation(summary = "Assign inquiry to employee", description = "Assigns an inquiry to an employee")
+    public ResponseEntity<ApiResponse<InquiryResponse>> assignInquiry(
+            @Parameter(description = "Inquiry ID") @PathVariable Long id,
+            @Parameter(description = "Employee ID") @RequestParam Long employeeId) {
+        InquiryResponse response = inquiryService.assignInquiry(id, employeeId);
+        return ResponseEntity.ok(ApiResponse.success("Inquiry assigned successfully", response));
     }
 }

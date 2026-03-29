@@ -14,6 +14,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -27,6 +28,7 @@ public class MotorcycleModelController {
     private final MotorcycleModelService motorcycleModelService;
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
     @Operation(summary = "Create a new motorcycle model", description = "Creates a new motorcycle model with specified details")
     public ResponseEntity<ApiResponse<MotorcycleModelResponse>> createMotorcycleModel(
             @Valid @RequestBody MotorcycleModelRequest request) {
@@ -36,6 +38,7 @@ public class MotorcycleModelController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
     @Operation(summary = "Update a motorcycle model", description = "Updates an existing motorcycle model by ID")
     public ResponseEntity<ApiResponse<MotorcycleModelResponse>> updateMotorcycleModel(
             @Parameter(description = "Motorcycle Model ID") @PathVariable Long id,
@@ -45,6 +48,7 @@ public class MotorcycleModelController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get motorcycle model by ID", description = "Retrieves a specific motorcycle model by its ID")
     public ResponseEntity<ApiResponse<MotorcycleModelResponse>> getMotorcycleModelById(
             @Parameter(description = "Motorcycle Model ID") @PathVariable Long id) {
@@ -53,6 +57,7 @@ public class MotorcycleModelController {
     }
 
     @GetMapping
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get all motorcycle models", description = "Retrieves all motorcycle models with pagination")
     public ResponseEntity<ApiResponse<PageResponse<MotorcycleModelResponse>>> getAllMotorcycleModels(
             @Parameter(description = "Page number (0-indexed)") @RequestParam(defaultValue = "0") int page,
@@ -62,6 +67,7 @@ public class MotorcycleModelController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
     @Operation(summary = "Delete a motorcycle model", description = "Deletes a motorcycle model by ID if no motorcycles are associated")
     public ResponseEntity<ApiResponse<Void>> deleteMotorcycleModel(
             @Parameter(description = "Motorcycle Model ID") @PathVariable Long id) {
@@ -70,6 +76,7 @@ public class MotorcycleModelController {
     }
 
     @GetMapping("/search")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Search motorcycle models", description = "Search motorcycle models with multiple filter criteria")
     public ResponseEntity<ApiResponse<PageResponse<MotorcycleModelResponse>>> searchMotorcycleModels(
             @Parameter(description = "Make filter") @RequestParam(required = false) String make,
@@ -84,6 +91,7 @@ public class MotorcycleModelController {
     }
 
     @GetMapping("/makes")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get all makes", description = "Retrieves all distinct motorcycle makes")
     public ResponseEntity<ApiResponse<List<String>>> getAllMakes() {
         List<String> makes = motorcycleModelService.getAllMakes();
@@ -91,6 +99,7 @@ public class MotorcycleModelController {
     }
 
     @GetMapping("/models")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get models by make", description = "Retrieves all models for a specific make")
     public ResponseEntity<ApiResponse<List<String>>> getModelsByMake(
             @Parameter(description = "Motorcycle make") @RequestParam String make) {
@@ -99,6 +108,7 @@ public class MotorcycleModelController {
     }
 
     @GetMapping("/variants")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get variants", description = "Retrieves all variants for a specific make and model")
     public ResponseEntity<ApiResponse<List<String>>> getVariantsByMakeAndModel(
             @Parameter(description = "Motorcycle make") @RequestParam String make,
@@ -108,6 +118,7 @@ public class MotorcycleModelController {
     }
 
     @GetMapping("/fuel-types")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get all fuel types", description = "Retrieves all available fuel types")
     public ResponseEntity<ApiResponse<List<FuelType>>> getAllFuelTypes() {
         List<FuelType> fuelTypes = motorcycleModelService.getAllFuelTypes();
@@ -115,6 +126,7 @@ public class MotorcycleModelController {
     }
 
     @GetMapping("/vehicle-types")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get all vehicle types", description = "Retrieves all available motorcycle vehicle types")
     public ResponseEntity<ApiResponse<List<MotorcycleVehicleType>>> getAllVehicleTypes() {
         List<MotorcycleVehicleType> vehicleTypes = motorcycleModelService.getAllVehicleTypes();
@@ -122,6 +134,7 @@ public class MotorcycleModelController {
     }
 
     @GetMapping("/active")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get active models", description = "Retrieves all active motorcycle models")
     public ResponseEntity<ApiResponse<List<MotorcycleModelResponse>>> getActiveModels() {
         List<MotorcycleModelResponse> activeModels = motorcycleModelService.getActiveModels();
@@ -129,6 +142,7 @@ public class MotorcycleModelController {
     }
 
     @GetMapping("/exists/{id}")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Check if model exists", description = "Checks if a motorcycle model exists by ID")
     public ResponseEntity<ApiResponse<Boolean>> existsById(
             @Parameter(description = "Motorcycle Model ID") @PathVariable Long id) {
