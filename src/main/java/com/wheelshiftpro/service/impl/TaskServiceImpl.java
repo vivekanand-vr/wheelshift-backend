@@ -56,6 +56,18 @@ public class TaskServiceImpl implements TaskService {
             throw new BusinessException("Due date must be in the future", "INVALID_DUE_DATE");
         }
 
+        // Validate assignee if provided (before mapping)
+        Employee assignee = null;
+        if (request.getAssigneeId() != null) {
+            assignee = employeeRepository.findById(request.getAssigneeId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Employee", "id", request.getAssigneeId()));
+            
+            // Validate employee is ACTIVE
+            if (assignee.getStatus() != EmployeeStatus.ACTIVE) {
+                throw new BusinessException("Assignee must be ACTIVE", "ASSIGNEE_NOT_ACTIVE");
+            }
+        }
+
         Task task = taskMapper.toEntity(request);
         
         // Set default status if not provided
@@ -68,16 +80,8 @@ public class TaskServiceImpl implements TaskService {
             task.setPriority(TaskPriority.MEDIUM);
         }
 
-        // Handle employee assignment if provided
-        if (request.getAssigneeId() != null) {
-            Employee assignee = employeeRepository.findById(request.getAssigneeId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Employee", "id", request.getAssigneeId()));
-            
-            // Validate employee is ACTIVE
-            if (assignee.getStatus() != EmployeeStatus.ACTIVE) {
-                throw new BusinessException("Assignee must be an active employee", "ASSIGNEE_NOT_ACTIVE");
-            }
-            
+        // Set assignee after validation
+        if (assignee != null) {
             task.setAssignee(assignee);
         }
 

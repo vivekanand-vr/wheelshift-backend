@@ -129,8 +129,8 @@ class InquiryServiceImplTest {
                     .build();
 
             when(clientRepository.findById(clientId)).thenReturn(Optional.of(client));
-            when(carRepository.findById(carId)).thenReturn(Optional.of(car));
             when(inquiryMapper.toEntity(request)).thenReturn(inquiry);
+            when(carRepository.findById(carId)).thenReturn(Optional.of(car));
             when(inquiryRepository.save(inquiry)).thenReturn(saved);
             when(inquiryMapper.toResponse(saved)).thenReturn(response);
 
@@ -142,6 +142,7 @@ class InquiryServiceImplTest {
             assertThat(result.getId()).isEqualTo(100L);
             verify(clientRepository).findById(clientId);
             verify(carRepository).findById(carId);
+            assertThat(inquiry.getCar()).isEqualTo(car);
             verify(inquiryRepository).save(inquiry);
             verify(auditService).log(eq(AuditCategory.INQUIRY), eq(100L), eq("CREATE"), 
                     eq(AuditLevel.REGULAR), any(), any());
@@ -200,7 +201,10 @@ class InquiryServiceImplTest {
             client.setId(clientId);
             client.setStatus(ClientStatus.ACTIVE);
 
+            Inquiry inquiry = new Inquiry();
+
             when(clientRepository.findById(clientId)).thenReturn(Optional.of(client));
+            when(inquiryMapper.toEntity(request)).thenReturn(inquiry);
             when(carRepository.findById(999L)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> inquiryService.createInquiry(request))
@@ -256,8 +260,8 @@ class InquiryServiceImplTest {
             saved.setId(100L);
 
             when(clientRepository.findById(clientId)).thenReturn(Optional.of(client));
-            when(carRepository.findById(carId)).thenReturn(Optional.of(car));
             when(inquiryMapper.toEntity(request)).thenReturn(inquiry);
+            when(carRepository.findById(carId)).thenReturn(Optional.of(car));
             when(inquiryRepository.save(inquiry)).thenReturn(saved);
             when(inquiryMapper.toResponse(saved)).thenReturn(new InquiryResponse());
 

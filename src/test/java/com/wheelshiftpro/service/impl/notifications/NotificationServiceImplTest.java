@@ -21,6 +21,7 @@ import com.wheelshiftpro.messaging.NotificationKafkaProducer;
 import com.wheelshiftpro.repository.EmployeeRepository;
 import com.wheelshiftpro.repository.notifications.NotificationEventRepository;
 import com.wheelshiftpro.repository.notifications.NotificationJobRepository;
+import com.wheelshiftpro.repository.notifications.NotificationPreferenceRepository;
 import com.wheelshiftpro.repository.notifications.NotificationTemplateRepository;
 import com.wheelshiftpro.security.EmployeeUserDetails;
 import com.wheelshiftpro.service.AuditService;
@@ -56,6 +57,7 @@ class NotificationServiceImplTest {
 
     @Mock private NotificationEventRepository eventRepository;
     @Mock private NotificationJobRepository jobRepository;
+    @Mock private NotificationPreferenceRepository preferenceRepository;
     @Mock private NotificationTemplateRepository templateRepository;
     @Mock private NotificationTemplateService templateService;
     @Mock private NotificationKafkaProducer kafkaProducer;
@@ -139,7 +141,11 @@ class NotificationServiceImplTest {
 
             NotificationEvent savedEvent = buildEvent(1L);
             when(eventRepository.save(any(NotificationEvent.class))).thenReturn(savedEvent);
-            when(jobRepository.findByDedupKey(any())).thenReturn(Optional.empty());
+            // Mock preference check - return empty to use defaults (no opt-out, no threshold)
+            lenient().when(preferenceRepository.findByPrincipalTypeAndPrincipalIdAndEventTypeAndChannel(
+                    any(), any(), any(), any())).thenReturn(Optional.empty());
+            // Mock dedup check - return false to allow job creation
+            when(jobRepository.existsByDedupKey(any())).thenReturn(false);
             when(jobRepository.save(any(NotificationJob.class))).thenReturn(buildJob(10L, 42L));
 
             NotificationEventResponse result = notificationService.createNotificationEvent(request);
@@ -196,7 +202,11 @@ class NotificationServiceImplTest {
 
             NotificationEvent savedEvent = buildEvent(3L);
             when(eventRepository.save(any())).thenReturn(savedEvent);
-            when(jobRepository.findByDedupKey(any())).thenReturn(Optional.of(buildJob(99L, 5L)));
+            // Mock preference check - return empty to use defaults
+            lenient().when(preferenceRepository.findByPrincipalTypeAndPrincipalIdAndEventTypeAndChannel(
+                    any(), any(), any(), any())).thenReturn(Optional.empty());
+            // Mock dedup check - return true to indicate the job already exists
+            when(jobRepository.existsByDedupKey(any())).thenReturn(true);
 
             notificationService.createNotificationEvent(request);
 

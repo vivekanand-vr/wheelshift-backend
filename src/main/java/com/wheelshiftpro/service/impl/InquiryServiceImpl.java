@@ -3,9 +3,11 @@ package com.wheelshiftpro.service.impl;
 import com.wheelshiftpro.dto.request.InquiryRequest;
 import com.wheelshiftpro.dto.response.InquiryResponse;
 import com.wheelshiftpro.dto.response.PageResponse;
+import com.wheelshiftpro.entity.Car;
 import com.wheelshiftpro.entity.Client;
 import com.wheelshiftpro.entity.Employee;
 import com.wheelshiftpro.entity.Inquiry;
+import com.wheelshiftpro.entity.Motorcycle;
 import com.wheelshiftpro.enums.AuditCategory;
 import com.wheelshiftpro.enums.AuditLevel;
 import com.wheelshiftpro.enums.ClientStatus;
@@ -22,6 +24,7 @@ import com.wheelshiftpro.repository.CarRepository;
 import com.wheelshiftpro.repository.ClientRepository;
 import com.wheelshiftpro.repository.EmployeeRepository;
 import com.wheelshiftpro.repository.InquiryRepository;
+import com.wheelshiftpro.repository.MotorcycleRepository;
 import com.wheelshiftpro.repository.SaleRepository;
 import com.wheelshiftpro.security.EmployeeUserDetails;
 import com.wheelshiftpro.service.AuditService;
@@ -57,6 +60,7 @@ public class InquiryServiceImpl implements InquiryService {
     private final InquiryMapper inquiryMapper;
     private final ClientRepository clientRepository;
     private final CarRepository carRepository;
+    private final MotorcycleRepository motorcycleRepository;
     private final EmployeeRepository employeeRepository;
     private final SaleRepository saleRepository;
     private final AuditService auditService;
@@ -71,7 +75,7 @@ public class InquiryServiceImpl implements InquiryService {
                 .orElseThrow(() -> new ResourceNotFoundException("Client", "id", request.getClientId()));
         
         if (client.getStatus() != ClientStatus.ACTIVE) {
-            throw new BusinessException("Client must be active to create inquiry", "CLIENT_NOT_ACTIVE");
+            throw new BusinessException("Client must be ACTIVE to create inquiry", "CLIENT_NOT_ACTIVE");
         }
 
         // Validate single-vehicle discriminator
@@ -79,13 +83,21 @@ public class InquiryServiceImpl implements InquiryService {
             throw new BusinessException("Inquiry can only reference one vehicle (car or motorcycle)", "MULTIPLE_VEHICLES");
         }
 
-        if (request.getCarId() != null && !carRepository.existsById(request.getCarId())) {
-            throw new ResourceNotFoundException("Car", "id", request.getCarId());
-        }
-
         Inquiry inquiry = inquiryMapper.toEntity(request);
         inquiry.setClient(client);
         inquiry.setStatus(InquiryStatus.OPEN);
+
+        // Wire vehicle relationships after mapping
+        if (request.getCarId() != null) {
+            Car car = carRepository.findById(request.getCarId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Car", "id", request.getCarId()));
+            inquiry.setCar(car);
+        }
+        if (request.getMotorcycleId() != null) {
+            Motorcycle motorcycle = motorcycleRepository.findById(request.getMotorcycleId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Motorcycle", "id", request.getMotorcycleId()));
+            inquiry.setMotorcycle(motorcycle);
+        }
 
         Inquiry saved = inquiryRepository.save(inquiry);
 
@@ -237,7 +249,7 @@ public class InquiryServiceImpl implements InquiryService {
 
         // If transitioning to RESPONDED, response text must be present
         if (status == InquiryStatus.RESPONDED && (inquiry.getResponse() == null || inquiry.getResponse().trim().isEmpty())) {
-            throw new BusinessException("Response text is required when status is RESPONDED", "RESPONSE_REQUIRED");
+            throw new BusinessException("response text is required when status is RESPONDED", "RESPONSE_REQUIRED");
         }
 
         InquiryStatus previousStatus = inquiry.getStatus();

@@ -298,7 +298,8 @@ class EventServiceImplTest {
 
             eventService.createEvent(request);
 
-            verify(car, never()).setStatus(any());
+            // Car status should remain RESERVED, not changed
+            assertThat(car.getStatus()).isEqualTo(CarStatus.RESERVED);
             verify(carRepository, never()).save(car);
         }
 
@@ -330,7 +331,8 @@ class EventServiceImplTest {
 
             eventService.createEvent(request);
 
-            verify(car, never()).setStatus(any());
+            // Car status should remain SOLD, not changed
+            assertThat(car.getStatus()).isEqualTo(CarStatus.SOLD);
             verify(carRepository, never()).save(car);
         }
 
@@ -362,7 +364,8 @@ class EventServiceImplTest {
 
             eventService.createEvent(request);
 
-            verify(car, never()).setStatus(any());
+            // Car status should remain AVAILABLE, not changed for non-test-drive events
+            assertThat(car.getStatus()).isEqualTo(CarStatus.AVAILABLE);
             verify(carRepository, never()).save(car);
         }
     }

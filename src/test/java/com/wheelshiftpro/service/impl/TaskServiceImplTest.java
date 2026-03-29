@@ -131,8 +131,11 @@ class TaskServiceImplTest {
             when(taskRepository.save(task)).thenReturn(saved);
             when(taskMapper.toResponse(saved)).thenReturn(new TaskResponse());
 
-            verify(employeeRepository, never()).findById(any());
+            TaskResponse result = taskService.createTask(request);
+
+            assertThat(result).isNotNull();
             assertThat(task.getAssignee()).isNull();
+            verify(employeeRepository, never()).findById(any());
             verify(taskRepository).save(task);
         }
 
