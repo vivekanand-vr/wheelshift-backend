@@ -1,6 +1,6 @@
 # WheelShift Pro — Implementation & Test Status
 
-**Last Updated:** March 29, 2026 (RBAC BL 16.x — all four services fixed and tested)  
+**Last Updated:** March 29, 2026 (Notification System BL 17.x — service fixed and tested)  
 **Spec Reference:** [`BUSINESS_LOGIC.md`](./BUSINESS_LOGIC.md)
 
 Track progress for every business logic operation defined in the spec.  
@@ -200,9 +200,9 @@ The **WheelShift Developer** agent reads this file to know which areas need atte
 
 | BL Ref | Operation | Impl Status | Impl Notes | Test Status | Test Notes |
 |--------|-----------|:-----------:|------------|:-----------:|------------|
-| 17.1 | Notification generation (triggered by events) | ❌ | Dispatched on BL 1.1, 2.1, 10.1, 11.1, etc. — not verified per trigger | ❌ | |
-| 17.2 | Delivery rules (quiet hours, opt-out, digest) | ❌ | | ❌ | |
-| 17.3 | Mark notification as read | `PUT /api/v1/notifications/{id}/read` | ❌ | Recipient-only guard not verified | ❌ | |
+| 17.1 | Notification generation (triggered by events) | ✅ | `createNotificationEvent` persists event, auto-generates `IN_APP` job from payload `recipientId`/`recipientType`, publishes to Kafka via `kafkaProducer.publishJob`; dedup key prevents duplicate jobs; audit `REGULAR`; `@Transactional(rollbackFor)`; `@PreAuthorize(SA,AD)` on create-event endpoint | ✅ | `NotificationServiceImplTest` — happyPath (event+job+Kafka), noRecipientInPayload (no job), dedupKeyExists (no 2nd job), auditLevelRegular, auth/no-auth audit field |
+| 17.2 | Delivery rules (quiet hours, opt-out, digest) | ❌ | Not implemented in `NotificationServiceImpl`; Kafka consumer layer is out of scope for this audit | ❌ | |
+| 17.3 | Mark notification as read | `PUT /api/v1/notifications/{id}/read` | ✅ | Fetches job, enforces recipient-only ownership (`validateNotificationOwnership` — `NOT_NOTIFICATION_RECIPIENT`); SA/ADMIN bypass; sets `sentAt`+`status=SENT` when unread; audit `REGULAR`; `@PreAuthorize(isAuthenticated())` on controller (was broken `EMPLOYEE` role — fixed) | ✅ | happyPath, alreadyRead_noSave, notFound, ownershipViolation throws, adminCanMarkAny, auditLevelRegular, unauthenticatedSkipsOwnershipCheck |
 
 ---
 
@@ -223,4 +223,4 @@ The **WheelShift Developer** agent reads this file to know which areas need atte
 | Audit calls in `InquiryServiceImpl` | ✅ | CREATE/UPDATE → `REGULAR`; DELETE/STATUS_CHANGE → `HIGH` | ✅ | Covered in `InquiryServiceImplTest` |
 | Audit calls in `TaskServiceImpl` | ✅ | CREATE/UPDATE/STATUS_CHANGE → `REGULAR`; DELETE → `HIGH` | ✅ | Covered in `TaskServiceImplTest` |
 | Audit calls in `EventServiceImpl` | ✅ | CREATE/UPDATE → `REGULAR`; DELETE → `HIGH` | ✅ | Covered in `EventServiceImplTest` |
-| Audit calls in all other service impls | ✅ | RBAC services: `RoleServiceImpl` (all writes → `CRITICAL`), `PermissionServiceImpl` (all writes → `CRITICAL`), `DataScopeServiceImpl` (all writes → `CRITICAL`), `ResourceACLServiceImpl` (all writes → `CRITICAL`, `AuditCategory.SYSTEM`) | ✅ | Covered in RoleServiceImplTest, PermissionServiceImplTest, DataScopeServiceImplTest, ResourceACLServiceImplTest |
+| Audit calls in all other service impls | ✅ | RBAC services: `RoleServiceImpl` (all writes → `CRITICAL`), `PermissionServiceImpl` (all writes → `CRITICAL`), `DataScopeServiceImpl` (all writes → `CRITICAL`), `ResourceACLServiceImpl` (all writes → `CRITICAL`, `AuditCategory.SYSTEM`); `NotificationServiceImpl` (CREATE_EVENT/CREATE_JOB/MARK_AS_READ/MARK_ALL_AS_READ → `REGULAR`, `AuditCategory.SYSTEM`) | ✅ | Covered in RoleServiceImplTest, PermissionServiceImplTest, DataScopeServiceImplTest, ResourceACLServiceImplTest, NotificationServiceImplTest |

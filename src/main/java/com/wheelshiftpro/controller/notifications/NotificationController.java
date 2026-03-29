@@ -34,7 +34,7 @@ public class NotificationController {
     private final NotificationSseEmitterManager sseEmitterManager;
     
     @PostMapping("/events")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
     @Operation(summary = "Create a notification event", description = "Creates a new notification event and generates jobs for recipients")
     public ResponseEntity<NotificationEventResponse> createEvent(
             @Valid @RequestBody CreateNotificationEventRequest request) {
@@ -52,7 +52,7 @@ public class NotificationController {
     }
     
     @GetMapping("/recipient/{recipientType}/{recipientId}")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get notifications for recipient", description = "Retrieves notifications for a specific recipient")
     public ResponseEntity<Page<NotificationJobResponse>> getNotificationsForRecipient(
             @PathVariable RecipientType recipientType,
@@ -65,7 +65,7 @@ public class NotificationController {
     }
     
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get notification by ID", description = "Retrieves a specific notification by ID")
     public ResponseEntity<NotificationJobResponse> getNotificationById(@PathVariable Long id) {
         NotificationJobResponse notification = notificationService.getNotificationById(id);
@@ -73,7 +73,7 @@ public class NotificationController {
     }
     
     @PutMapping("/{id}/read")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Mark notification as read", description = "Marks a notification as read")
     public ResponseEntity<NotificationJobResponse> markAsRead(@PathVariable Long id) {
         NotificationJobResponse notification = notificationService.markNotificationAsRead(id);
@@ -81,7 +81,7 @@ public class NotificationController {
     }
     
     @PutMapping("/recipient/{recipientType}/{recipientId}/read-all")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Mark all notifications as read", description = "Marks all notifications as read for a recipient")
     public ResponseEntity<Void> markAllAsRead(
             @PathVariable RecipientType recipientType,
@@ -92,7 +92,7 @@ public class NotificationController {
     }
     
     @GetMapping("/recipient/{recipientType}/{recipientId}/stats")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get notification statistics", description = "Retrieves notification statistics for a recipient")
     public ResponseEntity<NotificationStatsResponse> getStats(
             @PathVariable RecipientType recipientType,
@@ -102,7 +102,7 @@ public class NotificationController {
     }
     
     @GetMapping("/recipient/{recipientType}/{recipientId}/unread-count")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get unread notification count", description = "Retrieves unread notification count for a recipient")
     public ResponseEntity<Long> getUnreadCount(
             @PathVariable RecipientType recipientType,
@@ -133,7 +133,7 @@ public class NotificationController {
      * </pre>
      */
     @GetMapping(value = "/stream/{recipientType}/{recipientId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'EMPLOYEE')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Subscribe to real-time notifications",
                description = "Opens a Server-Sent Events stream that pushes new notifications as they arrive")
     public SseEmitter streamNotifications(

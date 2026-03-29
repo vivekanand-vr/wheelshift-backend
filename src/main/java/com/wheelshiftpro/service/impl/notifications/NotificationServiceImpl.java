@@ -11,11 +11,18 @@ import com.wheelshiftpro.entity.notifications.NotificationTemplate;
 import com.wheelshiftpro.enums.RecipientType;
 import com.wheelshiftpro.enums.notifications.NotificationChannel;
 import com.wheelshiftpro.enums.notifications.NotificationStatus;
+import com.wheelshiftpro.entity.Employee;
+import com.wheelshiftpro.enums.AuditCategory;
+import com.wheelshiftpro.enums.AuditLevel;
+import com.wheelshiftpro.exception.BusinessException;
 import com.wheelshiftpro.exception.ResourceNotFoundException;
 import com.wheelshiftpro.messaging.NotificationKafkaProducer;
+import com.wheelshiftpro.repository.EmployeeRepository;
 import com.wheelshiftpro.repository.notifications.NotificationEventRepository;
 import com.wheelshiftpro.repository.notifications.NotificationJobRepository;
 import com.wheelshiftpro.repository.notifications.NotificationTemplateRepository;
+import com.wheelshiftpro.security.EmployeeUserDetails;
+import com.wheelshiftpro.service.AuditService;
 import com.wheelshiftpro.service.notifications.NotificationService;
 import com.wheelshiftpro.service.notifications.NotificationTemplateService;
 
@@ -23,11 +30,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -40,9 +50,11 @@ public class NotificationServiceImpl implements NotificationService {
     private final NotificationTemplateRepository templateRepository;
     private final NotificationTemplateService templateService;
     private final NotificationKafkaProducer kafkaProducer;
-    
+    private final EmployeeRepository employeeRepository;
+    private final AuditService auditService;
+
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public NotificationEventResponse createNotificationEvent(CreateNotificationEventRequest request) {
         log.info("Creating notification event: type={}, entityType={}, entityId={}", 
                 request.getEventType(), request.getEntityType(), request.getEntityId());
@@ -64,6 +76,10 @@ public class NotificationServiceImpl implements NotificationService {
 
         // Publish each persisted job to Kafka (async, non-blocking for the caller)
         jobs.forEach(kafkaProducer::publishJob);
+
+        auditService.log(AuditCategory.SYSTEM, event.getId(), "CREATE_NOTIFICATION_EVENT",
+                AuditLevel.REGULAR, resolveCurrentEmployee(),
+                "Type: " + event.getEventType() + ", entity: " + event.getEntityType() + "/" + event.getEntityId());
 
         return mapToEventResponse(event);
     }
@@ -115,43 +131,68 @@ public class NotificationServiceImpl implements NotificationService {
         return Optional.of(job);
     }
     
-    private String generateDedupKey(Long eventId, RecipientType recipientType, 
+    private String generateDedupKey(Long eventId, RecipientType recipientType,
                                     Long recipientId, NotificationChannel channel) {
         return String.format("%d-%s-%d-%s", eventId, recipientType, recipientId, channel);
     }
+
+    private void validateNotificationOwnership(NotificationJob job) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof EmployeeUserDetails u)) return;
+        boolean isAdminOrSuperAdmin = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_SUPER_ADMIN")
+                        || a.getAuthority().equals("ROLE_ADMIN"));
+        if (!isAdminOrSuperAdmin && !Objects.equals(job.getRecipientId(), u.getId())) {
+            throw new BusinessException(
+                    "You can only manage your own notifications", "NOT_NOTIFICATION_RECIPIENT");
+        }
+    }
+
+    private Employee resolveCurrentEmployee() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof EmployeeUserDetails u) {
+            return employeeRepository.getReferenceById(u.getId());
+        }
+        return null;
+    }
     
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public NotificationJobResponse createNotificationJob(CreateNotificationJobRequest request) {
-        log.info("Creating notification job: eventId={}, recipientType={}, recipientId={}, channel={}", 
+        log.info("Creating notification job: eventId={}, recipientType={}, recipientId={}, channel={}",
                 request.getEventId(), request.getRecipientType(), request.getRecipientId(), request.getChannel());
-        
+
         NotificationEvent event = eventRepository.findById(request.getEventId())
-                .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + request.getEventId()));
-        
-        String dedupKey = generateDedupKey(request.getEventId(), request.getRecipientType(), 
+                .orElseThrow(() -> new ResourceNotFoundException("NotificationEvent", "id", request.getEventId()));
+
+        String dedupKey = generateDedupKey(request.getEventId(), request.getRecipientType(),
                 request.getRecipientId(), request.getChannel());
-        
-        // Check for existing job
-        return jobRepository.findByDedupKey(dedupKey)
-                .map(this::mapToJobResponse)
-                .orElseGet(() -> {
-                    NotificationJob job = NotificationJob.builder()
-                            .event(event)
-                            .recipientType(request.getRecipientType())
-                            .recipientId(request.getRecipientId())
-                            .channel(request.getChannel())
-                            .status(NotificationStatus.PENDING)
-                            .scheduledFor(request.getScheduledFor())
-                            .dedupKey(dedupKey)
-                            .retries(0)
-                            .createdAt(LocalDateTime.now())
-                            .updatedAt(LocalDateTime.now())
-                            .build();
-                    
-                    job = jobRepository.save(job);
-                    return mapToJobResponse(job);
-                });
+
+        // Return existing job unchanged (idempotent)
+        Optional<NotificationJob> existing = jobRepository.findByDedupKey(dedupKey);
+        if (existing.isPresent()) {
+            return mapToJobResponse(existing.get());
+        }
+
+        NotificationJob job = NotificationJob.builder()
+                .event(event)
+                .recipientType(request.getRecipientType())
+                .recipientId(request.getRecipientId())
+                .channel(request.getChannel())
+                .status(NotificationStatus.PENDING)
+                .scheduledFor(request.getScheduledFor())
+                .dedupKey(dedupKey)
+                .retries(0)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+
+        job = jobRepository.save(job);
+
+        auditService.log(AuditCategory.SYSTEM, job.getId(), "CREATE_NOTIFICATION_JOB",
+                AuditLevel.REGULAR, resolveCurrentEmployee(), "dedupKey: " + dedupKey);
+
+        return mapToJobResponse(job);
     }
     
     @Override
@@ -169,28 +210,34 @@ public class NotificationServiceImpl implements NotificationService {
     @Transactional(readOnly = true)
     public NotificationJobResponse getNotificationById(Long jobId) {
         NotificationJob job = jobRepository.findById(jobId)
-                .orElseThrow(() -> new ResourceNotFoundException("Notification not found with id: " + jobId));
-        
+                .orElseThrow(() -> new ResourceNotFoundException("NotificationJob", "id", jobId));
+
         return mapToJobResponseWithDetails(job);
     }
     
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public NotificationJobResponse markNotificationAsRead(Long jobId) {
         NotificationJob job = jobRepository.findById(jobId)
-                .orElseThrow(() -> new ResourceNotFoundException("Notification not found with id: " + jobId));
-        
+                .orElseThrow(() -> new ResourceNotFoundException("NotificationJob", "id", jobId));
+
+        validateNotificationOwnership(job);
+
         if (job.getSentAt() == null) {
             job.setSentAt(LocalDateTime.now());
             job.setStatus(NotificationStatus.SENT);
             job = jobRepository.save(job);
+
+            auditService.log(AuditCategory.SYSTEM, jobId, "MARK_AS_READ",
+                    AuditLevel.REGULAR, resolveCurrentEmployee(),
+                    "Notification " + jobId + " marked as read for recipient " + job.getRecipientId());
         }
-        
+
         return mapToJobResponse(job);
     }
     
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void markAllNotificationsAsRead(RecipientType recipientType, Long recipientId, NotificationChannel channel) {
         List<NotificationStatus> unreadStatuses = List.of(NotificationStatus.PENDING, NotificationStatus.SCHEDULED);
         Page<NotificationJob> jobs = jobRepository.findByRecipientAndChannelAndStatusIn(
@@ -203,8 +250,12 @@ public class NotificationServiceImpl implements NotificationService {
         });
         
         jobRepository.saveAll(jobs.getContent());
-        log.info("Marked {} notifications as read for recipient: {}:{}", 
+        log.info("Marked {} notifications as read for recipient: {}:{}",
                 jobs.getTotalElements(), recipientType, recipientId);
+
+        auditService.log(AuditCategory.SYSTEM, recipientId, "MARK_ALL_AS_READ",
+                AuditLevel.REGULAR, resolveCurrentEmployee(),
+                "All " + jobs.getTotalElements() + " notifications marked as read for recipient " + recipientId);
     }
     
     @Override
@@ -238,7 +289,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
     
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void processScheduledNotifications() {
         LocalDateTime now = LocalDateTime.now();
         List<NotificationJob> scheduledJobs = jobRepository.findByStatusAndScheduledForBefore(
