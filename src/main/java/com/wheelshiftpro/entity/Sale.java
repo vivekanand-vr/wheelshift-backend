@@ -12,8 +12,10 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * Entity representing a completed car sale.
+ * Entity representing a completed vehicle sale (Car or Motorcycle).
  * Records sale transaction details, commission, and associated documents.
+ * Exactly one of {@code car} / {@code motorcycle} must be non-null per row
+ * (enforced by the service layer — SaleServiceImpl).
  */
 @Entity
 @Table(name = "sales", uniqueConstraints = @UniqueConstraint(name = "uk_sale_car", columnNames = "car_id"))
@@ -36,8 +38,9 @@ public class Sale extends BaseEntity {
     @JoinColumn(name = "motorcycle_id", unique = true, foreignKey = @ForeignKey(name = "fk_sale_motorcycle"))
     private Motorcycle motorcycle;
 
+    @NotNull(message = "Vehicle type is required")
     @Enumerated(EnumType.STRING)
-    @Column(name = "vehicle_type", length = 20)
+    @Column(name = "vehicle_type", length = 20, nullable = false)
     @Builder.Default
     private VehicleType vehicleType = VehicleType.CAR;
 

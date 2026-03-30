@@ -11,10 +11,10 @@
 -- A compound index on (status, scheduled_for) optimizes this query pattern.
 
 -- Drop the existing single-column index if it exists
-DROP INDEX IF EXISTS idx_scheduled ON notification_jobs;
+DROP INDEX idx_scheduled ON notification_jobs;
 
 -- Create optimized compound index for digest scheduler query
-CREATE INDEX idx_notification_jobs_digest 
+CREATE INDEX idx_notification_jobs_digest
 ON notification_jobs(status, scheduled_for)
 COMMENT 'Optimizes digest scheduler query: WHERE status=SCHEDULED AND scheduled_for <= NOW()';
 

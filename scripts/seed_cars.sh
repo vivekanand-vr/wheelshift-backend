@@ -230,15 +230,249 @@ VALUES
     72000,1493,'SOLD',@loc_whitefield,
     '2022-06-05',492000.00,542000.00,5,5,
     '2018 Premier Rio diesel, powerful engine and spacious family car, sold as-is.'
+  ),
+  -- ── Cars #21 – #50 ────────────────────────────────────────────────────────
+  (
+    (SELECT id FROM car_models WHERE make='Maruti Suzuki' AND model='Swift' AND variant='Vxi' LIMIT 1),
+    'C2026DV0000000021','MH13BB1001',2021,'Ocean Blue',
+    16200,1197,'AVAILABLE',@loc_mg_road,
+    '2023-05-01',510000.00,585000.00,5,5,
+    '2021 Maruti Swift Vxi, sporty hatchback with smart drive technology and alloy wheels.'
+  ),
+  (
+    (SELECT id FROM car_models WHERE make='Maruti Suzuki' AND model='Swift' AND variant='Zxi' LIMIT 1),
+    'C2026DV0000000022','KA03HJ1001',2022,'Solid Red',
+    6800,1197,'AVAILABLE',@loc_hebbal,
+    '2024-02-10',648000.00,725000.00,5,5,
+    '2022 Maruti Swift Zxi, premium hatchback with LED projector headlamps and reversing camera.'
+  ),
+  (
+    (SELECT id FROM car_models WHERE make='Maruti Suzuki' AND model='Dzire' AND variant='Vxi' LIMIT 1),
+    'C2026DV0000000023','MH14CC1001',2021,'Silky Silver',
+    22000,1197,'AVAILABLE',@loc_elec_city,
+    '2023-09-15',625000.00,695000.00,4,5,
+    '2021 Maruti Dzire Vxi, India most popular compact sedan with premium features.'
+  ),
+  (
+    (SELECT id FROM car_models WHERE make='Maruti Suzuki' AND model='Dzire' AND variant='Ldi' LIMIT 1),
+    'C2026DV0000000024','AP09AA1001',2020,'Dignity Brown',
+    32000,1248,'AVAILABLE',@loc_whitefield,
+    '2023-04-20',668000.00,748000.00,4,5,
+    '2020 Maruti Dzire Ldi diesel, top-tier fuel economy ideal for long-distance intercity use.'
+  ),
+  (
+    (SELECT id FROM car_models WHERE make='Hyundai' AND model='Elite I20' AND variant='Era 1.2' LIMIT 1),
+    'C2026DV0000000025','MH13BB1002',2021,'Typhoon Silver',
+    18000,1197,'AVAILABLE',@loc_mg_road,
+    '2023-08-01',540000.00,615000.00,5,5,
+    '2021 Hyundai Elite i20 Era, premium feel with refined ride quality and stylish exterior.'
+  ),
+  (
+    (SELECT id FROM car_models WHERE make='Hyundai' AND model='Elite I20' AND variant='Magna Plus' LIMIT 1),
+    'C2026DV0000000026','KA03HJ1002',2020,'Fiery Red',
+    30000,1197,'AVAILABLE',@loc_hebbal,
+    '2023-03-15',612000.00,689000.00,5,5,
+    '2020 Hyundai Elite i20 Magna Plus, well-equipped with dual airbags and rear AC vents.'
+  ),
+  (
+    (SELECT id FROM car_models WHERE make='Hyundai' AND model='Aura' AND variant='S 1.2 Petrol' LIMIT 1),
+    'C2026DV0000000027','MH14CC1002',2022,'Polar White',
+    8500,1197,'AVAILABLE',@loc_elec_city,
+    '2024-01-20',622000.00,698000.00,4,5,
+    '2022 Hyundai Aura S, stylish compact sedan with segment-best space and fuel efficiency.'
+  ),
+  (
+    (SELECT id FROM car_models WHERE make='Tata' AND model='Tiago' AND variant='Revotron Xz' LIMIT 1),
+    'C2026DV0000000028','AP09AA1002',2021,'Teal Blue',
+    14000,1199,'RESERVED',@loc_whitefield,
+    '2023-10-10',538000.00,609000.00,5,5,
+    '2021 Tata Tiago Xz, fully loaded variant with sunroof and connected car technology.'
+  ),
+  (
+    (SELECT id FROM car_models WHERE make='Tata' AND model='Altroz' AND variant='Xe Petrol' LIMIT 1),
+    'C2026DV0000000029','MH13BB1003',2022,'Calgary White',
+    7200,1199,'AVAILABLE',@loc_mg_road,
+    '2024-03-05',499000.00,568000.00,5,5,
+    '2022 Tata Altroz Xe petrol, entry-level premium hatchback with 5-star GNCAP safety.'
+  ),
+  (
+    (SELECT id FROM car_models WHERE make='Tata' AND model='Tigor' AND variant='Revotron Xe' LIMIT 1),
+    'C2026DV0000000030','KA03HJ1003',2021,'Magnetic Red',
+    19500,1199,'AVAILABLE',@loc_hebbal,
+    '2023-07-22',548000.00,619000.00,4,5,
+    '2021 Tata Tigor Xe, compact fastback sedan with 5-star safety and spacious boot.'
+  ),
+  (
+    (SELECT id FROM car_models WHERE make='Honda' AND model='Jazz' AND variant='V Petrol' LIMIT 1),
+    'C2026DV0000000031','MH14CC1003',2021,'Lunar Silver Metallic',
+    17800,1199,'AVAILABLE',@loc_elec_city,
+    '2023-06-18',705000.00,789000.00,5,5,
+    '2021 Honda Jazz V petrol, versatile hatchback with magic seat technology and superior cabin space.'
+  ),
+  (
+    (SELECT id FROM car_models WHERE make='Honda' AND model='Amaze' AND variant='E Mt Petrol' LIMIT 1),
+    'C2026DV0000000032','AP09AA1003',2021,'Radiant Red',
+    23000,1199,'AVAILABLE',@loc_whitefield,
+    '2023-05-25',638000.00,712000.00,4,5,
+    '2021 Honda Amaze E petrol, dependable compact sedan with proven Honda reliability.'
+  ),
+  (
+    (SELECT id FROM car_models WHERE make='Honda' AND model='Amaze' AND variant='V Mt Diesel' LIMIT 1),
+    'C2026DV0000000033','MH13BB1004',2020,'Golden Brown Metallic',
+    42000,1498,'SOLD',@loc_mg_road,
+    '2022-11-10',795000.00,875000.00,4,5,
+    '2020 Honda Amaze V diesel, efficient diesel sedan with Honda CVT, sold as-is.'
+  ),
+  (
+    (SELECT id FROM car_models WHERE make='Volkswagen' AND model='Polo' AND variant='Comfortline 1.0 (P)' LIMIT 1),
+    'C2026DV0000000034','KA03HJ1004',2021,'Flash Red',
+    20000,999,'AVAILABLE',@loc_hebbal,
+    '2023-08-28',635000.00,712000.00,5,5,
+    '2021 Volkswagen Polo Comfortline, European build with dual airbags and premium interiors.'
+  ),
+  (
+    (SELECT id FROM car_models WHERE make='Volkswagen' AND model='Polo' AND variant='Highline Plus 1.0 (P)' LIMIT 1),
+    'C2026DV0000000035','MH14CC1004',2020,'Reflex Silver Metallic',
+    36000,999,'AVAILABLE',@loc_elec_city,
+    '2023-02-14',725000.00,815000.00,5,5,
+    '2020 VW Polo Highline Plus, loaded with touchscreen, sunroof and premium sound system.'
+  ),
+  (
+    (SELECT id FROM car_models WHERE make='Mahindra' AND model='Kuv100 Nxt' AND variant='K4+ 6Str' LIMIT 1),
+    'C2026DV0000000036','AP09AA1004',2020,'Aquamarine',
+    42500,1198,'AVAILABLE',@loc_whitefield,
+    '2023-01-09',542000.00,615000.00,5,6,
+    '2020 Mahindra KUV100 Nxt K4+ 6-seater, compact yet spacious with bold masculine styling.'
+  ),
+  (
+    (SELECT id FROM car_models WHERE make='Datsun' AND model='Go' AND variant='A' LIMIT 1),
+    'C2026DV0000000037','MH13BB1005',2019,'Coral Red',
+    55000,1198,'SOLD',@loc_mg_road,
+    '2022-07-20',445000.00,495000.00,5,5,
+    '2019 Datsun Go A, budget hatchback with spacious 5-seater cabin, sold as-is.'
+  ),
+  (
+    (SELECT id FROM car_models WHERE make='Datsun' AND model='Redi-Go' AND variant='T' LIMIT 1),
+    'C2026DV0000000038','KA03HJ1005',2021,'White',
+    16000,799,'AVAILABLE',@loc_hebbal,
+    '2023-09-10',328000.00,375000.00,5,5,
+    '2021 Datsun Redi-Go T, ultra-lightweight city car with best fuel efficiency in class.'
+  ),
+  (
+    (SELECT id FROM car_models WHERE make='Renault' AND model='Kwid' AND variant='Rxt 0.8' LIMIT 1),
+    'C2026DV0000000039','MH14CC1005',2022,'Fiery Red',
+    9500,799,'AVAILABLE',@loc_elec_city,
+    '2024-01-15',388000.00,435000.00,5,5,
+    '2022 Renault Kwid Rxt 0.8, stylish entry segment hatchback with digital instrument cluster.'
+  ),
+  (
+    (SELECT id FROM car_models WHERE make='Renault' AND model='Kwid' AND variant='Climber 1.0 Mt' LIMIT 1),
+    'C2026DV0000000040','AP09AA1005',2021,'Zanskar Blue',
+    18500,999,'AVAILABLE',@loc_whitefield,
+    '2023-07-30',428000.00,485000.00,5,5,
+    '2021 Renault Kwid Climber, rugged crossover styling with raised ground clearance.'
+  ),
+  (
+    (SELECT id FROM car_models WHERE make='Toyota' AND model='Etios Liva' AND variant='V' LIMIT 1),
+    'C2026DV0000000041','MH13BB1006',2021,'White',
+    22000,1197,'AVAILABLE',@loc_mg_road,
+    '2023-06-25',542000.00,612000.00,5,5,
+    '2021 Toyota Etios Liva V, mid-variant hatchback with Toyota legendary reliability.'
+  ),
+  (
+    (SELECT id FROM car_models WHERE make='Toyota' AND model='Etios Liva' AND variant='Vxd' LIMIT 1),
+    'C2026DV0000000042','KA03HJ1006',2020,'Silver Metallic',
+    38000,1364,'AVAILABLE',@loc_hebbal,
+    '2023-03-01',662000.00,742000.00,5,5,
+    '2020 Toyota Etios Liva Vxd diesel, top-spec variant with excellent highway diesel economy.'
+  ),
+  (
+    (SELECT id FROM car_models WHERE make='Hyundai' AND model='Xcent Prime' AND variant='T' LIMIT 1),
+    'C2026DV0000000043','MH14CC1006',2020,'Fiery Red',
+    35000,1197,'AVAILABLE',@loc_elec_city,
+    '2023-01-20',498000.00,562000.00,4,5,
+    '2020 Hyundai Xcent Prime T, compact fleet-grade sedan with spacious rear cabin.'
+  ),
+  (
+    (SELECT id FROM car_models WHERE make='Hyundai' AND model='Santro' AND variant='Asta Mt' LIMIT 1),
+    'C2026DV0000000044','AP09AA1006',2022,'Typhoon Silver',
+    7000,1086,'RESERVED',@loc_whitefield,
+    '2024-02-28',528000.00,595000.00,5,5,
+    '2022 Hyundai Santro Asta top-spec, packed with 3 airbags, touchscreen and wireless charging.'
+  ),
+  (
+    (SELECT id FROM car_models WHERE make='Maruti Suzuki' AND model='Eeco' AND variant='5 Str' LIMIT 1),
+    'C2026DV0000000045','MH13BB1007',2021,'White',
+    28000,1193,'AVAILABLE',@loc_mg_road,
+    '2023-05-12',332000.00,378000.00,5,5,
+    '2021 Maruti Eeco 5-seater, practical family van with unmatched versatility and low running cost.'
+  ),
+  (
+    (SELECT id FROM car_models WHERE make='Tata' AND model='Tiago' AND variant='Revotron Xza' LIMIT 1),
+    'C2026DV0000000046','KA03HJ1007',2022,'Flame Orange',
+    5800,1199,'AVAILABLE',@loc_hebbal,
+    '2024-03-10',588000.00,659000.00,5,5,
+    '2022 Tata Tiago Xza AMT, near-new automatic hatchback with iRA connected car tech.'
+  ),
+  (
+    (SELECT id FROM car_models WHERE make='Tata' AND model='Altroz' AND variant='Xm Diesel' LIMIT 1),
+    'C2026DV0000000047','MH14CC1007',2021,'Sonic Silver',
+    24000,1497,'AVAILABLE',@loc_elec_city,
+    '2023-10-05',735000.00,825000.00,5,5,
+    '2021 Tata Altroz Xm diesel, premium diesel hatchback with superior NVH refinement.'
+  ),
+  (
+    (SELECT id FROM car_models WHERE make='Honda' AND model='Jazz' AND variant='Vx Petrol' LIMIT 1),
+    'C2026DV0000000048','AP09AA1007',2020,'Premium White Pearl',
+    31000,1199,'RESERVED',@loc_whitefield,
+    '2023-02-20',737000.00,822000.00,5,5,
+    '2020 Honda Jazz Vx, top-spec with Honda Sensing safety suite and moonroof, currently reserved.'
+  ),
+  (
+    (SELECT id FROM car_models WHERE make='Maruti Suzuki' AND model='Dzire' AND variant='Zdi' LIMIT 1),
+    'C2026DV0000000049','MH13BB1008',2020,'Dignity Brown',
+    41000,1248,'SOLD',@loc_mg_road,
+    '2022-10-15',768000.00,852000.00,4,5,
+    '2020 Maruti Dzire Zdi diesel top-spec, premium compact sedan with AMT option, sold as-is.'
+  ),
+  (
+    (SELECT id FROM car_models WHERE make='Toyota' AND model='Etios Liva' AND variant='Vx' LIMIT 1),
+    'C2026DV0000000050','KA03HJ1008',2021,'Platinum White Pearl',
+    19000,1197,'RESERVED',@loc_hebbal,
+    '2023-08-22',598000.00,672000.00,5,5,
+    '2021 Toyota Etios Liva Vx, well-rounded hatchback with alloys and projector headlamps.'
   );
 
--- Recalculate car counts for all storage locations
+-- ── Recalculate car counts for all storage locations ─────────────────────────
 -- (no DB triggers since V20 — counts managed in application layer)
 UPDATE storage_locations sl
 SET current_car_count = (
   SELECT COUNT(*) FROM cars c
   WHERE c.storage_location_id = sl.id AND c.status <> 'SOLD'
 );
+
+-- ── Insert PURCHASE financial transactions for all seeded cars ────────────────
+-- Idempotent: skips rows where a PURCHASE transaction already exists.
+INSERT INTO financial_transactions
+  (car_id, motorcycle_id, vehicle_type, transaction_type, amount, transaction_date, description)
+SELECT
+  c.id,
+  NULL,
+  'CAR',
+  'PURCHASE',
+  c.purchase_price,
+  CONCAT(c.purchase_date, ' 09:00:00'),
+  CONCAT('Vehicle purchase - Car VIN: ', c.vin_number)
+FROM cars c
+WHERE c.vin_number LIKE 'C2026DV%'
+  AND c.purchase_price IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM financial_transactions ft
+    WHERE ft.car_id = c.id AND ft.transaction_type = 'PURCHASE'
+  );
+
+-- SALE financial transactions are created by seed_clients.sh
+-- (sale_price = actual negotiated price, not the asking selling_price).
 
 SQL
 
@@ -278,6 +512,17 @@ run_sql "
   WHERE c.vin_number LIKE '${VIN_PREFIX}%'
   GROUP BY cm.make
   ORDER BY cm.make;
+"
+
+echo ""
+echo -e "${BOLD}  Financial transactions:${RESET}"
+run_sql "
+  SELECT CONCAT('  ', RPAD(ft.transaction_type, 12, ' '), COUNT(*), ' transaction(s)')
+  FROM financial_transactions ft
+  JOIN cars c ON c.id = ft.car_id
+  WHERE c.vin_number LIKE '${VIN_PREFIX}%'
+  GROUP BY ft.transaction_type
+  ORDER BY ft.transaction_type;
 "
 
 echo ""

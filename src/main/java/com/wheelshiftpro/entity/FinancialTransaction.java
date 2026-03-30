@@ -12,9 +12,10 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * Entity representing a financial transaction related to a car.
+ * Entity representing a financial transaction linked to a Car or Motorcycle.
  * Tracks all monetary activities including purchases, repairs, deposits, sales,
- * and fees.
+ * and fees. Exactly one of {@code car} / {@code motorcycle} must be non-null
+ * per row (enforced by the DB-level constraint {@code chk_ft_one_vehicle}).
  */
 @Entity
 @Table(name = "financial_transactions", indexes = {
@@ -42,8 +43,9 @@ public class FinancialTransaction extends BaseEntity {
     @Column(name = "transaction_file_ids", columnDefinition = "TEXT")
     private String transactionFileIds;
 
+    @NotNull(message = "Vehicle type is required")
     @Enumerated(EnumType.STRING)
-    @Column(name = "vehicle_type", length = 20)
+    @Column(name = "vehicle_type", length = 20, nullable = false)
     @Builder.Default
     private VehicleType vehicleType = VehicleType.CAR;
 
