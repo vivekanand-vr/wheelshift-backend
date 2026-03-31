@@ -132,6 +132,12 @@
 			<scope>runtime</scope>
 		</dependency>
 
+		<!-- WebFlux — WebClient for non-blocking HTTP calls to the AI service -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-webflux</artifactId>
+		</dependency>
+
 		<!-- Apache Commons -->
 		<dependency>
 			<groupId>org.apache.commons</groupId>

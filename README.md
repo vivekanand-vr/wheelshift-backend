@@ -88,6 +88,12 @@ JWT_EXPIRATION_MS=86400000
 # AWS S3 (leave blank to use local file storage)
 AWS_ACCESS_KEY=
 AWS_SECRET_KEY=
+
+# AI Service (WheelShift AI — generates vehicle similarity recommendations)
+# Generate key with: python -c "import secrets; print(secrets.token_hex(32))"
+AI_SERVICE_BASE_URL=http://localhost:8000
+AI_SERVICE_API_KEY=change_this_in_production
+AI_SERVICE_ENABLED=true
 ```
 
 Never hardcode secrets in `application.properties` or any committed file.
@@ -105,7 +111,9 @@ Never hardcode secrets in `application.properties` or any committed file.
 | ORM / Schema | Spring Data JPA (Hibernate) + Flyway |
 | Mapping | MapStruct 1.5.5 + Lombok |
 | Security | Spring Security 6, JWT (JJWT 0.12) |
-| Caching | Redis 7 (Spring Cache) || Async Messaging | Apache Kafka 4.x, KRaft mode (spring-kafka) |
+| Caching | Redis 7 (Spring Cache) |
+| Async Messaging | Apache Kafka 4.x, KRaft mode (spring-kafka) |
+| AI Integration | WheelShift AI Service (HTTP/WebClient, hybrid similarity) |
 | Real-time Push | Server-Sent Events (SSE) || Scheduling | `@Scheduled` + ShedLock (Redis distributed lock) |
 | Observability | Spring Actuator, Micrometer / Prometheus |
 | API Docs | SpringDoc OpenAPI 3 / Swagger UI |
@@ -130,6 +138,7 @@ Never hardcode secrets in `application.properties` or any committed file.
 - **Inspections** — car and motorcycle inspection records
 - **Task Management** — task assignment, priorities, Kanban-style workflow
 - **Event Calendar** — appointments and event scheduling
+- **AI Recommendations** — similar vehicle suggestions powered by the WheelShift AI service (hybrid collaborative + content-based filtering); degrades gracefully when the AI service is unavailable
 
 ### Role-Based Dashboards
 Five tailored dashboard views: Admin, Sales, Inspector, Finance, Store Manager.
@@ -189,6 +198,7 @@ Five tailored dashboard views: Admin, Sales, Inspector, Finance, Store Manager.
 | Employee Permissions | `/rbac/employee-permissions` | `EmployeePermissionController` |
 | Resource ACLs | `/rbac/acl` | `ResourceACLController` |
 | Data Scopes | `/rbac/employees/{id}/scope` | `DataScopeController` |
+| AI Recommendations | `/recommendations` | `RecommendationController` |
 
 ---
 
@@ -307,6 +317,7 @@ A failing architecture test is a **build failure** — fix the architecture, nev
 | Request Correlation (X-Request-Id) | ✅ Complete |
 | Distributed Scheduling (ShedLock) | ✅ Complete |
 | Architecture Tests (ArchUnit) | ✅ Complete |
+| AI Recommendations (Similarity API) | ✅ Complete |
 | Unit Tests | 🔄 In Progress |
 | Integration Tests (Testcontainers) | 📋 Planned |
 | End-to-End Tests (REST Assured) | 📋 Planned |

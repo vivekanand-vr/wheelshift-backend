@@ -1,7 +1,7 @@
 ﻿# WheelShift Pro — Product Documentation
 
-**Version:** 1.1.0
-**Last Updated:** March 22, 2026
+**Version:** 1.2.0
+**Last Updated:** March 31, 2026
 **Status:** Production Ready
 
 ---
@@ -70,26 +70,27 @@ The platform is designed for **multi-user dealership teams**, providing each rol
 | 20 | Data Scoping | Security |
 | 21 | Resource-Level ACLs | Security |
 | 22 | Audit Logging | Security |
+| 23 | AI Similar Vehicle Recommendations | AI / Platform |
 
 ### Planned
 
 | # | Feature | Category | Status |
 |---|---------|----------|--------|
-| 23 | Frontend Web Application (React/Next.js) | Product | 🚧 In Progress |
-| 24 | Email Notifications (SMTP) | Platform | 📋 Planned |
-| 25 | Real-Time Updates (WebSocket) | Platform | 📋 Planned |
-| 26 | Export Reports (PDF / Excel) | Platform | 📋 Planned |
-| 27 | Two-Factor Authentication (2FA) | Security | 📋 Planned |
-| 28 | OAuth2 / Social Login | Security | 📋 Planned |
-| 29 | QR Code Generation for Vehicles | Core | 💡 Suggested |
-| 30 | Customer Self-Service Portal | Core | 💡 Suggested |
-| 31 | Bulk Import / Export (CSV) | Core | 💡 Suggested |
-| 32 | AI-Powered Pricing Recommendations | Advanced | 💡 Suggested |
-| 33 | Vehicle Price History Tracking | Core | 💡 Suggested |
-| 34 | Appointment Booking System | Core | 💡 Suggested |
-| 35 | Mobile App (iOS / Android) | Product | 💡 Suggested |
-| 36 | Multi-Tenancy (Multiple Dealerships) | Platform | 💡 Suggested |
-| 37 | WhatsApp Chatbot Integration | Platform | 💡 Suggested |
+| 24 | Frontend Web Application (React/Next.js) | Product | 🚧 In Progress |
+| 25 | Email Notifications (SMTP) | Platform | 📋 Planned |
+| 26 | Real-Time Updates (WebSocket) | Platform | 📋 Planned |
+| 27 | Export Reports (PDF / Excel) | Platform | 📋 Planned |
+| 28 | Two-Factor Authentication (2FA) | Security | 📋 Planned |
+| 29 | OAuth2 / Social Login | Security | 📋 Planned |
+| 30 | QR Code Generation for Vehicles | Core | 💡 Suggested |
+| 31 | Customer Self-Service Portal | Core | 💡 Suggested |
+| 32 | Bulk Import / Export (CSV) | Core | 💡 Suggested |
+| 33 | AI-Powered Pricing Recommendations | Advanced | 💡 Suggested |
+| 34 | Vehicle Price History Tracking | Core | 💡 Suggested |
+| 35 | Appointment Booking System | Core | 💡 Suggested |
+| 36 | Mobile App (iOS / Android) | Product | 💡 Suggested |
+| 37 | Multi-Tenancy (Multiple Dealerships) | Platform | 💡 Suggested |
+| 38 | WhatsApp Chatbot Integration | Platform | 💡 Suggested |
 
 ---
 
@@ -248,6 +249,18 @@ Schedule and manage business events and appointments.
 - Event types: Inspection, Test Drive, Sale, Reservation, Meeting, Servicing, and more
 - Attach files and documents to events
 - Notification integration for event reminders
+
+### 4.14 AI Similar Vehicle Recommendations
+
+Hybrid AI-powered similarity engine that surfaces vehicles a customer is likely to be interested in.
+
+- Retrieve up to 20 similar cars or motorcycles for any vehicle in inventory
+- Powered by the WheelShift AI Service (FastAPI microservice) using hybrid similarity scoring — combines structured attributes (make, model, year, price, mileage) with semantic embeddings
+- Results enriched server-side with live DB data: primary image URL, storage location name, and current status
+- Graceful degradation — returns an empty list with a warning flag when the AI service is unavailable, so inventory pages never break
+- Cached results propagated from the AI service layer for low-latency repeated requests
+- Configurable result limit (`limit` query param, 1–20, default 5)
+- Requires authentication; available to all authenticated roles
 
 ---
 
@@ -412,8 +425,7 @@ Access is evaluated in order, and denied if no rule grants it:
 | **Schema Migrations** | Flyway | 9.x |
 | **Build tool** | Maven | 3.9+ |
 | **Containerization** | Docker + Docker Compose | — |
-| **API Documentation** | SpringDoc OpenAPI (Swagger UI) | 2.7.0 |
-| **Frontend** *(Planned)* | React + Next.js | — |
+| **API Documentation** | SpringDoc OpenAPI (Swagger UI) | 2.7.0 || **AI Integration** | WheelShift AI Service (WebClient / FastAPI) | — || **Frontend** *(Planned)* | React + Next.js | — |
 
 ---
 
@@ -460,6 +472,7 @@ All endpoints are under `/api/v1/` and require a `Authorization: Bearer <token>`
 | **RBAC** | `/api/v1/rbac/*` | Roles, permissions, scopes, ACLs |
 | **Notifications** | `/api/v1/notifications/*` | Notification management and preferences |
 | **Dashboard** | `/api/v1/dashboard/*` | Role-specific dashboard data |
+| **Recommendations** | `/api/v1/recommendations/*` | AI-powered similar vehicle recommendations |
 
 Interactive API documentation: `http://localhost:8080/api/v1/swagger-ui.html`
 
@@ -473,7 +486,7 @@ Interactive API documentation: `http://localhost:8080/api/v1/swagger-ui.html`
 |---------|---------|
 | **Frontend Application** | React + Next.js web app covering all roles and dashboards |
 | **Test Coverage >80%** | Expanding the automated test suite |
-| **AI Service** | Separate Python/FastAPI microservice for intelligent features — pricing, lead scoring, inventory health |
+| **AI Service (Extended)** | Additional AI capabilities — smart pricing, lead scoring, inventory health, demand forecasting |
 
 📖 See [AI Service Overview](AI_SERVICE_OVERVIEW.md) for architecture and implementation plan.
 
@@ -530,6 +543,6 @@ Interactive API documentation: `http://localhost:8080/api/v1/swagger-ui.html`
 
 ---
 
-**Document Version:** 1.1.0
-**Last Updated:** March 22, 2026
+**Document Version:** 1.2.0
+**Last Updated:** March 31, 2026
 **Next Review:** June 2026

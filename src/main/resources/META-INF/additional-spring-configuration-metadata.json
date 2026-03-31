@@ -143,5 +143,25 @@
     "name": "spring.kafka.consumer.properties.spring.json.use.type.headers",
     "type": "java.lang.Boolean",
     "description": "When false, JsonDeserializer uses the configured value type instead of type headers from the record."
+  },
+  {
+    "name": "ai.service.base-url",
+    "type": "java.lang.String",
+    "description": "Base URL of the WheelShift AI service (e.g. http://localhost:8000 or http://wheelshift-ai:8000 in Docker)."
+  },
+  {
+    "name": "ai.service.api-key",
+    "type": "java.lang.String",
+    "description": "Shared-secret API key sent as the X-API-Key header on every request to the AI service."
+  },
+  {
+    "name": "ai.service.enabled",
+    "type": "java.lang.Boolean",
+    "description": "When false, the AIServiceClient short-circuits and returns empty results without making any HTTP calls."
+  },
+  {
+    "name": "ai.service.timeout-seconds",
+    "type": "java.lang.Integer",
+    "description": "Maximum seconds to wait for a response from the AI service before timing out and degrading gracefully."
   }
 ]}
