@@ -71,26 +71,27 @@ The platform is designed for **multi-user dealership teams**, providing each rol
 | 21 | Resource-Level ACLs | Security |
 | 22 | Audit Logging | Security |
 | 23 | AI Similar Vehicle Recommendations | AI / Platform |
+| 24 | AI Lead Scoring | AI / Platform |
 
 ### Planned
 
 | # | Feature | Category | Status |
 |---|---------|----------|--------|
-| 24 | Frontend Web Application (React/Next.js) | Product | 🚧 In Progress |
-| 25 | Email Notifications (SMTP) | Platform | 📋 Planned |
-| 26 | Real-Time Updates (WebSocket) | Platform | 📋 Planned |
-| 27 | Export Reports (PDF / Excel) | Platform | 📋 Planned |
-| 28 | Two-Factor Authentication (2FA) | Security | 📋 Planned |
-| 29 | OAuth2 / Social Login | Security | 📋 Planned |
-| 30 | QR Code Generation for Vehicles | Core | 💡 Suggested |
-| 31 | Customer Self-Service Portal | Core | 💡 Suggested |
-| 32 | Bulk Import / Export (CSV) | Core | 💡 Suggested |
-| 33 | AI-Powered Pricing Recommendations | Advanced | 💡 Suggested |
-| 34 | Vehicle Price History Tracking | Core | 💡 Suggested |
-| 35 | Appointment Booking System | Core | 💡 Suggested |
-| 36 | Mobile App (iOS / Android) | Product | 💡 Suggested |
-| 37 | Multi-Tenancy (Multiple Dealerships) | Platform | 💡 Suggested |
-| 38 | WhatsApp Chatbot Integration | Platform | 💡 Suggested |
+| 25 | Frontend Web Application (React/Next.js) | Product | 🚧 In Progress |
+| 26 | Email Notifications (SMTP) | Platform | 📋 Planned |
+| 27 | Real-Time Updates (WebSocket) | Platform | 📋 Planned |
+| 28 | Export Reports (PDF / Excel) | Platform | 📋 Planned |
+| 29 | Two-Factor Authentication (2FA) | Security | 📋 Planned |
+| 30 | OAuth2 / Social Login | Security | 📋 Planned |
+| 31 | QR Code Generation for Vehicles | Core | 💡 Suggested |
+| 32 | Customer Self-Service Portal | Core | 💡 Suggested |
+| 33 | Bulk Import / Export (CSV) | Core | 💡 Suggested |
+| 34 | AI-Powered Pricing Recommendations | Advanced | 💡 Suggested |
+| 35 | Vehicle Price History Tracking | Core | 💡 Suggested |
+| 36 | Appointment Booking System | Core | 💡 Suggested |
+| 37 | Mobile App (iOS / Android) | Product | 💡 Suggested |
+| 38 | Multi-Tenancy (Multiple Dealerships) | Platform | 💡 Suggested |
+| 39 | WhatsApp Chatbot Integration | Platform | 💡 Suggested |
 
 ---
 
@@ -261,6 +262,25 @@ Hybrid AI-powered similarity engine that surfaces vehicles a customer is likely 
 - Cached results propagated from the AI service layer for low-latency repeated requests
 - Configurable result limit (`limit` query param, 1–20, default 5)
 - Requires authentication; available to all authenticated roles
+
+### 4.15 AI Lead Scoring
+
+AI-powered lead scoring that automatically ranks inquiries by conversion likelihood, helping sales teams focus on the hottest prospects first.
+
+- Score any inquiry on demand — returns a 0–100 conversion likelihood score and a priority tier: **Hot**, **Warm**, or **Cold**
+- **Batch scoring** — score up to 50 inquiries in a single API call, designed for enriching the sales-dashboard inquiry list on every page load
+- Per-signal breakdown showing how each factor contributed to the score:
+  - Purchasing history (max 30 pts)
+  - Inquiry type / intent category (max 20 pts)
+  - Best reservation status (max 15 pts)
+  - Inquiry frequency in the last 90 days (max 15 pts)
+  - Response engagement — status and latency (max 10 pts)
+  - Vehicle price band (max 10 pts)
+- Results enriched server-side with inquiry context: client name, email, inquiry type, status, and assigned employee
+- `aiAvailable` flag on every response — when the AI service is unreachable, score and priority are `null` and inquiries still render without the score badge
+- Cached scores served from the AI service Redis layer (15-minute TTL) for sub-10ms repeated calls
+- Endpoints: `GET /api/v1/lead-scoring/inquiries/{id}` (single) · `POST /api/v1/lead-scoring/inquiries/batch` (up to 50)
+- Accessible to: `SUPER_ADMIN`, `ADMIN`, `SALES`, `STORE_MANAGER`
 
 ---
 
@@ -473,6 +493,7 @@ All endpoints are under `/api/v1/` and require a `Authorization: Bearer <token>`
 | **Notifications** | `/api/v1/notifications/*` | Notification management and preferences |
 | **Dashboard** | `/api/v1/dashboard/*` | Role-specific dashboard data |
 | **Recommendations** | `/api/v1/recommendations/*` | AI-powered similar vehicle recommendations |
+| **Lead Scoring** | `/api/v1/lead-scoring/*` | AI-powered inquiry lead scoring (single + batch) |
 
 Interactive API documentation: `http://localhost:8080/api/v1/swagger-ui.html`
 
@@ -486,7 +507,7 @@ Interactive API documentation: `http://localhost:8080/api/v1/swagger-ui.html`
 |---------|---------|
 | **Frontend Application** | React + Next.js web app covering all roles and dashboards |
 | **Test Coverage >80%** | Expanding the automated test suite |
-| **AI Service (Extended)** | Additional AI capabilities — smart pricing, lead scoring, inventory health, demand forecasting |
+| **AI Service (Extended)** | Additional AI capabilities — smart pricing, inventory health, demand forecasting |
 
 📖 See [AI Service Overview](AI_SERVICE_OVERVIEW.md) for architecture and implementation plan.
 
@@ -519,7 +540,6 @@ Interactive API documentation: `http://localhost:8080/api/v1/swagger-ui.html`
 | **Accounting Integrations** | Push financial data to QuickBooks, Xero, or Tally |
 | **VIN Auto-Fill** | Fetch vehicle specs automatically from a VIN lookup service |
 | **AI Smart Pricing** | Suggest optimal selling prices based on historical sales, condition, and market trends (AI Service) |
-| **AI Lead Scoring** | Automatically score and prioritize inquiries by conversion likelihood (AI Service) |
 | **AI Inventory Health Score** | Flag slow-moving vehicles with suggested actions before they stall too long (AI Service) |
 | **AI Vehicle Description Generator** | Auto-generate ready-to-publish listing descriptions from vehicle specs (AI Service) |
 | **AI Demand Forecasting** | Predict which vehicle categories will sell well next quarter to guide purchasing (AI Service) |
@@ -543,6 +563,6 @@ Interactive API documentation: `http://localhost:8080/api/v1/swagger-ui.html`
 
 ---
 
-**Document Version:** 1.2.0
-**Last Updated:** March 31, 2026
+**Document Version:** 1.3.0
+**Last Updated:** April 4, 2026
 **Next Review:** June 2026
