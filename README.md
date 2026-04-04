@@ -113,7 +113,7 @@ Never hardcode secrets in `application.properties` or any committed file.
 | Security | Spring Security 6, JWT (JJWT 0.12) |
 | Caching | Redis 7 (Spring Cache) |
 | Async Messaging | Apache Kafka 4.x, KRaft mode (spring-kafka) |
-| AI Integration | WheelShift AI Service (HTTP/WebClient, hybrid similarity) |
+| AI Integration | WheelShift AI Service (HTTP/WebClient, similarity recommendations + lead scoring) |
 | Real-time Push | Server-Sent Events (SSE) || Scheduling | `@Scheduled` + ShedLock (Redis distributed lock) |
 | Observability | Spring Actuator, Micrometer / Prometheus |
 | API Docs | SpringDoc OpenAPI 3 / Swagger UI |
@@ -139,6 +139,7 @@ Never hardcode secrets in `application.properties` or any committed file.
 - **Task Management** — task assignment, priorities, Kanban-style workflow
 - **Event Calendar** — appointments and event scheduling
 - **AI Recommendations** — similar vehicle suggestions powered by the WheelShift AI service (hybrid collaborative + content-based filtering); degrades gracefully when the AI service is unavailable
+- **AI Lead Scoring** — score inquiries by conversion likelihood (0–100) with Hot/Warm/Cold priority tiers and per-signal breakdowns; batch endpoint for dashboard enrichment (up to 50 inquiries per call); degrades gracefully when the AI service is unavailable
 
 ### Role-Based Dashboards
 Five tailored dashboard views: Admin, Sales, Inspector, Finance, Store Manager.
@@ -199,6 +200,7 @@ Five tailored dashboard views: Admin, Sales, Inspector, Finance, Store Manager.
 | Resource ACLs | `/rbac/acl` | `ResourceACLController` |
 | Data Scopes | `/rbac/employees/{id}/scope` | `DataScopeController` |
 | AI Recommendations | `/recommendations` | `RecommendationController` |
+| Lead Scoring | `/lead-scoring` | `LeadScoringController` |
 
 ---
 
@@ -318,6 +320,7 @@ A failing architecture test is a **build failure** — fix the architecture, nev
 | Distributed Scheduling (ShedLock) | ✅ Complete |
 | Architecture Tests (ArchUnit) | ✅ Complete |
 | AI Recommendations (Similarity API) | ✅ Complete |
+| AI Lead Scoring | ✅ Complete |
 | Unit Tests | 🔄 In Progress |
 | Integration Tests (Testcontainers) | 📋 Planned |
 | End-to-End Tests (REST Assured) | 📋 Planned |
